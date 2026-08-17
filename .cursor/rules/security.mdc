@@ -1,0 +1,38 @@
+---
+description: Security rules for the Kubernetes Reliability Platform
+alwaysApply: true
+---
+
+# Security Rules
+
+## Secrets and Credentials
+
+- Never commit secrets, API keys, passwords, or tokens.
+- Never hardcode credentials in source code.
+- Use `.env.example` to document required environment variables.
+- Use `.env` locally (gitignored) for actual values.
+- Never expose secrets through logs, error messages, or API responses.
+
+## Kubernetes
+
+- Use Kubernetes Secrets for sensitive configuration in cluster deployments.
+- Do not store secrets in ConfigMaps.
+- Apply least-privilege RBAC for all service accounts.
+
+## AI Safety
+
+- AI must not receive unrestricted Kubernetes API access.
+- Destructive operations require explicit human approval.
+- Initial AI access must NOT allow:
+  - Deleting namespaces
+  - Deleting databases
+  - Deleting secrets
+  - Deleting persistent volumes
+- AI remediation must be controlled and auditable.
+- AI Kubernetes access should be read-only until explicitly approved for remediation.
+
+## General
+
+- Validate and sanitize all external input.
+- Use HTTPS in production configurations.
+- Keep dependencies updated and scan for known vulnerabilities.

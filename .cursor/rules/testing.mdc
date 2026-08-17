@@ -1,0 +1,38 @@
+---
+description: Testing expectations for the Kubernetes Reliability Platform
+alwaysApply: true
+---
+
+# Testing Rules
+
+## Philosophy
+
+A task is not complete merely because the application starts. It must be tested and verified.
+
+## Test Levels
+
+| Level | Scope | When Introduced |
+|-------|-------|-----------------|
+| Unit | Individual functions and classes | Milestone 1 |
+| Integration | Service + database interactions | Milestone 2 |
+| End-to-end | Full request flows across services | Milestone 2+ |
+| Container | Docker image behavior | Milestone 3 |
+| Kubernetes | Deployment, probes, scaling | Milestone 4 |
+| Failure simulation | Network, latency, dependency failures | Milestone 12 |
+| Observability | Metrics, logs, traces verification | Milestones 7–10 |
+| AI | Prompt quality, tool calling, safety | Milestones 14–17 |
+
+## Expectations
+
+- Write tests alongside implementation, not as an afterthought.
+- Tests must be deterministic and repeatable.
+- Use appropriate Python testing tools when Milestone 1 begins (e.g., pytest).
+- Integration tests live in `tests/integration/`.
+- End-to-end tests live in `tests/e2e/`.
+- Do not create fake or placeholder tests.
+
+## Verification
+
+- Run appropriate tests after every implementation change.
+- Report test results before requesting commit authorization.
+- Never claim something works without running verification.

@@ -1,0 +1,62 @@
+---
+description: Intended architecture for the Kubernetes Reliability Platform
+alwaysApply: true
+---
+
+# Architecture Rules
+
+## Application Layer
+
+Three Python/FastAPI microservices:
+
+- **User Service** — user management
+- **Order Service** — order management; calls Payment Service
+- **Payment Service** — payment processing
+
+**Database:** PostgreSQL (shared or per-service, to be decided in Milestone 1)
+
+## Application Technologies
+
+- Python 3.x
+- FastAPI
+- Pydantic
+- SQLAlchemy
+- uv (dependency management)
+
+## Infrastructure (introduced progressively)
+
+- Docker
+- Docker Compose
+- Kubernetes (kind for local development)
+- kubectl
+- Helm
+
+## CI/CD
+
+- GitHub Actions
+
+## Observability (introduced after application deployment)
+
+- Prometheus + PromQL
+- Grafana
+- Alertmanager
+- Loki
+- OpenTelemetry
+
+## AI Layer (final phase only)
+
+- LLM API integration
+- Structured prompting
+- Tool calling
+- RAG
+- Kubernetes API integration (read-only initially)
+- Human-in-the-loop remediation
+
+AI must not be introduced until the reliability platform works without AI.
+
+## Constraints
+
+- Do not introduce additional technologies without explicit approval.
+- Do not silently change architecture — explain important decisions.
+- Business logic should remain intentionally simple.
+- The platform exists to demonstrate operational and reliability engineering concepts.

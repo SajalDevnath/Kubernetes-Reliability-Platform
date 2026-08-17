@@ -1,0 +1,60 @@
+---
+description: Git workflow and commit conventions
+alwaysApply: true
+---
+
+# Git Rules
+
+## Commits
+
+- Keep commits small and focused on a single concern.
+- Do not mix unrelated changes in one commit.
+- Do not create commits without explicit authorization.
+- Never commit secrets or credentials.
+- Never commit generated build artifacts, virtual environments, or IDE config.
+- Review all changes before committing.
+
+## Commit Message Format
+
+```
+<type>: <description>
+```
+
+### Types
+
+| Type | Use For |
+|------|---------|
+| `chore` | Project setup, tooling, maintenance |
+| `feat` | New features or services |
+| `fix` | Bug fixes |
+| `test` | Adding or updating tests |
+| `infra` | Docker, Kubernetes, Helm changes |
+| `ci` | CI/CD pipeline changes |
+| `docs` | Documentation updates |
+| `refactor` | Code restructuring without behavior change |
+
+### Examples
+
+```
+chore: initialize project structure
+feat: add user service
+test: add integration tests
+infra: add Kubernetes deployment
+ci: add GitHub Actions pipeline
+docs: update architecture documentation
+fix: handle payment service timeout
+```
+
+## Branches
+
+- Use descriptive branch names (e.g., `milestone-1/user-service`).
+- Keep branches focused on the current milestone or task.
+
+## Before Committing
+
+Show the user:
+1. List of changed files
+2. Test results (when applicable)
+3. Proposed commit message
+
+Wait for explicit authorization before committing.

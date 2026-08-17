@@ -1,0 +1,35 @@
+---
+description: General project rules for the Kubernetes Reliability Platform
+alwaysApply: true
+---
+
+# Project Rules
+
+## Core Principles
+
+- Follow `PROJECT_MASTER_SPECIFICATION.md` as the single source of truth.
+- Follow `docs/ROADMAP.md` for milestone sequencing and current status.
+- Work incrementally — complete one milestone task at a time.
+- Avoid implementing future milestones without explicit instruction.
+- Avoid unnecessary dependencies and technologies.
+- Keep implementations simple and focused.
+- Preserve existing working functionality.
+- Update documentation when implementation changes require it.
+
+## Scope Control
+
+- Do not create application code, Dockerfiles, Kubernetes manifests, Helm charts, or CI/CD workflows until their respective milestones.
+- Do not introduce technologies outside the approved stack without explicit approval.
+- Do not over-engineer or add abstractions prematurely.
+
+## Documentation
+
+- Read relevant project documentation before making changes.
+- Mark planned/unimplemented features clearly as "Planned" in documentation.
+- Never claim future functionality is already implemented.
+
+## Quality
+
+- A task is not complete merely because code was written — it must be tested and verified.
+- Never claim something works without verification.
+- Never commit secrets or hardcoded credentials.

@@ -1,0 +1,51 @@
+---
+description: Python and FastAPI coding standards for application development
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Coding Style
+
+These standards apply once application development begins (Milestone 1+).
+
+## Python
+
+- Use the project's selected Python version (3.x).
+- Use type hints on function signatures and public interfaces.
+- Follow PEP 8 and standard Python naming conventions:
+  - `snake_case` for functions, variables, and modules
+  - `PascalCase` for classes
+  - `UPPER_SNAKE_CASE` for constants
+- Prefer clear, readable code over clever abstractions.
+- Keep modules focused on a single responsibility.
+- Avoid unnecessary abstraction layers.
+
+## FastAPI Structure
+
+Separate concerns into distinct layers:
+
+- **API/Router** — HTTP endpoints, request/response handling
+- **Service** — business logic
+- **Repository/Data Access** — database operations
+- **Models** — SQLAlchemy ORM models
+- **Schemas** — Pydantic request/response models
+
+Use FastAPI routers for API boundaries.
+Use dependency injection appropriately within FastAPI.
+
+## Data and Configuration
+
+- Use Pydantic models for request/response validation.
+- Use SQLAlchemy for database access.
+- Externalize configuration via environment variables.
+- Never hardcode credentials or secrets.
+
+## Async
+
+- Prefer async only where it provides a clear benefit (I/O-bound operations).
+- Do not make everything async by default.
+
+## Dependencies
+
+- Manage dependencies with `uv`.
+- Do not add libraries without justification.
