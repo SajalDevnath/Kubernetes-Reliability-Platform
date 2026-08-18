@@ -85,3 +85,31 @@ Application business logic will remain intentionally simple across all microserv
 The primary purpose is demonstrating operational and reliability engineering concepts — not building a complex business application. Simple logic keeps focus on infrastructure, observability, and SRE practices.
 
 **Status:** Accepted
+
+---
+
+## ADR-007 — Monorepo Layout with `services/` Directory
+
+**Date:** 2026-08-18
+
+**Decision:**
+Application microservices will live under `services/<service_name>/` with a shared root `pyproject.toml` managed by uv.
+
+**Reason:**
+This layout scales naturally to three microservices (User, Order, Payment) while keeping a single dependency lockfile and consistent tooling at the repository root. Each service owns its `app/` package with routers, schemas, and core configuration.
+
+**Status:** Accepted
+
+---
+
+## ADR-008 — Non-Package uv Project for Application Code
+
+**Date:** 2026-08-18
+
+**Decision:**
+The root `pyproject.toml` uses `[tool.uv] package = false` because the repository is an application monorepo, not a publishable Python library.
+
+**Reason:**
+Services are run directly via uvicorn with `--app-dir` rather than installed as editable packages. This avoids unnecessary build configuration while still using uv for dependency management and virtual environments.
+
+**Status:** Accepted

@@ -2,7 +2,17 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Application implementation has not started.** Milestone 0 (Engineering Foundation) is complete. The repository contains project structure, documentation, and development rules.
+> **Milestone 1 in progress.** User Service skeleton is running with a `GET /health` endpoint. PostgreSQL/SQLAlchemy setup is the next Milestone 1 task.
+
+## Quick Start
+
+```bash
+python -m uv sync --dev
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8001 --app-dir services/user_service
+python -m uv run pytest tests/unit -v
+```
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for full setup instructions.
 
 ## Purpose
 
@@ -50,7 +60,7 @@ Three microservices with simple business logic, designed to create realistic ope
 | Milestone | Name | Status |
 |-----------|------|--------|
 | 0 | Engineering Foundation | COMPLETE |
-| 1 | Application Foundation | NOT STARTED |
+| 1 | Application Foundation | IN PROGRESS |
 | 2–17 | See roadmap | NOT STARTED |
 
 ## Documentation
@@ -60,7 +70,7 @@ Three microservices with simple business logic, designed to create realistic ope
 | [Project Master Specification](PROJECT_MASTER_SPECIFICATION.md) | Single source of truth |
 | [AGENTS.md](AGENTS.md) | AI assistant operating instructions |
 | [Project Overview](docs/PROJECT.md) | Goals, scope, and capabilities |
-| [Architecture](docs/ARCHITECTURE.md) | System architecture (planned) |
+| [Architecture](docs/ARCHITECTURE.md) | System architecture |
 | [Requirements](docs/REQUIREMENTS.md) | Functional and non-functional requirements |
 | [Development Guide](docs/DEVELOPMENT.md) | Development workflow |
 | [Testing Strategy](docs/TESTING.md) | Testing approach |

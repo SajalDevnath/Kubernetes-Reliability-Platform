@@ -1,8 +1,8 @@
 # Architecture
 
-> **Status:** Planned — application implementation has not started.
+> **Status:** In progress — User Service skeleton implemented (health endpoint only).
 
-This document describes the intended architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
+This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
 ## High-Level Overview
 
@@ -22,16 +22,17 @@ User Service (FastAPI)          Client
                               PostgreSQL
 ```
 
-## Application Layer (Planned — Milestone 1–2)
+## Application Layer
 
 ### User Service
 
 - **Purpose:** User management (create, read, update users)
-- **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
-- **Database:** PostgreSQL
-- **Status:** Planned
+- **Technology:** Python, FastAPI, Pydantic, SQLAlchemy (planned)
+- **Database:** PostgreSQL (planned)
+- **Location:** `services/user_service/`
+- **Status:** Skeleton implemented — `GET /health` only; business APIs planned
 
-### Order Service
+### Order Service (Planned — Milestone 2)
 
 - **Purpose:** Order management; communicates with Payment Service
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
@@ -46,11 +47,11 @@ User Service (FastAPI)          Client
 - **Database:** PostgreSQL
 - **Status:** Planned
 
-## Data Layer (Planned — Milestone 1)
+## Data Layer (Planned — Milestone 1, remaining tasks)
 
 - **Database:** PostgreSQL
 - **ORM:** SQLAlchemy
-- **Status:** Planned
+- **Status:** Planned — not yet configured
 
 ## Containerization (Planned — Milestone 3)
 
@@ -97,6 +98,22 @@ User Service (FastAPI)          Client
 - **Status:** Planned
 
 > AI is the final layer. The platform must work fully without AI before AI capabilities are introduced.
+
+## User Service Package Structure
+
+```
+services/user_service/
+└── app/
+    ├── main.py              # FastAPI application entry point
+    ├── api/
+    │   ├── router.py        # Aggregates API routers
+    │   └── routes/
+    │       └── health.py    # Health check endpoint
+    ├── core/
+    │   └── config.py        # Environment-based settings
+    └── schemas/
+        └── health.py        # Pydantic response models
+```
 
 ## Design Principles
 

@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Initial requirements defined. Implementation has not started.
+> **Status:** Partial implementation — User Service health endpoint active.
 
 ## Functional Requirements
 
@@ -20,7 +20,7 @@
 | FR-005 | Each microservice shall expose REST APIs via FastAPI | Planned |
 | FR-006 | APIs shall use Pydantic models for request/response validation | Planned |
 | FR-007 | APIs shall return appropriate HTTP status codes and error responses | Planned |
-| FR-008 | APIs shall include health check endpoints | Planned |
+| FR-008 | APIs shall include health check endpoints | Implemented (User Service `/health` only) |
 
 ### Database
 

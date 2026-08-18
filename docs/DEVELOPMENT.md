@@ -1,8 +1,8 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 1 — Application Foundation (next)
+> **Current Milestone:** Milestone 1 — Application Foundation (in progress)
 
-This document describes the intended development workflow for the Kubernetes Reliability Platform.
+This document describes the development workflow for the Kubernetes Reliability Platform.
 
 ## Development Philosophy
 
@@ -12,28 +12,67 @@ This document describes the intended development workflow for the Kubernetes Rel
 - Update documentation when implementation changes require it
 - Do not introduce technologies before their milestone
 
-## Python Development Workflow (Planned — Milestone 1+)
+## Prerequisites
 
-Once application development begins:
+- Python 3.10+
+- [uv](https://docs.astral.sh/uv/) (`python -m uv` if installed via pip)
+- Git
+
+## Python Development Workflow
 
 1. Use `uv` for dependency and environment management
-2. Create virtual environments per service or monorepo as designed
+2. Application code lives under `services/<service_name>/`
 3. Use type hints and follow coding standards in `.cursor/rules/coding-style.mdc`
-4. Structure code with clear separation: routers, services, repositories, models, schemas
+4. Structure code with clear separation: routers, schemas, core/config (services/repositories added when needed)
 
-## FastAPI Development Workflow (Planned — Milestone 1+)
+## Local Setup
+
+```bash
+# Install dependencies (creates .venv automatically)
+python -m uv sync --dev
+
+# Copy environment template and adjust if needed
+cp .env.example .env
+```
+
+## Running the User Service
+
+```bash
+# Start the FastAPI application
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8001 --app-dir services/user_service
+
+# Verify health endpoint
+curl http://127.0.0.1:8001/health
+```
+
+Expected response:
+
+```json
+{"status":"ok","service":"user-service","environment":"development"}
+```
+
+API documentation is available at `http://127.0.0.1:8001/docs` when the service is running.
+
+## FastAPI Development Workflow
 
 1. Define Pydantic schemas for request/response models
-2. Implement business logic in service layer
+2. Implement business logic in service layer (when introduced)
 3. Wire endpoints in FastAPI routers
-4. Use dependency injection for database sessions and configuration
-5. Test endpoints with pytest and httpx
+4. Use dependency injection for configuration and database sessions (when introduced)
+5. Test endpoints with pytest and FastAPI TestClient
+
+## Running Tests
+
+```bash
+# Run all unit tests
+python -m uv run pytest tests/unit -v
+```
 
 ## Local Development Philosophy
 
 - The entire platform runs locally
 - No AWS or cloud dependencies for core implementation
-- Use kind for local Kubernetes clusters
+- Use kind for local Kubernetes clusters (Milestone 4+)
 - Use Docker Compose for local multi-service development (Milestone 3+)
 
 ## Cursor Workflow
@@ -61,8 +100,8 @@ See `AGENTS.md` for the complete AI assistant operating model.
 
 1. Write tests alongside implementation
 2. Run unit tests for every code change
-3. Run integration tests when services interact
-4. Run end-to-end tests for full request flows
+3. Run integration tests when services interact (Milestone 2+)
+4. Run end-to-end tests for full request flows (Milestone 2+)
 5. Report test results before requesting commit authorization
 
 See `docs/TESTING.md` for the full testing strategy.
@@ -86,17 +125,11 @@ For each milestone:
 6. Mark milestone tasks complete in the roadmap
 7. Request commit authorization with changed files and test results
 
-## Prerequisites (Current — Milestone 0)
-
-- Git
-- A text editor or IDE (Cursor recommended)
-- GitHub account (for version control)
-
 ## Future Prerequisites (by milestone)
 
 | Milestone | Tools Required |
 |-----------|---------------|
-| 1 | Python 3.x, uv |
+| 1 (remaining) | PostgreSQL (local or container) |
 | 3 | Docker, Docker Compose |
 | 4 | kind, kubectl |
 | 5 | Helm |

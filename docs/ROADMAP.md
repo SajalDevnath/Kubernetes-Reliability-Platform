@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 0 — Engineering Foundation
+> **Last updated:** Milestone 1 — Application Foundation (in progress)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -36,13 +36,13 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Objective:** Set up Python project structure, dependency management with uv, and a single FastAPI service skeleton.
 
 **Major Tasks:**
-- Initialize Python project with uv
-- Define package structure for microservices
-- Create FastAPI application skeleton
-- Set up PostgreSQL connection with SQLAlchemy
-- Implement health check endpoint
-- Add initial unit tests
-- Document local development setup
+- [x] Initialize Python project with uv
+- [x] Define package structure for microservices
+- [x] Create FastAPI application skeleton
+- [ ] Set up PostgreSQL connection with SQLAlchemy
+- [x] Implement health check endpoint
+- [x] Add initial unit tests
+- [x] Document local development setup
 
 **Completion Criteria:**
 - A FastAPI service starts locally
@@ -51,7 +51,9 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Unit tests pass
 - Development workflow is documented
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS
+
+> **Note:** Initial application foundation (uv project, User Service skeleton, `/health` endpoint, unit tests) is complete. PostgreSQL/SQLAlchemy setup remains for a subsequent Milestone 1 task.
 
 ---
 
@@ -380,7 +382,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 
 ```
 Milestone 0  → Engineering Foundation        [COMPLETE]
-Milestone 1  → Application Foundation      [NOT STARTED]
+Milestone 1  → Application Foundation      [IN PROGRESS]
 Milestone 2  → Microservices               [NOT STARTED]
 Milestone 3  → Docker                      [NOT STARTED]
 Milestone 4  → Kubernetes                  [NOT STARTED]

@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Strategy defined. No tests exist yet — application implementation has not started.
+> **Status:** Unit tests available for User Service health endpoint.
 
 ## Philosophy
 
@@ -8,12 +8,12 @@ A task is not complete merely because the application starts. Every change must 
 
 ## Test Levels
 
-### Unit Tests (Planned — Milestone 1)
+### Unit Tests (Milestone 1 — in progress)
 
-- **Scope:** Individual functions, classes, and business logic
-- **Location:** Co-located with service code or in `tests/` per service
-- **Tools:** pytest (to be introduced in Milestone 1)
-- **Status:** Planned
+- **Scope:** Individual functions, classes, and API endpoint behavior
+- **Location:** `tests/unit/`
+- **Tools:** pytest, FastAPI TestClient, httpx
+- **Status:** Active — health endpoint tests implemented
 
 ### Integration Tests (Planned — Milestone 2)
 
@@ -68,17 +68,24 @@ A task is not complete merely because the application starts. Every change must 
 
 ## Currently Available Tests
 
-None. Application implementation has not started.
+| Test File | Coverage |
+|-----------|----------|
+| `tests/unit/test_health.py` | `GET /health` status code, response body, schema shape |
+
+Run with:
+
+```bash
+python -m uv run pytest tests/unit -v
+```
 
 ## Test Directory Structure
 
 ```
 tests/
+├── unit/           # Unit tests (active)
 ├── integration/    # Service + database integration tests (planned)
 └── e2e/            # End-to-end cross-service tests (planned)
 ```
-
-Unit tests will be organized within each service's package structure when Milestone 1 begins.
 
 ## Quality Gates
 

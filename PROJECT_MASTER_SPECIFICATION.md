@@ -349,15 +349,14 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 0 — Engineering Foundation (COMPLETE)
+**Current Milestone:** Milestone 1 — Application Foundation (IN PROGRESS)
 
 **Status:**
-- Repository structure created
-- Documentation written
-- Cursor rules defined
-- Roadmap established
-- Application implementation has NOT started
+- Repository structure and documentation complete (Milestone 0)
+- Python project initialized with uv
+- User Service FastAPI skeleton with `/health` endpoint
+- Unit tests passing for health endpoint
+- PostgreSQL/SQLAlchemy not yet configured
 - No Docker, Kubernetes, or infrastructure files exist
-- No dependencies installed
 
-**Next Milestone:** Milestone 1 — Application Foundation (NOT STARTED)
+**Next Milestone 1 Task:** Set up PostgreSQL connection with SQLAlchemy
