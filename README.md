@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestone 1 in progress.** User Service skeleton is running with a `GET /health` endpoint. PostgreSQL/SQLAlchemy setup is the next Milestone 1 task.
+> **Milestone 1 complete.** User Service foundation with `GET /health` and PostgreSQL/SQLAlchemy database layer. Order and Payment services are not yet implemented.
 
 ## Quick Start
 
@@ -10,6 +10,7 @@ A hands-on learning project that builds Python/FastAPI microservices and progres
 python -m uv sync --dev
 python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8001 --app-dir services/user_service
 python -m uv run pytest tests/unit -v
+python -m uv run pytest tests/integration -v -m integration
 ```
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for full setup instructions.
@@ -60,8 +61,9 @@ Three microservices with simple business logic, designed to create realistic ope
 | Milestone | Name | Status |
 |-----------|------|--------|
 | 0 | Engineering Foundation | COMPLETE |
-| 1 | Application Foundation | IN PROGRESS |
-| 2–17 | See roadmap | NOT STARTED |
+| 1 | Application Foundation | COMPLETE |
+| 2 | Microservices | NOT STARTED |
+| 3–17 | See roadmap | NOT STARTED |
 
 ## Documentation
 

@@ -113,3 +113,17 @@ The root `pyproject.toml` uses `[tool.uv] package = false` because the repositor
 Services are run directly via uvicorn with `--app-dir` rather than installed as editable packages. This avoids unnecessary build configuration while still using uv for dependency management and virtual environments.
 
 **Status:** Accepted
+
+---
+
+## ADR-009 — Synchronous SQLAlchemy for Milestone 1
+
+**Date:** 2026-08-19
+
+**Decision:**
+The User Service database layer will use synchronous SQLAlchemy 2.x APIs with the `psycopg2` driver.
+
+**Reason:**
+The existing FastAPI endpoints are synchronous, and the milestone scope is establishing a minimal database foundation. Synchronous SQLAlchemy keeps the initial implementation simple; async database access can be evaluated later if needed.
+
+**Status:** Accepted

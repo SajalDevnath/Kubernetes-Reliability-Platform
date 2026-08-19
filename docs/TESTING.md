@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Unit tests available for User Service health endpoint.
+> **Status:** Milestone 1 complete — unit and integration tests passing.
 
 ## Philosophy
 
@@ -8,19 +8,19 @@ A task is not complete merely because the application starts. Every change must 
 
 ## Test Levels
 
-### Unit Tests (Milestone 1 — in progress)
+### Unit Tests (Milestone 1 — complete)
 
 - **Scope:** Individual functions, classes, and API endpoint behavior
 - **Location:** `tests/unit/`
 - **Tools:** pytest, FastAPI TestClient, httpx
-- **Status:** Active — health endpoint tests implemented
+- **Status:** Complete — 9 tests passing
 
-### Integration Tests (Planned — Milestone 2)
+### Integration Tests (Milestone 1 — complete)
 
-- **Scope:** Service + database interactions, API endpoint behavior
+- **Scope:** Live PostgreSQL connectivity
 - **Location:** `tests/integration/`
-- **Tools:** pytest, httpx, test database
-- **Status:** Planned
+- **Tools:** pytest, SQLAlchemy
+- **Status:** Complete — PostgreSQL connectivity test passing
 
 ### End-to-End Tests (Planned — Milestone 2+)
 
@@ -71,20 +71,24 @@ A task is not complete merely because the application starts. Every change must 
 | Test File | Coverage |
 |-----------|----------|
 | `tests/unit/test_health.py` | `GET /health` status code, response body, schema shape |
+| `tests/unit/test_database_config.py` | PostgreSQL URL construction and settings defaults |
+| `tests/unit/test_database.py` | SQLAlchemy engine, session factory, `get_db`, declarative Base |
+| `tests/integration/test_database_connectivity.py` | Live PostgreSQL connectivity (`SELECT 1`) |
 
 Run with:
 
 ```bash
 python -m uv run pytest tests/unit -v
+python -m uv run pytest tests/integration -v -m integration
 ```
 
 ## Test Directory Structure
 
 ```
 tests/
-├── unit/           # Unit tests (active)
-├── integration/    # Service + database integration tests (planned)
-└── e2e/            # End-to-end cross-service tests (planned)
+├── unit/           # Unit tests (active — Milestone 1 complete)
+├── integration/    # PostgreSQL connectivity tests (active — Milestone 1 complete)
+└── e2e/            # End-to-end cross-service tests (planned — Milestone 2+)
 ```
 
 ## Quality Gates

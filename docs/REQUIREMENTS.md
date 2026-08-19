@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Partial implementation — User Service health endpoint active.
+> **Status:** Milestone 1 complete — User Service foundation, health endpoint, and PostgreSQL/SQLAlchemy data layer implemented.
 
 ## Functional Requirements
 
@@ -17,18 +17,18 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-005 | Each microservice shall expose REST APIs via FastAPI | Planned |
-| FR-006 | APIs shall use Pydantic models for request/response validation | Planned |
-| FR-007 | APIs shall return appropriate HTTP status codes and error responses | Planned |
+| FR-005 | Each microservice shall expose REST APIs via FastAPI | Partial (User Service health endpoint only) |
+| FR-006 | APIs shall use Pydantic models for request/response validation | Partial (health response schema) |
+| FR-007 | APIs shall return appropriate HTTP status codes and error responses | Partial (health endpoint) |
 | FR-008 | APIs shall include health check endpoints | Implemented (User Service `/health` only) |
 
 ### Database
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-009 | The system shall use PostgreSQL as the database | Planned |
-| FR-010 | Database access shall use SQLAlchemy ORM | Planned |
-| FR-011 | Database configuration shall be externalized via environment variables | Planned |
+| FR-009 | The system shall use PostgreSQL as the database | Implemented (User Service configuration) |
+| FR-010 | Database access shall use SQLAlchemy ORM | Implemented (engine, Base, sessions) |
+| FR-011 | Database configuration shall be externalized via environment variables | Implemented |
 
 ### Containerization
 
@@ -128,7 +128,7 @@
 | ID | Requirement | Status |
 |----|-------------|--------|
 | NFR-005 | Secrets shall never be committed to version control | Planned |
-| NFR-006 | Configuration shall be externalized via environment variables | Planned |
+| NFR-006 | Configuration shall be externalized via environment variables | Implemented |
 | NFR-007 | Kubernetes Secrets shall be used for sensitive cluster configuration | Planned |
 | NFR-008 | AI operations shall follow least-privilege access principles | Planned |
 | NFR-009 | Destructive AI actions shall require explicit human approval | Planned |
@@ -137,15 +137,16 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-010 | Code shall use type hints and follow Python conventions | Planned |
-| NFR-011 | Services shall follow a consistent layered architecture | Planned |
-| NFR-012 | Documentation shall be updated when implementation changes | Planned |
+| NFR-010 | Code shall use type hints and follow Python conventions | Implemented |
+| NFR-011 | Services shall follow a consistent layered architecture | Partial (User Service foundation) |
+| NFR-012 | Documentation shall be updated when implementation changes | Implemented |
 
 ### Testability
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Planned |
+| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Partial (User Service unit + DB integration tests) |
+| NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
 | NFR-014 | Failure scenarios shall be testable and reproducible | Planned |
 | NFR-015 | Observability outputs shall be verifiable | Planned |
 
@@ -153,5 +154,4 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-016 | The platform shall run locally without cloud dependencies | Planned |
 | NFR-017 | Kubernetes shall use kind for local cluster provisioning | Planned |

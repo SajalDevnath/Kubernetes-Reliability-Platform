@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 1 — Application Foundation (in progress)
+> **Current Milestone:** Milestone 2 — Microservices (next)
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -17,6 +17,7 @@ This document describes the development workflow for the Kubernetes Reliability 
 - Python 3.10+
 - [uv](https://docs.astral.sh/uv/) (`python -m uv` if installed via pip)
 - Git
+- PostgreSQL (required for integration connectivity tests; optional for unit tests)
 
 ## Python Development Workflow
 
@@ -58,7 +59,7 @@ API documentation is available at `http://127.0.0.1:8001/docs` when the service 
 1. Define Pydantic schemas for request/response models
 2. Implement business logic in service layer (when introduced)
 3. Wire endpoints in FastAPI routers
-4. Use dependency injection for configuration and database sessions (when introduced)
+4. Use dependency injection for configuration and database sessions via `get_db`
 5. Test endpoints with pytest and FastAPI TestClient
 
 ## Running Tests
@@ -66,7 +67,28 @@ API documentation is available at `http://127.0.0.1:8001/docs` when the service 
 ```bash
 # Run all unit tests
 python -m uv run pytest tests/unit -v
+
+# Run PostgreSQL connectivity integration test (requires running PostgreSQL)
+python -m uv run pytest tests/integration -v -m integration
 ```
+
+The integration test uses `POSTGRES_*` variables from `.env` (or defaults in `.env.example`). It is skipped automatically when PostgreSQL is unavailable.
+
+## Database Configuration
+
+PostgreSQL settings are loaded from environment variables:
+
+| Variable | Default |
+|----------|---------|
+| `POSTGRES_HOST` | `localhost` |
+| `POSTGRES_PORT` | `5432` |
+| `POSTGRES_DB` | `k8s_reliability` |
+| `POSTGRES_USER` | `app_user` |
+| `POSTGRES_PASSWORD` | `change_me` |
+
+Alternatively, set `DATABASE_URL` to override the component-based connection string.
+
+Connectivity can be verified programmatically via `app.db.database.check_database_connection()`.
 
 ## Local Development Philosophy
 
@@ -129,7 +151,7 @@ For each milestone:
 
 | Milestone | Tools Required |
 |-----------|---------------|
-| 1 (remaining) | PostgreSQL (local or container) |
+| 2 | PostgreSQL (for service + database integration) |
 | 3 | Docker, Docker Compose |
 | 4 | kind, kubectl |
 | 5 | Helm |

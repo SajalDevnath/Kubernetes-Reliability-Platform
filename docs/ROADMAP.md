@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 1 — Application Foundation (in progress)
+> **Last updated:** Milestone 1 — Application Foundation (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -39,7 +39,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - [x] Initialize Python project with uv
 - [x] Define package structure for microservices
 - [x] Create FastAPI application skeleton
-- [ ] Set up PostgreSQL connection with SQLAlchemy
+- [x] Set up PostgreSQL connection with SQLAlchemy
 - [x] Implement health check endpoint
 - [x] Add initial unit tests
 - [x] Document local development setup
@@ -51,9 +51,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Unit tests pass
 - Development workflow is documented
 
-**Status:** IN PROGRESS
-
-> **Note:** Initial application foundation (uv project, User Service skeleton, `/health` endpoint, unit tests) is complete. PostgreSQL/SQLAlchemy setup remains for a subsequent Milestone 1 task.
+**Status:** COMPLETE
 
 ---
 
@@ -382,7 +380,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 
 ```
 Milestone 0  → Engineering Foundation        [COMPLETE]
-Milestone 1  → Application Foundation      [IN PROGRESS]
+Milestone 1  → Application Foundation      [COMPLETE]
 Milestone 2  → Microservices               [NOT STARTED]
 Milestone 3  → Docker                      [NOT STARTED]
 Milestone 4  → Kubernetes                  [NOT STARTED]

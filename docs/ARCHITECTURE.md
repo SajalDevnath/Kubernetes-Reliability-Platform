@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** In progress — User Service skeleton implemented (health endpoint only).
+> **Status:** Milestone 1 complete — User Service foundation and PostgreSQL/SQLAlchemy data layer implemented.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -27,10 +27,10 @@ User Service (FastAPI)          Client
 ### User Service
 
 - **Purpose:** User management (create, read, update users)
-- **Technology:** Python, FastAPI, Pydantic, SQLAlchemy (planned)
-- **Database:** PostgreSQL (planned)
+- **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
+- **Database:** PostgreSQL
 - **Location:** `services/user_service/`
-- **Status:** Skeleton implemented — `GET /health` only; business APIs planned
+- **Status:** Foundation complete — `GET /health`, configuration, and database layer implemented; user management APIs planned (Milestone 2)
 
 ### Order Service (Planned — Milestone 2)
 
@@ -47,11 +47,12 @@ User Service (FastAPI)          Client
 - **Database:** PostgreSQL
 - **Status:** Planned
 
-## Data Layer (Planned — Milestone 1, remaining tasks)
+## Data Layer
 
 - **Database:** PostgreSQL
-- **ORM:** SQLAlchemy
-- **Status:** Planned — not yet configured
+- **ORM:** SQLAlchemy 2.x (synchronous)
+- **Location:** `services/user_service/app/db/`
+- **Status:** Implemented — engine, session factory, declarative Base, `get_db` dependency, and connectivity check; ORM models planned (Milestone 2)
 
 ## Containerization (Planned — Milestone 3)
 
@@ -110,7 +111,9 @@ services/user_service/
     │   └── routes/
     │       └── health.py    # Health check endpoint
     ├── core/
-    │   └── config.py        # Environment-based settings
+    │   └── config.py        # Environment-based settings (incl. PostgreSQL)
+    ├── db/
+    │   └── database.py      # SQLAlchemy engine, Base, sessions, connectivity check
     └── schemas/
         └── health.py        # Pydantic response models
 ```
