@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestone 1 complete.** User Service foundation with `GET /health` and PostgreSQL/SQLAlchemy database layer. Order and Payment services are not yet implemented.
+> **Milestone 2 in progress.** User Service CRUD is complete and verified against PostgreSQL. Order and Payment services are not yet built.
 
 ## Quick Start
 
@@ -62,7 +62,7 @@ Three microservices with simple business logic, designed to create realistic ope
 |-----------|------|--------|
 | 0 | Engineering Foundation | COMPLETE |
 | 1 | Application Foundation | COMPLETE |
-| 2 | Microservices | NOT STARTED |
+| 2 | Microservices | IN PROGRESS |
 | 3–17 | See roadmap | NOT STARTED |
 
 ## Documentation

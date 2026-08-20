@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 1 complete — unit and integration tests passing.
+> **Status:** Milestone 2 in progress — User Service CRUD complete and verified (35 tests passing).
 
 ## Philosophy
 
@@ -8,19 +8,19 @@ A task is not complete merely because the application starts. Every change must 
 
 ## Test Levels
 
-### Unit Tests (Milestone 1 — complete)
+### Unit Tests (Milestone 2 — User Service complete)
 
-- **Scope:** Individual functions, classes, and API endpoint behavior
+- **Scope:** Individual functions, classes, API endpoint behavior, schemas, repository, and service logic
 - **Location:** `tests/unit/`
-- **Tools:** pytest, FastAPI TestClient, httpx
-- **Status:** Complete — 9 tests passing
+- **Tools:** pytest, FastAPI TestClient, httpx, SQLite (repository tests)
+- **Status:** Complete for User Service — 25 tests passing
 
-### Integration Tests (Milestone 1 — complete)
+### Integration Tests (Milestone 2 — User Service complete)
 
-- **Scope:** Live PostgreSQL connectivity
+- **Scope:** Live PostgreSQL connectivity and User CRUD API flows
 - **Location:** `tests/integration/`
-- **Tools:** pytest, SQLAlchemy
-- **Status:** Complete — PostgreSQL connectivity test passing
+- **Tools:** pytest, SQLAlchemy, FastAPI TestClient
+- **Status:** Complete for User Service — 10 tests passing against PostgreSQL
 
 ### End-to-End Tests (Planned — Milestone 2+)
 
@@ -73,7 +73,11 @@ A task is not complete merely because the application starts. Every change must 
 | `tests/unit/test_health.py` | `GET /health` status code, response body, schema shape |
 | `tests/unit/test_database_config.py` | PostgreSQL URL construction and settings defaults |
 | `tests/unit/test_database.py` | SQLAlchemy engine, session factory, `get_db`, declarative Base |
+| `tests/unit/test_user_schemas.py` | User Pydantic schema validation |
+| `tests/unit/test_user_repository.py` | User repository CRUD (SQLite) |
+| `tests/unit/test_user_service.py` | User service business logic and error handling |
 | `tests/integration/test_database_connectivity.py` | Live PostgreSQL connectivity (`SELECT 1`) |
+| `tests/integration/test_users_api.py` | User CRUD API against PostgreSQL |
 
 Run with:
 
@@ -86,9 +90,9 @@ python -m uv run pytest tests/integration -v -m integration
 
 ```
 tests/
-├── unit/           # Unit tests (active — Milestone 1 complete)
-├── integration/    # PostgreSQL connectivity tests (active — Milestone 1 complete)
-└── e2e/            # End-to-end cross-service tests (planned — Milestone 2+)
+├── unit/           # Unit tests (User Service complete — 25 passing)
+├── integration/    # PostgreSQL + User CRUD API tests (User Service complete — 10 passing)
+└── e2e/            # End-to-end cross-service tests (planned — Milestone 2 remaining)
 ```
 
 ## Quality Gates

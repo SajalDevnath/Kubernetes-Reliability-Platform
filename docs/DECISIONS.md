@@ -127,3 +127,19 @@ The User Service database layer will use synchronous SQLAlchemy 2.x APIs with th
 The existing FastAPI endpoints are synchronous, and the milestone scope is establishing a minimal database foundation. Synchronous SQLAlchemy keeps the initial implementation simple; async database access can be evaluated later if needed.
 
 **Status:** Accepted
+
+---
+
+## ADR-010 — Minimal User Model Fields
+
+**Date:** 2026-08-20
+
+**Decision:**
+The User Service will use a minimal user model with `email`, `full_name`, and `is_active` fields. No password or authentication fields are included at this stage.
+
+**Reason:**
+The project specification does not define detailed user fields, and authentication is out of scope for Milestone 2. A minimal model supports CRUD demonstration without introducing unnecessary security complexity before it is required.
+
+**Status:** Accepted
+
+**Verification:** User Service CRUD and PostgreSQL integration tests passing (2026-08-20).

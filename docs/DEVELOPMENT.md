@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 2 — Microservices (next)
+> **Current Milestone:** Milestone 2 — Microservices (in progress)
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -54,6 +54,24 @@ Expected response:
 
 API documentation is available at `http://127.0.0.1:8001/docs` when the service is running.
 
+### User CRUD Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/users` | Create a user |
+| `GET` | `/users` | List users (supports `skip` and `limit`) |
+| `GET` | `/users/{user_id}` | Get a user by ID |
+| `PATCH` | `/users/{user_id}` | Update a user |
+| `DELETE` | `/users/{user_id}` | Delete a user |
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8001/users \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","full_name":"Test User"}'
+```
+
 ## FastAPI Development Workflow
 
 1. Define Pydantic schemas for request/response models
@@ -72,7 +90,7 @@ python -m uv run pytest tests/unit -v
 python -m uv run pytest tests/integration -v -m integration
 ```
 
-The integration test uses `POSTGRES_*` variables from `.env` (or defaults in `.env.example`). It is skipped automatically when PostgreSQL is unavailable.
+The integration test uses `POSTGRES_*` variables from `.env` (or defaults in `.env.example`). PostgreSQL must be running for integration tests to execute.
 
 ## Database Configuration
 

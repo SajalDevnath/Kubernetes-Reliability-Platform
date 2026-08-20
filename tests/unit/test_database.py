@@ -39,4 +39,4 @@ def test_get_db_yields_and_closes_session() -> None:
 
 def test_declarative_base_is_configured() -> None:
     assert hasattr(Base, "metadata")
-    assert Base.metadata.tables == {}
+    assert "users" in Base.metadata.tables

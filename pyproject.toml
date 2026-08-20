@@ -5,6 +5,7 @@ description = "Kubernetes Reliability Platform - hands-on SRE and cloud-native l
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "email-validator>=2.3.0",
     "fastapi>=0.141.1",
     "psycopg2-binary>=2.9.12",
     "pydantic-settings>=2.15.0",

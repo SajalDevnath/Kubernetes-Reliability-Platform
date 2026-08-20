@@ -349,13 +349,12 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 1 — Application Foundation (COMPLETE)
+**Current Milestone:** Milestone 2 — Microservices (IN PROGRESS)
 
 **Status:**
-- Repository structure and documentation complete (Milestone 0)
-- User Service FastAPI skeleton with `/health` endpoint
-- SQLAlchemy/PostgreSQL configuration, engine, sessions, and connectivity check implemented
-- Unit tests (9) and integration tests (1) passing
+- Milestone 1 complete (User Service foundation, health endpoint, PostgreSQL/SQLAlchemy)
+- User Service CRUD APIs complete and verified (`/users` — 25 unit tests, 10 integration tests passing)
+- Order and Payment services not yet implemented
 - No Docker, Kubernetes, or infrastructure files exist
 
-**Next Milestone:** Milestone 2 — Microservices (NOT STARTED)
+**Next Milestone 2 Task:** Implement Order Service with Payment Service integration

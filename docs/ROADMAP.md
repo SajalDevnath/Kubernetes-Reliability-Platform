@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 1 — Application Foundation (complete)
+> **Last updated:** Milestone 2 — Microservices (in progress)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -60,12 +60,12 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Objective:** Implement User, Order, and Payment services with REST APIs and service-to-service communication.
 
 **Major Tasks:**
-- Implement User Service CRUD APIs
-- Implement Order Service with Payment Service integration
-- Implement Payment Service
-- Define Pydantic schemas for all endpoints
-- Add integration tests
-- Add end-to-end tests for cross-service flows
+- [x] Implement User Service CRUD APIs
+- [ ] Implement Order Service with Payment Service integration
+- [ ] Implement Payment Service
+- [ ] Define Pydantic schemas for all endpoints
+- [ ] Add integration tests
+- [ ] Add end-to-end tests for cross-service flows
 
 **Completion Criteria:**
 - All three services run locally
@@ -73,7 +73,9 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Order → Payment communication works
 - Integration and E2E tests pass
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS
+
+> **Note:** User Service CRUD APIs are **complete and verified** (25 unit tests, 10 integration tests passing against PostgreSQL). Order and Payment services remain for subsequent Milestone 2 tasks.
 
 ---
 
@@ -381,7 +383,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 ```
 Milestone 0  → Engineering Foundation        [COMPLETE]
 Milestone 1  → Application Foundation      [COMPLETE]
-Milestone 2  → Microservices               [NOT STARTED]
+Milestone 2  → Microservices               [IN PROGRESS]
 Milestone 3  → Docker                      [NOT STARTED]
 Milestone 4  → Kubernetes                  [NOT STARTED]
 Milestone 5  → Helm                        [NOT STARTED]

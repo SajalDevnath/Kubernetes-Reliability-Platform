@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 1 complete — User Service foundation and PostgreSQL/SQLAlchemy data layer implemented.
+> **Status:** Milestone 2 in progress — User Service CRUD complete and verified.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -30,7 +30,7 @@ User Service (FastAPI)          Client
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/user_service/`
-- **Status:** Foundation complete — `GET /health`, configuration, and database layer implemented; user management APIs planned (Milestone 2)
+- **Status:** Complete — `GET /health` and `/users` CRUD endpoints verified against PostgreSQL
 
 ### Order Service (Planned — Milestone 2)
 
@@ -52,7 +52,7 @@ User Service (FastAPI)          Client
 - **Database:** PostgreSQL
 - **ORM:** SQLAlchemy 2.x (synchronous)
 - **Location:** `services/user_service/app/db/`
-- **Status:** Implemented — engine, session factory, declarative Base, `get_db` dependency, and connectivity check; ORM models planned (Milestone 2)
+- **Status:** Implemented — engine, session factory, declarative Base, `get_db` dependency, connectivity check, and `User` ORM model
 
 ## Containerization (Planned — Milestone 3)
 
@@ -109,13 +109,22 @@ services/user_service/
     ├── api/
     │   ├── router.py        # Aggregates API routers
     │   └── routes/
-    │       └── health.py    # Health check endpoint
+    │       ├── health.py    # Health check endpoint
+    │       └── users.py     # User CRUD endpoints
     ├── core/
-    │   └── config.py        # Environment-based settings (incl. PostgreSQL)
+    │   ├── config.py        # Environment-based settings (incl. PostgreSQL)
+    │   └── exceptions.py    # Application exceptions
     ├── db/
     │   └── database.py      # SQLAlchemy engine, Base, sessions, connectivity check
+    ├── models/
+    │   └── user.py          # User ORM model
+    ├── repositories/
+    │   └── user.py          # User data access
+    ├── services/
+    │   └── user.py          # User business logic
     └── schemas/
-        └── health.py        # Pydantic response models
+        ├── health.py        # Health response model
+        └── user.py          # User request/response schemas
 ```
 
 ## Design Principles

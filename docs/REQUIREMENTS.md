@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 1 complete — User Service foundation, health endpoint, and PostgreSQL/SQLAlchemy data layer implemented.
+> **Status:** Milestone 2 in progress — User Service CRUD complete and verified.
 
 ## Functional Requirements
 
@@ -8,7 +8,7 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-001 | The system shall provide a User Service for user management | Planned |
+| FR-001 | The system shall provide a User Service for user management | Implemented (User Service CRUD) |
 | FR-002 | The system shall provide an Order Service for order management | Planned |
 | FR-003 | The system shall provide a Payment Service for payment processing | Planned |
 | FR-004 | Order Service shall communicate with Payment Service for payment operations | Planned |
@@ -17,17 +17,17 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-005 | Each microservice shall expose REST APIs via FastAPI | Partial (User Service health endpoint only) |
-| FR-006 | APIs shall use Pydantic models for request/response validation | Partial (health response schema) |
-| FR-007 | APIs shall return appropriate HTTP status codes and error responses | Partial (health endpoint) |
-| FR-008 | APIs shall include health check endpoints | Implemented (User Service `/health` only) |
+| FR-005 | Each microservice shall expose REST APIs via FastAPI | Partial (User Service complete; Order/Payment planned) |
+| FR-006 | APIs shall use Pydantic models for request/response validation | Partial (User Service complete; Order/Payment planned) |
+| FR-007 | APIs shall return appropriate HTTP status codes and error responses | Partial (User Service complete; Order/Payment planned) |
+| FR-008 | APIs shall include health check endpoints | Implemented (User Service `/health`) |
 
 ### Database
 
 | ID | Requirement | Status |
 |----|-------------|--------|
 | FR-009 | The system shall use PostgreSQL as the database | Implemented (User Service configuration) |
-| FR-010 | Database access shall use SQLAlchemy ORM | Implemented (engine, Base, sessions) |
+| FR-010 | Database access shall use SQLAlchemy ORM | Implemented (engine, Base, sessions, User model) |
 | FR-011 | Database configuration shall be externalized via environment variables | Implemented |
 
 ### Containerization
@@ -138,14 +138,14 @@
 | ID | Requirement | Status |
 |----|-------------|--------|
 | NFR-010 | Code shall use type hints and follow Python conventions | Implemented |
-| NFR-011 | Services shall follow a consistent layered architecture | Partial (User Service foundation) |
+| NFR-011 | Services shall follow a consistent layered architecture | Partial (User Service complete; Order/Payment planned) |
 | NFR-012 | Documentation shall be updated when implementation changes | Implemented |
 
 ### Testability
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Partial (User Service unit + DB integration tests) |
+| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Partial (User Service: 25 unit + 10 integration; E2E planned) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
 | NFR-014 | Failure scenarios shall be testable and reproducible | Planned |
 | NFR-015 | Observability outputs shall be verifiable | Planned |
