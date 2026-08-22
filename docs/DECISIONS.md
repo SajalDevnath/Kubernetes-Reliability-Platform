@@ -157,3 +157,5 @@ The Order Service will use a minimal `Order` model with `user_id`, `status`, and
 The project specification defines order management and future Order → Payment communication but does not specify detailed order fields. `user_id` links an order to a user, `status` supports order lifecycle and payment outcomes, and `total_amount` supports payment processing. Omitting a cross-service foreign key follows microservice boundaries while sharing PostgreSQL for local development.
 
 **Status:** Accepted
+
+**Verification:** Order Service CRUD and PostgreSQL integration tests passing (2026-08-22).

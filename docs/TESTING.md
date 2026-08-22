@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 2 in progress — User Service CRUD complete and verified (35 tests passing).
+> **Status:** Milestone 2 in progress — User Service and Order Service CRUD complete and verified (67 tests passing).
 
 ## Philosophy
 
@@ -8,19 +8,19 @@ A task is not complete merely because the application starts. Every change must 
 
 ## Test Levels
 
-### Unit Tests (Milestone 2 — User Service complete)
+### Unit Tests (Milestone 2 — User and Order services complete)
 
 - **Scope:** Individual functions, classes, API endpoint behavior, schemas, repository, and service logic
 - **Location:** `tests/unit/`
 - **Tools:** pytest, FastAPI TestClient, httpx, SQLite (repository tests)
-- **Status:** Complete for User Service — 25 tests passing
+- **Status:** Complete for User Service (25 tests) and Order Service (23 tests) — 48 unit tests passing
 
-### Integration Tests (Milestone 2 — User Service complete)
+### Integration Tests (Milestone 2 — User and Order services complete)
 
-- **Scope:** Live PostgreSQL connectivity and User CRUD API flows
+- **Scope:** Live PostgreSQL connectivity and User/Order CRUD API flows
 - **Location:** `tests/integration/`
 - **Tools:** pytest, SQLAlchemy, FastAPI TestClient
-- **Status:** Complete for User Service — 10 tests passing against PostgreSQL
+- **Status:** Complete for User Service (10 tests) and Order Service (9 tests) — 19 integration tests passing against PostgreSQL
 
 ### End-to-End Tests (Planned — Milestone 2+)
 
@@ -76,8 +76,12 @@ A task is not complete merely because the application starts. Every change must 
 | `tests/unit/test_user_schemas.py` | User Pydantic schema validation |
 | `tests/unit/test_user_repository.py` | User repository CRUD (SQLite) |
 | `tests/unit/test_user_service.py` | User service business logic and error handling |
+| `tests/unit/order_service/test_order_foundation.py` | Order model, schemas, and metadata |
+| `tests/unit/order_service/test_order_repository.py` | Order repository CRUD (SQLite) |
+| `tests/unit/order_service/test_order_service.py` | Order service business logic and error handling |
 | `tests/integration/test_database_connectivity.py` | Live PostgreSQL connectivity (`SELECT 1`) |
 | `tests/integration/test_users_api.py` | User CRUD API against PostgreSQL |
+| `tests/integration/order_service/test_orders_api.py` | Order CRUD API against PostgreSQL |
 
 Run with:
 
@@ -90,9 +94,11 @@ python -m uv run pytest tests/integration -v -m integration
 
 ```
 tests/
-├── unit/           # Unit tests (User Service complete — 25 passing)
-├── integration/    # PostgreSQL + User CRUD API tests (User Service complete — 10 passing)
-└── e2e/            # End-to-end cross-service tests (planned — Milestone 2 remaining)
+├── unit/                          # Unit tests (48 passing)
+│   └── order_service/             # Order Service unit tests (23 passing)
+├── integration/                   # PostgreSQL + API tests (19 passing)
+│   └── order_service/             # Order Service integration tests (9 passing)
+└── e2e/                           # End-to-end cross-service tests (planned)
 ```
 
 ## Quality Gates

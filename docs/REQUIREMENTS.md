@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 2 in progress — User Service CRUD complete and verified.
+> **Status:** Milestone 2 in progress — User Service and Order Service CRUD complete and verified.
 
 ## Functional Requirements
 
@@ -9,7 +9,7 @@
 | ID | Requirement | Status |
 |----|-------------|--------|
 | FR-001 | The system shall provide a User Service for user management | Implemented (User Service CRUD) |
-| FR-002 | The system shall provide an Order Service for order management | Planned |
+| FR-002 | The system shall provide an Order Service for order management | Implemented (Order Service CRUD) |
 | FR-003 | The system shall provide a Payment Service for payment processing | Planned |
 | FR-004 | Order Service shall communicate with Payment Service for payment operations | Planned |
 
@@ -17,17 +17,17 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-005 | Each microservice shall expose REST APIs via FastAPI | Partial (User Service complete; Order/Payment planned) |
-| FR-006 | APIs shall use Pydantic models for request/response validation | Partial (User Service complete; Order/Payment planned) |
-| FR-007 | APIs shall return appropriate HTTP status codes and error responses | Partial (User Service complete; Order/Payment planned) |
+| FR-005 | Each microservice shall expose REST APIs via FastAPI | Partial (User and Order services complete; Payment planned) |
+| FR-006 | APIs shall use Pydantic models for request/response validation | Partial (User and Order services complete; Payment planned) |
+| FR-007 | APIs shall return appropriate HTTP status codes and error responses | Partial (User and Order services complete; Payment planned) |
 | FR-008 | APIs shall include health check endpoints | Implemented (User Service `/health`) |
 
 ### Database
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-009 | The system shall use PostgreSQL as the database | Implemented (User Service configuration) |
-| FR-010 | Database access shall use SQLAlchemy ORM | Implemented (engine, Base, sessions, User model) |
+| FR-009 | The system shall use PostgreSQL as the database | Implemented (User and Order services) |
+| FR-010 | Database access shall use SQLAlchemy ORM | Implemented (engine, Base, sessions, User and Order models) |
 | FR-011 | Database configuration shall be externalized via environment variables | Implemented |
 
 ### Containerization

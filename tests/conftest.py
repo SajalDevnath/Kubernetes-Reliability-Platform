@@ -39,9 +39,12 @@ def pytest_runtest_setup(item) -> None:
 def order_service_modules():
     """Import Order Service modules with the correct service path."""
     _set_service_path(ORDER_SERVICE_ROOT)
+    from app.core.exceptions import InvalidOrderStateError, OrderNotFoundError
     from app.db.database import Base
     from app.models.order import Order, OrderStatus
+    from app.repositories.order import OrderRepository
     from app.schemas.order import OrderCreate, OrderUpdate
+    from app.services.order import OrderService
 
     return {
         "Base": Base,
@@ -49,4 +52,8 @@ def order_service_modules():
         "OrderStatus": OrderStatus,
         "OrderCreate": OrderCreate,
         "OrderUpdate": OrderUpdate,
+        "OrderRepository": OrderRepository,
+        "OrderService": OrderService,
+        "OrderNotFoundError": OrderNotFoundError,
+        "InvalidOrderStateError": InvalidOrderStateError,
     }

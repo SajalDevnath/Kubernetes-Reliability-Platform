@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 2 in progress — User Service CRUD complete and verified.
+> **Status:** Milestone 2 in progress — User Service and Order Service CRUD complete and verified.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -32,14 +32,14 @@ User Service (FastAPI)          Client
 - **Location:** `services/user_service/`
 - **Status:** Complete — `GET /health` and `/users` CRUD endpoints verified against PostgreSQL
 
-### Order Service (Milestone 2 — foundation in progress)
+### Order Service
 
-- **Purpose:** Order management; communicates with Payment Service
+- **Purpose:** Order management (CRUD); future Payment Service integration planned
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/order_service/`
-- **Dependencies:** Payment Service (planned)
-- **Status:** Foundation — Order ORM model, schemas, and package structure defined; API/repository/service layers not yet implemented
+- **Dependencies:** Payment Service (planned — not yet integrated)
+- **Status:** Complete — `/orders` CRUD endpoints verified against PostgreSQL (23 unit tests, 9 integration tests passing)
 
 ### Payment Service
 
@@ -133,19 +133,36 @@ services/user_service/
 ```
 services/order_service/
 └── app/
+    ├── main.py              # FastAPI application entry point
+    ├── api/
+    │   ├── router.py        # Aggregates API routers
+    │   └── routes/
+    │       └── orders.py    # Order CRUD endpoints
     ├── core/
-    │   └── config.py        # Environment-based settings (port 8002)
+    │   ├── config.py        # Environment-based settings (port 8002)
+    │   └── exceptions.py    # OrderNotFoundError, InvalidOrderStateError
     ├── db/
     │   └── database.py      # SQLAlchemy engine, Base, sessions
     ├── models/
     │   └── order.py         # Order ORM model and OrderStatus enum
-    ├── schemas/
-    │   └── order.py         # Order request/response schemas
-    ├── repositories/          # Data access (planned — next phase)
-    ├── services/              # Business logic (planned — next phase)
-    └── api/
-        └── routes/            # API endpoints (planned — next phase)
+    ├── repositories/
+    │   └── order.py         # Order data access
+    ├── services/
+    │   └── order.py         # Order business logic
+    └── schemas/
+        └── order.py         # Order request/response schemas
 ```
+
+### Order Model
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | integer | Primary key |
+| `user_id` | integer | Reference to User Service (no cross-service FK) |
+| `status` | enum | `pending`, `paid`, `cancelled` (default: `pending`) |
+| `total_amount` | decimal(10,2) | Must be positive |
+| `created_at` | datetime | Set on creation |
+| `updated_at` | datetime | Updated on modification |
 
 ## Design Principles
 

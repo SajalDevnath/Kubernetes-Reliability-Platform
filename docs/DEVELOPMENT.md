@@ -72,6 +72,36 @@ curl -X POST http://127.0.0.1:8001/users \
   -d '{"email":"user@example.com","full_name":"Test User"}'
 ```
 
+## Running the Order Service
+
+```bash
+# Start the FastAPI application
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8002 --app-dir services/order_service
+
+# Verify API documentation
+curl http://127.0.0.1:8002/docs
+```
+
+API documentation is available at `http://127.0.0.1:8002/docs` when the service is running.
+
+### Order CRUD Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/orders` | Create an order |
+| `GET` | `/orders` | List orders (supports `skip` and `limit`) |
+| `GET` | `/orders/{order_id}` | Get an order by ID |
+| `PATCH` | `/orders/{order_id}` | Update an order |
+| `DELETE` | `/orders/{order_id}` | Delete an order |
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8002/orders \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":1,"total_amount":"49.99"}'
+```
+
 ## FastAPI Development Workflow
 
 1. Define Pydantic schemas for request/response models

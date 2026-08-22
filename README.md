@@ -2,13 +2,14 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestone 2 in progress.** User Service CRUD is complete and verified against PostgreSQL. Order and Payment services are not yet built.
+> **Milestone 2 in progress.** User Service and Order Service CRUD are complete and verified against PostgreSQL. Payment Service and cross-service communication are not yet built.
 
 ## Quick Start
 
 ```bash
 python -m uv sync --dev
 python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8001 --app-dir services/user_service
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8002 --app-dir services/order_service
 python -m uv run pytest tests/unit -v
 python -m uv run pytest tests/integration -v -m integration
 ```
