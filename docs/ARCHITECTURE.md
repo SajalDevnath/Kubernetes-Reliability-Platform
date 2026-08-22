@@ -32,13 +32,14 @@ User Service (FastAPI)          Client
 - **Location:** `services/user_service/`
 - **Status:** Complete — `GET /health` and `/users` CRUD endpoints verified against PostgreSQL
 
-### Order Service (Planned — Milestone 2)
+### Order Service (Milestone 2 — foundation in progress)
 
 - **Purpose:** Order management; communicates with Payment Service
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
-- **Dependencies:** Payment Service
-- **Status:** Planned
+- **Location:** `services/order_service/`
+- **Dependencies:** Payment Service (planned)
+- **Status:** Foundation — Order ORM model, schemas, and package structure defined; API/repository/service layers not yet implemented
 
 ### Payment Service
 
@@ -125,6 +126,25 @@ services/user_service/
     └── schemas/
         ├── health.py        # Health response model
         └── user.py          # User request/response schemas
+```
+
+## Order Service Package Structure
+
+```
+services/order_service/
+└── app/
+    ├── core/
+    │   └── config.py        # Environment-based settings (port 8002)
+    ├── db/
+    │   └── database.py      # SQLAlchemy engine, Base, sessions
+    ├── models/
+    │   └── order.py         # Order ORM model and OrderStatus enum
+    ├── schemas/
+    │   └── order.py         # Order request/response schemas
+    ├── repositories/          # Data access (planned — next phase)
+    ├── services/              # Business logic (planned — next phase)
+    └── api/
+        └── routes/            # API endpoints (planned — next phase)
 ```
 
 ## Design Principles

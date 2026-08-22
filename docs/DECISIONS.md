@@ -143,3 +143,17 @@ The project specification does not define detailed user fields, and authenticati
 **Status:** Accepted
 
 **Verification:** User Service CRUD and PostgreSQL integration tests passing (2026-08-20).
+
+---
+
+## ADR-011 — Minimal Order Model Fields
+
+**Date:** 2026-08-22
+
+**Decision:**
+The Order Service will use a minimal `Order` model with `user_id`, `status`, and `total_amount` fields, plus standard timestamps. `user_id` is stored as an integer reference to the User Service without a database foreign key constraint. `OrderStatus` values are `pending`, `paid`, and `cancelled`.
+
+**Reason:**
+The project specification defines order management and future Order → Payment communication but does not specify detailed order fields. `user_id` links an order to a user, `status` supports order lifecycle and payment outcomes, and `total_amount` supports payment processing. Omitting a cross-service foreign key follows microservice boundaries while sharing PostgreSQL for local development.
+
+**Status:** Accepted
