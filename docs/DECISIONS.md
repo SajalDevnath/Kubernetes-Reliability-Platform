@@ -159,3 +159,17 @@ The project specification defines order management and future Order → Payment 
 **Status:** Accepted
 
 **Verification:** Order Service CRUD and PostgreSQL integration tests passing (2026-08-22).
+
+---
+
+## ADR-012 — Minimal Payment Model Fields
+
+**Date:** 2026-08-23
+
+**Decision:**
+The Payment Service will use a minimal `Payment` model with `order_id`, `amount`, and `status` fields, plus standard timestamps. `order_id` is stored as an integer reference to the Order Service without a database foreign key constraint. `PaymentStatus` values are `pending`, `successful`, and `failed`. No card numbers, CVV, or other sensitive payment credentials are stored.
+
+**Reason:**
+The project specification defines payment processing and future Order → Payment communication but does not specify detailed payment fields. `order_id` links a payment to an order, `amount` records the payment value, and `status` tracks payment outcome. Omitting a cross-service foreign key follows microservice boundaries while sharing PostgreSQL for local development. Sensitive payment data is excluded by design.
+
+**Status:** Accepted

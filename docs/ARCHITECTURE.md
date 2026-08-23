@@ -41,12 +41,15 @@ User Service (FastAPI)          Client
 - **Dependencies:** Payment Service (planned — not yet integrated)
 - **Status:** Complete — `/orders` CRUD endpoints verified against PostgreSQL (23 unit tests, 9 integration tests passing)
 
-### Payment Service
+### Payment Service (Milestone 2 — foundation in progress)
 
-- **Purpose:** Payment processing for orders
+- **Purpose:** Payment processing for orders; future Order Service integration planned
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
-- **Status:** Planned
+- **Location:** `services/payment_service/`
+- **Port:** 8003
+- **Dependencies:** Order Service (reference via `order_id` only — no cross-service FK or HTTP integration yet)
+- **Status:** Foundation — Payment ORM model, schemas, and package structure defined; API/repository/service layers not yet implemented
 
 ## Data Layer
 
@@ -161,6 +164,36 @@ services/order_service/
 | `user_id` | integer | Reference to User Service (no cross-service FK) |
 | `status` | enum | `pending`, `paid`, `cancelled` (default: `pending`) |
 | `total_amount` | decimal(10,2) | Must be positive |
+| `created_at` | datetime | Set on creation |
+| `updated_at` | datetime | Updated on modification |
+
+## Payment Service Package Structure
+
+```
+services/payment_service/
+└── app/
+    ├── core/
+    │   └── config.py        # Environment-based settings (port 8003)
+    ├── db/
+    │   └── database.py      # SQLAlchemy engine, Base, sessions
+    ├── models/
+    │   └── payment.py       # Payment ORM model and PaymentStatus enum
+    ├── schemas/
+    │   └── payment.py       # Payment request/response schemas
+    ├── repositories/          # Data access (planned — next phase)
+    ├── services/              # Business logic (planned — next phase)
+    └── api/
+        └── routes/            # API endpoints (planned — next phase)
+```
+
+### Payment Model
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | integer | Primary key |
+| `order_id` | integer | Reference to Order Service (no cross-service FK) |
+| `amount` | decimal(10,2) | Must be positive |
+| `status` | enum | `pending`, `successful`, `failed` (default: `pending`) |
 | `created_at` | datetime | Set on creation |
 | `updated_at` | datetime | Updated on modification |
 

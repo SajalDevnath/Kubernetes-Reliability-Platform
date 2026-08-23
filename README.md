@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestone 2 in progress.** User Service and Order Service CRUD are complete and verified against PostgreSQL. Payment Service and cross-service communication are not yet built.
+> **Milestone 2 in progress.** User Service and Order Service CRUD are complete and verified against PostgreSQL. Payment Service foundation is in place; Payment CRUD APIs and cross-service communication are not yet built.
 
 ## Quick Start
 

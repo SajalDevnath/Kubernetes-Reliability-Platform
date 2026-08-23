@@ -355,8 +355,9 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 - Milestone 1 complete (User Service foundation, health endpoint, PostgreSQL/SQLAlchemy)
 - User Service CRUD APIs complete and verified (`/users` — 25 unit tests, 10 integration tests passing)
 - Order Service CRUD APIs complete and verified (`/orders` — 23 unit tests, 9 integration tests passing)
-- Payment Service not yet implemented
+- Payment Service foundation in place (ORM model, schemas, package structure — 12 unit tests)
+- Payment Service CRUD APIs not yet implemented
 - No cross-service HTTP communication yet
 - No Docker, Kubernetes, or infrastructure files exist
 
-**Next Milestone 2 Task:** Implement Payment Service and Order → Payment integration
+**Next Milestone 2 Task:** Implement Payment Service CRUD APIs and Order → Payment integration

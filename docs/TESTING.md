@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 2 in progress — User Service and Order Service CRUD complete and verified (67 tests passing).
+> **Status:** Milestone 2 in progress — User Service and Order Service CRUD complete; Payment Service foundation complete (60 unit tests passing).
 
 ## Philosophy
 
@@ -13,7 +13,7 @@ A task is not complete merely because the application starts. Every change must 
 - **Scope:** Individual functions, classes, API endpoint behavior, schemas, repository, and service logic
 - **Location:** `tests/unit/`
 - **Tools:** pytest, FastAPI TestClient, httpx, SQLite (repository tests)
-- **Status:** Complete for User Service (25 tests) and Order Service (23 tests) — 48 unit tests passing
+- **Status:** Complete for User Service (25 tests) and Order Service (23 tests); Payment Service foundation (12 tests) — 60 unit tests passing
 
 ### Integration Tests (Milestone 2 — User and Order services complete)
 
@@ -79,6 +79,7 @@ A task is not complete merely because the application starts. Every change must 
 | `tests/unit/order_service/test_order_foundation.py` | Order model, schemas, and metadata |
 | `tests/unit/order_service/test_order_repository.py` | Order repository CRUD (SQLite) |
 | `tests/unit/order_service/test_order_service.py` | Order service business logic and error handling |
+| `tests/unit/payment_service/test_payment_foundation.py` | Payment model, schemas, and metadata |
 | `tests/integration/test_database_connectivity.py` | Live PostgreSQL connectivity (`SELECT 1`) |
 | `tests/integration/test_users_api.py` | User CRUD API against PostgreSQL |
 | `tests/integration/order_service/test_orders_api.py` | Order CRUD API against PostgreSQL |
@@ -94,8 +95,9 @@ python -m uv run pytest tests/integration -v -m integration
 
 ```
 tests/
-├── unit/                          # Unit tests (48 passing)
-│   └── order_service/             # Order Service unit tests (23 passing)
+├── unit/                          # Unit tests (60 passing)
+│   ├── order_service/             # Order Service unit tests (23 passing)
+│   └── payment_service/           # Payment Service foundation tests (12 passing)
 ├── integration/                   # PostgreSQL + API tests (19 passing)
 │   └── order_service/             # Order Service integration tests (9 passing)
 └── e2e/                           # End-to-end cross-service tests (planned)
