@@ -173,3 +173,5 @@ The Payment Service will use a minimal `Payment` model with `order_id`, `amount`
 The project specification defines payment processing and future Order → Payment communication but does not specify detailed payment fields. `order_id` links a payment to an order, `amount` records the payment value, and `status` tracks payment outcome. Omitting a cross-service foreign key follows microservice boundaries while sharing PostgreSQL for local development. Sensitive payment data is excluded by design.
 
 **Status:** Accepted
+
+**Verification:** Payment Service CRUD and PostgreSQL integration tests passing (2026-08-23).

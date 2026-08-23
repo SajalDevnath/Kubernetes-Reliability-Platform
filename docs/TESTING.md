@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 2 in progress — User Service and Order Service CRUD complete; Payment Service foundation complete (60 unit tests passing).
+> **Status:** Milestone 2 in progress — User, Order, and Payment Service CRUD complete and verified (108 tests passing).
 
 ## Philosophy
 
@@ -8,19 +8,19 @@ A task is not complete merely because the application starts. Every change must 
 
 ## Test Levels
 
-### Unit Tests (Milestone 2 — User and Order services complete)
+### Unit Tests (Milestone 2 — User, Order, and Payment services complete)
 
 - **Scope:** Individual functions, classes, API endpoint behavior, schemas, repository, and service logic
 - **Location:** `tests/unit/`
 - **Tools:** pytest, FastAPI TestClient, httpx, SQLite (repository tests)
-- **Status:** Complete for User Service (25 tests) and Order Service (23 tests); Payment Service foundation (12 tests) — 60 unit tests passing
+- **Status:** Complete for User Service (25 tests), Order Service (23 tests), and Payment Service (29 tests) — 77 unit tests passing
 
-### Integration Tests (Milestone 2 — User and Order services complete)
+### Integration Tests (Milestone 2 — User, Order, and Payment services complete)
 
-- **Scope:** Live PostgreSQL connectivity and User/Order CRUD API flows
+- **Scope:** Live PostgreSQL connectivity and User/Order/Payment CRUD API flows
 - **Location:** `tests/integration/`
 - **Tools:** pytest, SQLAlchemy, FastAPI TestClient
-- **Status:** Complete for User Service (10 tests) and Order Service (9 tests) — 19 integration tests passing against PostgreSQL
+- **Status:** Complete for User Service (10 tests), Order Service (9 tests), and Payment Service (12 tests) — 31 integration tests passing against PostgreSQL
 
 ### End-to-End Tests (Planned — Milestone 2+)
 
@@ -80,9 +80,12 @@ A task is not complete merely because the application starts. Every change must 
 | `tests/unit/order_service/test_order_repository.py` | Order repository CRUD (SQLite) |
 | `tests/unit/order_service/test_order_service.py` | Order service business logic and error handling |
 | `tests/unit/payment_service/test_payment_foundation.py` | Payment model, schemas, and metadata |
+| `tests/unit/payment_service/test_payment_repository.py` | Payment repository CRUD (SQLite) |
+| `tests/unit/payment_service/test_payment_service.py` | Payment service business logic and error handling |
 | `tests/integration/test_database_connectivity.py` | Live PostgreSQL connectivity (`SELECT 1`) |
 | `tests/integration/test_users_api.py` | User CRUD API against PostgreSQL |
 | `tests/integration/order_service/test_orders_api.py` | Order CRUD API against PostgreSQL |
+| `tests/integration/payment_service/test_payments_api.py` | Payment CRUD API against PostgreSQL |
 
 Run with:
 
@@ -95,11 +98,12 @@ python -m uv run pytest tests/integration -v -m integration
 
 ```
 tests/
-├── unit/                          # Unit tests (60 passing)
+├── unit/                          # Unit tests (77 passing)
 │   ├── order_service/             # Order Service unit tests (23 passing)
-│   └── payment_service/           # Payment Service foundation tests (12 passing)
-├── integration/                   # PostgreSQL + API tests (19 passing)
-│   └── order_service/             # Order Service integration tests (9 passing)
+│   └── payment_service/           # Payment Service unit tests (29 passing)
+├── integration/                   # PostgreSQL + API tests (31 passing)
+│   ├── order_service/             # Order Service integration tests (9 passing)
+│   └── payment_service/           # Payment Service integration tests (12 passing)
 └── e2e/                           # End-to-end cross-service tests (planned)
 ```
 

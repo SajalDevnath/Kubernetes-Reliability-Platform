@@ -67,9 +67,12 @@ def order_service_modules():
 def payment_service_modules():
     """Import Payment Service modules with the correct service path."""
     _set_service_path(PAYMENT_SERVICE_ROOT)
+    from app.core.exceptions import InvalidPaymentStateError, PaymentNotFoundError
     from app.db.database import Base
     from app.models.payment import Payment, PaymentStatus
+    from app.repositories.payment import PaymentRepository
     from app.schemas.payment import PaymentCreate, PaymentResponse, PaymentUpdate
+    from app.services.payment import PaymentService
 
     return {
         "Base": Base,
@@ -78,4 +81,8 @@ def payment_service_modules():
         "PaymentCreate": PaymentCreate,
         "PaymentUpdate": PaymentUpdate,
         "PaymentResponse": PaymentResponse,
+        "PaymentRepository": PaymentRepository,
+        "PaymentService": PaymentService,
+        "PaymentNotFoundError": PaymentNotFoundError,
+        "InvalidPaymentStateError": InvalidPaymentStateError,
     }

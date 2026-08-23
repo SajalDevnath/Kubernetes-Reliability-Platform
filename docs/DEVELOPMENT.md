@@ -102,6 +102,51 @@ curl -X POST http://127.0.0.1:8002/orders \
   -d '{"user_id":1,"total_amount":"49.99"}'
 ```
 
+## Running the Payment Service
+
+```bash
+# Start the FastAPI application
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8003 --app-dir services/payment_service
+
+# Verify health endpoint
+curl http://127.0.0.1:8003/health
+```
+
+Expected response:
+
+```json
+{"status":"ok","service":"payment-service","environment":"development"}
+```
+
+API documentation is available at `http://127.0.0.1:8003/docs` when the service is running.
+
+### Payment CRUD Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/payments` | Create a payment |
+| `GET` | `/payments` | List payments (supports `skip` and `limit`) |
+| `GET` | `/payments/{payment_id}` | Get a payment by ID |
+| `PATCH` | `/payments/{payment_id}` | Update a payment |
+| `DELETE` | `/payments/{payment_id}` | Delete a payment |
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8003/payments \
+  -H "Content-Type: application/json" \
+  -d '{"order_id":1,"amount":"49.99"}'
+```
+
+### Payment Status Transitions
+
+New payments default to `pending`. Allowed transitions:
+
+- `pending` → `successful`
+- `pending` → `failed`
+
+Terminal states (`successful`, `failed`) cannot be updated. Amount changes are allowed only while `pending`.
+
 ## FastAPI Development Workflow
 
 1. Define Pydantic schemas for request/response models

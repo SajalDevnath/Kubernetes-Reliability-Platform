@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 2 in progress — User Service and Order Service CRUD complete and verified.
+> **Status:** Milestone 2 in progress — User, Order, and Payment Service CRUD complete and verified.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -41,15 +41,15 @@ User Service (FastAPI)          Client
 - **Dependencies:** Payment Service (planned — not yet integrated)
 - **Status:** Complete — `/orders` CRUD endpoints verified against PostgreSQL (23 unit tests, 9 integration tests passing)
 
-### Payment Service (Milestone 2 — foundation in progress)
+### Payment Service
 
-- **Purpose:** Payment processing for orders; future Order Service integration planned
+- **Purpose:** Payment processing for orders (CRUD); future Order Service integration planned
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/payment_service/`
 - **Port:** 8003
 - **Dependencies:** Order Service (reference via `order_id` only — no cross-service FK or HTTP integration yet)
-- **Status:** Foundation — Payment ORM model, schemas, and package structure defined; API/repository/service layers not yet implemented
+- **Status:** Complete — `GET /health` and `/payments` CRUD endpoints verified against PostgreSQL (29 unit tests, 12 integration tests passing)
 
 ## Data Layer
 
@@ -172,18 +172,26 @@ services/order_service/
 ```
 services/payment_service/
 └── app/
+    ├── main.py              # FastAPI application entry point
+    ├── api/
+    │   ├── router.py        # Aggregates API routers
+    │   └── routes/
+    │       ├── health.py    # Health check endpoint
+    │       └── payments.py  # Payment CRUD endpoints
     ├── core/
-    │   └── config.py        # Environment-based settings (port 8003)
+    │   ├── config.py        # Environment-based settings (port 8003)
+    │   └── exceptions.py    # PaymentNotFoundError, InvalidPaymentStateError
     ├── db/
     │   └── database.py      # SQLAlchemy engine, Base, sessions
     ├── models/
     │   └── payment.py       # Payment ORM model and PaymentStatus enum
-    ├── schemas/
-    │   └── payment.py       # Payment request/response schemas
-    ├── repositories/          # Data access (planned — next phase)
-    ├── services/              # Business logic (planned — next phase)
-    └── api/
-        └── routes/            # API endpoints (planned — next phase)
+    ├── repositories/
+    │   └── payment.py       # Payment data access
+    ├── services/
+    │   └── payment.py       # Payment business logic
+    └── schemas/
+        ├── health.py        # Health response model
+        └── payment.py       # Payment request/response schemas
 ```
 
 ### Payment Model
@@ -196,6 +204,16 @@ services/payment_service/
 | `status` | enum | `pending`, `successful`, `failed` (default: `pending`) |
 | `created_at` | datetime | Set on creation |
 | `updated_at` | datetime | Updated on modification |
+
+### Payment Status Transitions
+
+| From | Allowed transitions |
+|------|---------------------|
+| `pending` | `successful`, `failed` |
+| `successful` | Terminal — no updates allowed |
+| `failed` | Terminal — no updates allowed |
+
+Amount updates are allowed only while status is `pending`.
 
 ## Design Principles
 
