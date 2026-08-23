@@ -146,3 +146,17 @@ def test_update_cancelled_order_returns_409(order_api_client) -> None:
     response = order_api_client.patch(f"/orders/{order_id}", json={"status": "paid"})
 
     assert response.status_code == 409
+
+
+@pytest.mark.integration
+def test_update_paid_order_to_cancelled_returns_409(order_api_client) -> None:
+    create_response = order_api_client.post(
+        "/orders",
+        json={"user_id": 7, "total_amount": "8.00"},
+    )
+    order_id = create_response.json()["id"]
+    order_api_client.patch(f"/orders/{order_id}", json={"status": "paid"})
+
+    response = order_api_client.patch(f"/orders/{order_id}", json={"status": "cancelled"})
+
+    assert response.status_code == 409

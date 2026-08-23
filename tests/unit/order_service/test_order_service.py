@@ -92,6 +92,24 @@ def test_update_paid_order_total_amount_raises_invalid_state(order_service_modul
         service.update_order(1, order_update(total_amount=Decimal("20.00")))
 
 
+def test_update_paid_order_status_raises_invalid_state(order_service_modules) -> None:
+    invalid_order_state_error = order_service_modules["InvalidOrderStateError"]
+    order_service_cls = order_service_modules["OrderService"]
+    order_status = order_service_modules["OrderStatus"]
+    order_update = order_service_modules["OrderUpdate"]
+
+    paid_order = MagicMock()
+    paid_order.status = order_status.PAID
+    mock_repository = MagicMock()
+    mock_repository.get_by_id.return_value = paid_order
+
+    service = order_service_cls(db=MagicMock())
+    service.repository = mock_repository
+
+    with pytest.raises(invalid_order_state_error):
+        service.update_order(1, order_update(status=order_status.CANCELLED))
+
+
 def test_delete_order_raises_not_found(order_service_modules) -> None:
     order_not_found_error = order_service_modules["OrderNotFoundError"]
     order_service_cls = order_service_modules["OrderService"]

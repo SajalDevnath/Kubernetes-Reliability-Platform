@@ -30,8 +30,10 @@ class OrderService:
         if order.status == OrderStatus.CANCELLED:
             raise InvalidOrderStateError("Cannot update a cancelled order")
 
-        if order.status == OrderStatus.PAID and order_data.total_amount is not None:
-            raise InvalidOrderStateError("Cannot change total amount of a paid order")
+        if order.status == OrderStatus.PAID:
+            if order_data.total_amount is not None:
+                raise InvalidOrderStateError("Cannot change total amount of a paid order")
+            raise InvalidOrderStateError("Cannot update a paid order")
 
         return self.repository.update(order, order_data)
 
