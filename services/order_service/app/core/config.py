@@ -28,6 +28,9 @@ class Settings(BaseSettings):
 
     database_url: str | None = Field(default=None, validation_alias="DATABASE_URL")
 
+    payment_service_url: str = "http://127.0.0.1:8003"
+    payment_service_timeout_seconds: float = Field(default=5.0, gt=0)
+
     def get_database_url(self) -> str:
         """Return the SQLAlchemy database URL from env override or components."""
         if self.database_url:

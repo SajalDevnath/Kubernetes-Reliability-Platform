@@ -1,7 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import InvalidOrderStateError, OrderNotFoundError
+from app.clients.payment import PaymentServiceClient
+from app.core.config import Settings, get_settings
+from app.core.exceptions import (
+    InvalidOrderStateError,
+    OrderNotFoundError,
+    PaymentServiceError,
+    PaymentServiceTimeoutError,
+    PaymentServiceUnavailableError,
+)
 from app.db.database import get_db
 from app.schemas.order import OrderCreate, OrderResponse, OrderUpdate
 from app.services.order import OrderService
@@ -9,8 +17,15 @@ from app.services.order import OrderService
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
-def get_order_service(db: Session = Depends(get_db)) -> OrderService:
-    return OrderService(db)
+def get_payment_client(settings: Settings = Depends(get_settings)) -> PaymentServiceClient:
+    return PaymentServiceClient(settings=settings)
+
+
+def get_order_service(
+    db: Session = Depends(get_db),
+    payment_client: PaymentServiceClient = Depends(get_payment_client),
+) -> OrderService:
+    return OrderService(db, payment_client=payment_client)
 
 
 @router.post("", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
@@ -19,7 +34,23 @@ def create_order(
     order_service: OrderService = Depends(get_order_service),
 ) -> OrderResponse:
     """Create a new order."""
-    order = order_service.create_order(order_data)
+    try:
+        order = order_service.create_order(order_data)
+    except PaymentServiceUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except PaymentServiceTimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=str(exc),
+        ) from exc
+    except PaymentServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
     return OrderResponse.model_validate(order)
 
 

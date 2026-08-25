@@ -38,8 +38,8 @@ User Service (FastAPI)          Client
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/order_service/`
-- **Dependencies:** Payment Service (planned — not yet integrated)
-- **Status:** Complete — `/orders` CRUD endpoints verified against PostgreSQL (23 unit tests, 9 integration tests passing)
+- **Dependencies:** Payment Service (synchronous HTTP on order creation)
+- **Status:** Complete — `/orders` CRUD endpoints and Order → Payment integration verified against PostgreSQL
 
 ### Payment Service
 

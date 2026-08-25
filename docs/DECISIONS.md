@@ -175,3 +175,20 @@ The project specification defines payment processing and future Order → Paymen
 **Status:** Accepted
 
 **Verification:** Payment Service CRUD and PostgreSQL integration tests passing (2026-08-23).
+
+---
+
+## ADR-013 — Synchronous Order → Payment HTTP Integration
+
+**Date:** 2026-08-25
+
+**Decision:**
+Order Service will create a payment synchronously over HTTP immediately after flushing a new order record and before committing the order transaction. Communication uses a dedicated `PaymentServiceClient` (`httpx`) configured via `PAYMENT_SERVICE_URL` and `PAYMENT_SERVICE_TIMEOUT_SECONDS` (default 5.0 seconds). On payment failure, Order Service rolls back the uncommitted order and returns HTTP 503 (unavailable), 504 (timeout), or 502 (Payment Service error/malformed response). Order creation must not return 201 unless payment creation succeeds.
+
+**Reason:**
+Milestone 2 requires Order → Payment communication without introducing message brokers, sagas, background workers, retries, or circuit breakers. Synchronous HTTP with flush-then-commit avoids persisting orphan orders in the common failure path while keeping the implementation simple and testable.
+
+**Consistency limitation:**
+This is not a distributed transaction. Edge cases remain possible (for example, payment succeeds but order commit fails, or payment succeeds after a timeout from the caller's perspective). Phase 1 accepts this limitation explicitly.
+
+**Status:** Accepted

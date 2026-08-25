@@ -12,7 +12,7 @@ class OrderRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def create(self, order_data: OrderCreate) -> Order:
+    def add_order(self, order_data: OrderCreate) -> Order:
         order = Order(
             user_id=order_data.user_id,
             total_amount=order_data.total_amount,
@@ -20,12 +20,28 @@ class OrderRepository:
         )
         self.db.add(order)
         try:
+            self.db.flush()
+            self.db.refresh(order)
+            return order
+        except IntegrityError:
+            self.db.rollback()
+            raise
+
+    def commit_order(self, order: Order) -> Order:
+        try:
             self.db.commit()
             self.db.refresh(order)
             return order
         except IntegrityError:
             self.db.rollback()
             raise
+
+    def rollback(self) -> None:
+        self.db.rollback()
+
+    def create(self, order_data: OrderCreate) -> Order:
+        order = self.add_order(order_data)
+        return self.commit_order(order)
 
     def get_by_id(self, order_id: int) -> Order | None:
         return self.db.get(Order, order_id)

@@ -62,7 +62,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Major Tasks:**
 - [x] Implement User Service CRUD APIs
 - [x] Implement Order Service CRUD APIs (no Payment integration yet)
-- [ ] Implement Order Service → Payment Service integration
+- [x] Implement Order Service → Payment Service integration
 - [x] Implement Payment Service CRUD APIs
 - [x] Define Payment Service foundation (ORM model, schemas, package structure)
 - [x] Define Pydantic schemas for Payment endpoints
@@ -77,7 +77,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 
 **Status:** IN PROGRESS
 
-> **Note:** User Service CRUD APIs are **complete and verified** (25 unit tests, 10 integration tests passing against PostgreSQL). Order Service CRUD APIs are **complete and verified** (23 unit tests, 9 integration tests passing against PostgreSQL). Payment Service CRUD APIs are **complete and verified** (29 unit tests, 12 integration tests passing against PostgreSQL). Order → Payment cross-service communication and E2E workflows remain for subsequent Milestone 2 tasks.
+> **Note:** User Service CRUD APIs are **complete and verified** (25 unit tests, 10 integration tests passing against PostgreSQL). Order Service CRUD APIs and Order → Payment HTTP integration are **complete and verified**. Payment Service CRUD APIs are **complete and verified** (29 unit tests, 12 integration tests passing against PostgreSQL). E2E cross-service workflows remain for subsequent Milestone 2 tasks.
 
 ---
 

@@ -88,3 +88,36 @@ def test_repository_rolls_back_on_integrity_error(
 
     with pytest.raises(IntegrityError):
         repository.create(order_create(user_id=1, total_amount=Decimal("10.00")))
+
+
+def test_repository_add_order_flushes_without_commit(
+    db_session: Session,
+    order_service_modules,
+) -> None:
+    order_repository = order_service_modules["OrderRepository"]
+    order_create = order_service_modules["OrderCreate"]
+
+    repository = order_repository(db_session)
+    order = repository.add_order(order_create(user_id=1, total_amount=Decimal("12.00")))
+
+    assert order.id is not None
+    assert repository.get_by_id(order.id) is not None
+
+    repository.rollback()
+
+    assert repository.get_by_id(order.id) is None
+
+
+def test_repository_commit_order_persists_order(
+    db_session: Session,
+    order_service_modules,
+) -> None:
+    order_repository = order_service_modules["OrderRepository"]
+    order_create = order_service_modules["OrderCreate"]
+
+    repository = order_repository(db_session)
+    order = repository.add_order(order_create(user_id=1, total_amount=Decimal("18.00")))
+    committed = repository.commit_order(order)
+
+    assert committed.id == order.id
+    assert repository.get_by_id(order.id) is not None

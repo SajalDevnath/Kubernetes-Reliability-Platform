@@ -84,7 +84,8 @@ A task is not complete merely because the application starts. Every change must 
 | `tests/unit/payment_service/test_payment_service.py` | Payment service business logic and error handling |
 | `tests/integration/test_database_connectivity.py` | Live PostgreSQL connectivity (`SELECT 1`) |
 | `tests/integration/test_users_api.py` | User CRUD API against PostgreSQL |
-| `tests/integration/order_service/test_orders_api.py` | Order CRUD API against PostgreSQL |
+| `tests/unit/order_service/test_payment_client.py` | Payment Service HTTP client behavior |
+| `tests/integration/order_service/test_orders_api.py` | Order CRUD API and Order → Payment integration against PostgreSQL |
 | `tests/integration/payment_service/test_payments_api.py` | Payment CRUD API against PostgreSQL |
 
 Run with:

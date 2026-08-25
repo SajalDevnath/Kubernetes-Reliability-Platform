@@ -102,6 +102,13 @@ curl -X POST http://127.0.0.1:8002/orders \
   -d '{"user_id":1,"total_amount":"49.99"}'
 ```
 
+Order creation synchronously calls Payment Service (`POST /payments`) using `PAYMENT_SERVICE_URL` (default `http://127.0.0.1:8003`). Payment Service must be running for order creation to succeed.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PAYMENT_SERVICE_URL` | `http://127.0.0.1:8003` | Payment Service base URL (Order Service) |
+| `PAYMENT_SERVICE_TIMEOUT_SECONDS` | `5.0` | HTTP timeout for Payment Service calls |
+
 ## Running the Payment Service
 
 ```bash

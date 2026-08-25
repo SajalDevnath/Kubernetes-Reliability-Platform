@@ -11,7 +11,7 @@
 | FR-001 | The system shall provide a User Service for user management | Implemented (User Service CRUD) |
 | FR-002 | The system shall provide an Order Service for order management | Implemented (Order Service CRUD) |
 | FR-003 | The system shall provide a Payment Service for payment processing | Implemented (Payment Service CRUD) |
-| FR-004 | Order Service shall communicate with Payment Service for payment operations | Planned |
+| FR-004 | Order Service shall communicate with Payment Service for payment operations | Implemented (synchronous HTTP on order creation) |
 
 ### APIs
 

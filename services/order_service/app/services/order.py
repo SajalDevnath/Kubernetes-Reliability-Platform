@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import InvalidOrderStateError, OrderNotFoundError
+from app.clients.payment import PaymentServiceClient
+from app.core.config import get_settings
+from app.core.exceptions import InvalidOrderStateError, OrderNotFoundError, PaymentServiceError
 from app.models.order import Order, OrderStatus
 from app.repositories.order import OrderRepository
 from app.schemas.order import OrderCreate, OrderUpdate
@@ -9,11 +11,22 @@ from app.schemas.order import OrderCreate, OrderUpdate
 class OrderService:
     """Business logic for order management."""
 
-    def __init__(self, db: Session) -> None:
+    def __init__(
+        self,
+        db: Session,
+        payment_client: PaymentServiceClient | None = None,
+    ) -> None:
         self.repository = OrderRepository(db)
+        self.payment_client = payment_client or PaymentServiceClient(settings=get_settings())
 
     def create_order(self, order_data: OrderCreate) -> Order:
-        return self.repository.create(order_data)
+        order = self.repository.add_order(order_data)
+        try:
+            self.payment_client.create_payment(order.id, order.total_amount)
+        except PaymentServiceError:
+            self.repository.rollback()
+            raise
+        return self.repository.commit_order(order)
 
     def get_order(self, order_id: int) -> Order:
         order = self.repository.get_by_id(order_id)
