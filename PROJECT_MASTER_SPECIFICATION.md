@@ -349,13 +349,11 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 2 — Microservices (IN PROGRESS)
+**Current Milestone:** Milestone 3 — Docker (NOT STARTED)
 
 **Status:**
 - Milestone 1 complete (User Service foundation, health endpoint, PostgreSQL/SQLAlchemy)
-- User Service CRUD APIs complete and verified (`/users` — 25 unit tests, 10 integration tests passing)
-- Order Service CRUD APIs and Order → Payment HTTP integration complete and verified
-- Payment Service CRUD APIs complete and verified (`/payments` — 29 unit tests, 12 integration tests passing)
+- Milestone 2 complete (User, Order, and Payment Service CRUD APIs; Order → Payment HTTP integration; E2E cross-service workflows verified — 86 unit, 36 integration, 2 E2E tests passing; 124 total)
 - No Docker, Kubernetes, or infrastructure files exist
 
-**Next Milestone 2 Task:** E2E cross-service workflows (user → order → payment)
+**Next Milestone:** Milestone 3 — Docker

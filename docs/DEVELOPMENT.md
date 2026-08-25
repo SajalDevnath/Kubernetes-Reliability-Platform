@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 2 — Microservices (in progress)
+> **Current Milestone:** Milestone 3 — Docker (not started)
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -168,11 +168,14 @@ Terminal states (`successful`, `failed`) cannot be updated. Amount changes are a
 # Run all unit tests
 python -m uv run pytest tests/unit -v
 
-# Run PostgreSQL connectivity integration test (requires running PostgreSQL)
+# Run PostgreSQL integration tests (requires running PostgreSQL)
 python -m uv run pytest tests/integration -v -m integration
+
+# Run end-to-end cross-service workflow tests (requires running PostgreSQL)
+python -m uv run pytest tests/e2e -v -m e2e
 ```
 
-The integration test uses `POSTGRES_*` variables from `.env` (or defaults in `.env.example`). PostgreSQL must be running for integration tests to execute.
+Integration and E2E tests use `POSTGRES_*` variables from `.env` (or defaults in `.env.example`). PostgreSQL must be running for integration and E2E tests to execute.
 
 ## Database Configuration
 

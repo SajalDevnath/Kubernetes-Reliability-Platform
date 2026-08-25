@@ -28,4 +28,5 @@ testpaths = ["tests"]
 pythonpath = ["services/user_service"]
 markers = [
     "integration: marks tests requiring external services such as PostgreSQL",
+    "e2e: marks end-to-end cross-service workflow tests requiring PostgreSQL",
 ]

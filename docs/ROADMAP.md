@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 2 — Microservices (in progress)
+> **Last updated:** Milestone 2 — Microservices (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -67,7 +67,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - [x] Define Payment Service foundation (ORM model, schemas, package structure)
 - [x] Define Pydantic schemas for Payment endpoints
 - [x] Add integration tests (User, Order, and Payment services)
-- [ ] Add end-to-end tests for cross-service flows
+- [x] Add end-to-end tests for cross-service flows
 
 **Completion Criteria:**
 - All three services run locally
@@ -75,9 +75,15 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Order → Payment communication works
 - Integration and E2E tests pass
 
-**Status:** IN PROGRESS
+**Exit Validation:**
+- [x] All three services run locally
+- [x] REST APIs are functional and validated
+- [x] Order → Payment communication works
+- [x] Integration and E2E tests pass (86 unit, 36 integration, 2 E2E — 124 total)
 
-> **Note:** User Service CRUD APIs are **complete and verified** (25 unit tests, 10 integration tests passing against PostgreSQL). Order Service CRUD APIs and Order → Payment HTTP integration are **complete and verified**. Payment Service CRUD APIs are **complete and verified** (29 unit tests, 12 integration tests passing against PostgreSQL). E2E cross-service workflows remain for subsequent Milestone 2 tasks.
+**Status:** COMPLETE
+
+> **Note:** Milestone 2 verified against PostgreSQL — User, Order, and Payment Service CRUD APIs; Order → Payment HTTP integration; and E2E cross-service workflows (user → order → payment). Test totals: **86 unit**, **36 integration**, **2 E2E** (**124 total**).
 
 ---
 
@@ -385,7 +391,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 ```
 Milestone 0  → Engineering Foundation        [COMPLETE]
 Milestone 1  → Application Foundation      [COMPLETE]
-Milestone 2  → Microservices               [IN PROGRESS]
+Milestone 2  → Microservices               [COMPLETE]
 Milestone 3  → Docker                      [NOT STARTED]
 Milestone 4  → Kubernetes                  [NOT STARTED]
 Milestone 5  → Helm                        [NOT STARTED]
