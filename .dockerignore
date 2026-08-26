@@ -1,0 +1,66 @@
+# Version control and local tooling
+.git
+.gitignore
+.github
+.cursor
+.venv
+.uv
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+*.egg-info/
+dist/
+build/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# IDE and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Documentation and tests (not required for service images)
+docs/
+tests/
+
+# Local data and docker scratch
+data/
+postgres-data/
+.docker/
+
+# Test and build artifacts
+test-results/
+playwright-report/
+screenshots/
+target/
+out/
+bin/
+obj/

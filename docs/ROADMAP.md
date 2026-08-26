@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 2 — Microservices (complete)
+> **Last updated:** Milestone 3 — Docker (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -92,18 +92,26 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Objective:** Containerize all services and orchestrate locally with Docker Compose.
 
 **Major Tasks:**
-- Create Dockerfiles for each service
-- Create Docker Compose configuration
-- Include PostgreSQL in Compose stack
-- Verify container health checks
-- Document container workflow
+- [x] Create Dockerfiles for each service
+- [x] Create Docker Compose configuration
+- [x] Include PostgreSQL in Compose stack
+- [x] Verify container health checks
+- [x] Document container workflow
 
 **Completion Criteria:**
 - All services run via Docker Compose
 - Services communicate within the Compose network
 - Health checks pass in containers
 
-**Status:** NOT STARTED
+**Exit Validation:**
+- [x] All services run via Docker Compose (`docker-compose.yml` — postgres, user-service, order-service, payment-service)
+- [x] Services communicate within the Compose network (`krp-network`; Order → Payment via `http://payment-service:8003`)
+- [x] Health checks pass in containers (PostgreSQL `pg_isready`; User/Payment `/health`; Order `GET /orders`)
+- [x] Existing pytest suite passes with no regression (86 unit, 36 integration, 2 E2E — 124 total)
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 3 verified — Dockerfiles for User, Order, and Payment services; `docker-compose.yml` with PostgreSQL 16, named volume, service-name networking, and container healthchecks. Compose workflow documented in `docs/DEVELOPMENT.md`. Order → Payment communication verified over Compose DNS. Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
 
 ---
 
@@ -392,7 +400,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 Milestone 0  → Engineering Foundation        [COMPLETE]
 Milestone 1  → Application Foundation      [COMPLETE]
 Milestone 2  → Microservices               [COMPLETE]
-Milestone 3  → Docker                      [NOT STARTED]
+Milestone 3  → Docker                      [COMPLETE]
 Milestone 4  → Kubernetes                  [NOT STARTED]
 Milestone 5  → Helm                        [NOT STARTED]
 Milestone 6  → CI/CD                       [NOT STARTED]

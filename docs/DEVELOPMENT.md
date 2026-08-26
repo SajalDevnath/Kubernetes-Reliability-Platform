@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 3 — Docker (not started)
+> **Current Milestone:** Milestone 4 — Kubernetes (next). Milestone 3 — Docker is complete.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -17,7 +17,8 @@ This document describes the development workflow for the Kubernetes Reliability 
 - Python 3.10+
 - [uv](https://docs.astral.sh/uv/) (`python -m uv` if installed via pip)
 - Git
-- PostgreSQL (required for integration connectivity tests; optional for unit tests)
+- PostgreSQL (required for integration connectivity tests; optional for unit tests when not using Docker Compose)
+- Docker and Docker Compose (required for the containerized local stack — Milestone 3)
 
 ## Python Development Workflow
 
@@ -154,6 +155,61 @@ New payments default to `pending`. Allowed transitions:
 
 Terminal states (`successful`, `failed`) cannot be updated. Amount changes are allowed only while `pending`.
 
+Payment status updates are owned by Payment Service. Updating a payment to `successful` does **not** automatically change the associated order's status in Order Service.
+
+## Docker Compose Workflow
+
+The containerized local stack is defined in `docker-compose.yml` at the repository root. It runs PostgreSQL 16 and all three application services on the `krp-network` Compose network.
+
+| Service | Host port | Container healthcheck |
+|---------|-----------|------------------------|
+| `postgres` | (internal only) | `pg_isready` |
+| `user-service` | 8001 | `GET /health` |
+| `order-service` | 8002 | `GET /orders` (Order Service has no `/health` endpoint) |
+| `payment-service` | 8003 | `GET /health` |
+
+Application services connect to PostgreSQL using `POSTGRES_HOST=postgres`. Order Service reaches Payment Service using `PAYMENT_SERVICE_URL=http://payment-service:8003` (Compose service name, not `127.0.0.1`).
+
+### Build and run
+
+```bash
+# Validate Compose configuration
+docker compose config
+
+# Build application images
+docker compose build
+
+# Start the full stack in the background
+docker compose up -d
+
+# Inspect service status
+docker compose ps
+
+# View logs
+docker compose logs --no-color
+```
+
+### Verify from the host
+
+```bash
+curl http://127.0.0.1:8001/health
+curl http://127.0.0.1:8003/health
+curl http://127.0.0.1:8002/orders
+```
+
+Expected health responses include `"status":"ok"` with `"service":"user-service"` or `"service":"payment-service"`.
+
+### Stop the stack
+
+```bash
+# Stop containers but preserve the PostgreSQL volume
+docker compose down
+```
+
+Use `docker compose down -v` only when you intentionally want to remove the named PostgreSQL volume.
+
+The pytest suite (`tests/unit`, `tests/integration`, `tests/e2e`) continues to run against host PostgreSQL via `.env` / `.env.example` defaults and does not require the Compose stack to be running.
+
 ## FastAPI Development Workflow
 
 1. Define Pydantic schemas for request/response models
@@ -198,7 +254,7 @@ Connectivity can be verified programmatically via `app.db.database.check_databas
 - The entire platform runs locally
 - No AWS or cloud dependencies for core implementation
 - Use kind for local Kubernetes clusters (Milestone 4+)
-- Use Docker Compose for local multi-service development (Milestone 3+)
+- Use Docker Compose for local multi-service development (Milestone 3 — implemented; see Docker Compose Workflow above)
 
 ## Cursor Workflow
 

@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 2 in progress — User, Order, and Payment Service CRUD complete and verified.
+> **Status:** Milestone 3 complete — User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, and Docker Compose containerization verified.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -34,22 +34,22 @@ User Service (FastAPI)          Client
 
 ### Order Service
 
-- **Purpose:** Order management (CRUD); future Payment Service integration planned
+- **Purpose:** Order management (CRUD) with synchronous Payment Service integration on order creation
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/order_service/`
-- **Dependencies:** Payment Service (synchronous HTTP on order creation)
-- **Status:** Complete — `/orders` CRUD endpoints and Order → Payment integration verified against PostgreSQL
+- **Dependencies:** Payment Service (synchronous HTTP on order creation via `PAYMENT_SERVICE_URL`)
+- **Status:** Complete — `/orders` CRUD endpoints and Order → Payment integration verified against PostgreSQL and Docker Compose
 
 ### Payment Service
 
-- **Purpose:** Payment processing for orders (CRUD); future Order Service integration planned
+- **Purpose:** Payment processing for orders (CRUD)
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/payment_service/`
 - **Port:** 8003
-- **Dependencies:** Order Service (reference via `order_id` only — no cross-service FK or HTTP integration yet)
-- **Status:** Complete — `GET /health` and `/payments` CRUD endpoints verified against PostgreSQL (29 unit tests, 12 integration tests passing)
+- **Dependencies:** Order Service (reference via `order_id` only — no cross-service FK or reverse HTTP integration)
+- **Status:** Complete — `GET /health` and `/payments` CRUD endpoints verified against PostgreSQL and Docker Compose
 
 ## Data Layer
 
@@ -58,11 +58,15 @@ User Service (FastAPI)          Client
 - **Location:** `services/user_service/app/db/`
 - **Status:** Implemented — engine, session factory, declarative Base, `get_db` dependency, connectivity check, and `User` ORM model
 
-## Containerization (Planned — Milestone 3)
+## Containerization (Milestone 3 — implemented)
 
-- Each microservice packaged as a Docker image
-- Local multi-service orchestration via Docker Compose
-- **Status:** Planned
+- Each microservice packaged as a Docker image (`services/*/Dockerfile`)
+- Local multi-service orchestration via `docker-compose.yml`
+- PostgreSQL 16 in Compose with named volume persistence
+- Compose network (`krp-network`) for service-name DNS (`postgres`, `user-service`, `order-service`, `payment-service`)
+- Container healthchecks: PostgreSQL `pg_isready`; User/Payment `/health`; Order `GET /orders`
+- Order Service uses `PAYMENT_SERVICE_URL=http://payment-service:8003` inside Compose
+- **Status:** Complete — verified via `docker compose build`, `docker compose up`, and host/Compose-network checks
 
 ## Kubernetes (Planned — Milestone 4–5)
 

@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 2 complete — User, Order, and Payment Service CRUD, Order → Payment integration, and E2E cross-service workflows verified (124 tests passing).
+> **Status:** Milestone 3 complete — application tests (124 passing) and Docker Compose container verification complete.
 
 ## Philosophy
 
@@ -29,10 +29,20 @@ A task is not complete merely because the application starts. Every change must 
 - **Example:** Create user → create order → verify payment → process payment
 - **Status:** Complete — 2 E2E tests passing against PostgreSQL
 
-### Container Tests (Planned — Milestone 3)
+### Container Tests (Milestone 3 — Docker Compose verification complete)
 
-- **Scope:** Docker image builds, container startup, health checks
-- **Status:** Planned
+- **Scope:** Docker image builds, container startup, Compose orchestration, container health checks, Compose network communication
+- **Location:** Manual verification against `docker-compose.yml` (automated container tests not yet in `tests/`)
+- **Status:** Verified — all three service images build; `docker compose up` brings up postgres, user-service, order-service, and payment-service on `krp-network`
+- **Verified checks:**
+  - `docker compose config` and `docker compose build` succeed
+  - PostgreSQL healthy via `pg_isready`
+  - User Service `/health` and Payment Service `/health` return HTTP 200 in containers
+  - Order Service `GET /orders` returns HTTP 200 (no `/health` endpoint)
+  - Order container reaches Payment at `http://payment-service:8003/health` over Compose DNS
+  - Host-mapped User → Order → Payment workflow exercised through Compose containers
+  - PostgreSQL data persists across application container restarts (`docker compose down` without `-v`)
+  - Existing pytest suite unchanged: 86 unit + 36 integration + 2 E2E = **124 passing**
 
 ### Kubernetes Tests (Planned — Milestone 4)
 
@@ -64,7 +74,7 @@ A task is not complete merely because the application starts. Every change must 
 | Every code change | Relevant unit tests |
 | Service integration | Integration tests |
 | Before commit | Full test suite for changed area |
-| Milestone completion | All tests for that milestone |
+| Milestone completion | All tests for that milestone; Milestone 3 also requires Compose stack verification |
 
 ## Currently Available Tests
 

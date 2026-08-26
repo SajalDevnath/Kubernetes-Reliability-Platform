@@ -349,11 +349,12 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 3 — Docker (NOT STARTED)
+**Current Milestone:** Milestone 4 — Kubernetes (NOT STARTED)
 
 **Status:**
 - Milestone 1 complete (User Service foundation, health endpoint, PostgreSQL/SQLAlchemy)
 - Milestone 2 complete (User, Order, and Payment Service CRUD APIs; Order → Payment HTTP integration; E2E cross-service workflows verified — 86 unit, 36 integration, 2 E2E tests passing; 124 total)
-- No Docker, Kubernetes, or infrastructure files exist
+- Milestone 3 complete (Dockerfiles for all services, `docker-compose.yml`, PostgreSQL in Compose, container healthchecks, Compose-network Order → Payment verification)
+- Kubernetes manifests and Helm charts do not exist yet
 
-**Next Milestone:** Milestone 3 — Docker
+**Next Milestone:** Milestone 4 — Kubernetes
