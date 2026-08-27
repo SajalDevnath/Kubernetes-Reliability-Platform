@@ -167,11 +167,14 @@ kubernetes-reliability-platform/
 │   └── plans/          # Implementation plans per milestone
 │
 ├── docs/               # Project documentation
-├── scripts/            # Utility scripts (added per milestone)
+├── k8s/                # Kubernetes manifests (Milestone 4)
+├── services/           # Application microservices
 ├── tests/
+│   ├── unit/           # Unit tests
 │   ├── integration/    # Integration tests
 │   └── e2e/            # End-to-end tests
 │
+├── docker-compose.yml  # Docker Compose stack (Milestone 3)
 ├── .env.example        # Environment variable template
 ├── .gitignore
 ├── AGENTS.md           # AI assistant operating instructions
@@ -179,7 +182,7 @@ kubernetes-reliability-platform/
 └── README.md
 ```
 
-Application and infrastructure directories (services, Docker, k8s, helm, etc.) will be introduced progressively during their respective milestones.
+Application and infrastructure directories are introduced progressively during their respective milestones. Kubernetes manifests exist under `k8s/`; Helm charts are planned for Milestone 5.
 
 ## 9. Documentation Architecture
 
@@ -349,12 +352,14 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 4 — Kubernetes (NOT STARTED)
+**Current Milestone:** Milestone 5 — Helm (NOT STARTED)
 
 **Status:**
+- Milestone 0 complete (engineering foundation, documentation, rules, roadmap)
 - Milestone 1 complete (User Service foundation, health endpoint, PostgreSQL/SQLAlchemy)
 - Milestone 2 complete (User, Order, and Payment Service CRUD APIs; Order → Payment HTTP integration; E2E cross-service workflows verified — 86 unit, 36 integration, 2 E2E tests passing; 124 total)
 - Milestone 3 complete (Dockerfiles for all services, `docker-compose.yml`, PostgreSQL in Compose, container healthchecks, Compose-network Order → Payment verification)
-- Kubernetes manifests and Helm charts do not exist yet
+- Milestone 4 complete (plain YAML manifests under `k8s/`, kind cluster `krp`, namespace `krp`, Deployments/Services/ConfigMaps/Secret/PVC, probes, resource limits, in-cluster Order → Payment verification; 124 tests passing)
+- Kubernetes manifests exist under `k8s/`; Helm charts do not exist yet
 
-**Next Milestone:** Milestone 4 — Kubernetes
+**Next Milestone:** Milestone 5 — Helm

@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 3 complete — application tests (124 passing) and Docker Compose container verification complete.
+> **Status:** Milestone 4 complete — application tests (124 passing), Docker Compose container verification, and Kubernetes (kind) manual verification complete.
 
 ## Philosophy
 
@@ -44,10 +44,21 @@ A task is not complete merely because the application starts. Every change must 
   - PostgreSQL data persists across application container restarts (`docker compose down` without `-v`)
   - Existing pytest suite unchanged: 86 unit + 36 integration + 2 E2E = **124 passing**
 
-### Kubernetes Tests (Planned — Milestone 4)
+### Kubernetes Tests (Milestone 4 — manual verification complete)
 
-- **Scope:** Deployment health, probe behavior, service discovery, scaling
-- **Status:** Planned
+- **Scope:** Deployment health, probe behavior, service discovery, in-cluster Order → Payment workflow
+- **Location:** Manual verification against `k8s/` manifests (automated Kubernetes tests not in `tests/`)
+- **Status:** Verified — all four workloads deploy to kind cluster `krp` (namespace `krp`) and reach Ready
+- **Verified checks:**
+  - PostgreSQL Deployment with PVC `postgres-data` (1Gi) healthy via `pg_isready`
+  - User Service `/health` and Payment Service `/health` return HTTP 200 in cluster
+  - Order Service `GET /orders` returns HTTP 200 (no `/health` endpoint)
+  - ConfigMaps and `postgres-credentials` Secret externalize configuration
+  - In-cluster DNS resolves `user-service`, `order-service`, `payment-service`, `postgres`
+  - User creation, order creation, and payment record creation verified in-cluster
+  - Order → Payment communication via `http://payment-service:8003` verified
+  - Existing pytest suite unchanged: 86 unit + 36 integration + 2 E2E = **124 passing**
+  - Docker Compose parity verified after Kubernetes work
 
 ### Failure Simulation Tests (Planned — Milestone 12)
 
@@ -74,7 +85,7 @@ A task is not complete merely because the application starts. Every change must 
 | Every code change | Relevant unit tests |
 | Service integration | Integration tests |
 | Before commit | Full test suite for changed area |
-| Milestone completion | All tests for that milestone; Milestone 3 also requires Compose stack verification |
+| Milestone completion | All tests for that milestone; Milestone 3 requires Compose stack verification; Milestone 4 requires kind stack verification |
 
 ## Currently Available Tests
 

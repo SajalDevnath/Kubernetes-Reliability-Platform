@@ -1,6 +1,6 @@
 # Kubernetes Reliability Platform
 
-> **Current progress:** Milestones 0–3 complete (microservices, automated tests, Docker Compose). Milestone 4 — Kubernetes is next (not started).
+> **Current progress:** Milestones 0–4 complete (microservices, automated tests, Docker Compose, Kubernetes on kind). Milestone 5 — Helm is next (not started).
 
 ## What This Project Is
 
@@ -27,7 +27,8 @@ Modern platform and SRE engineering requires practical experience across applica
 - Three microservices: User, Order, Payment (implemented)
 - PostgreSQL database (implemented)
 - Docker and Docker Compose local orchestration (implemented)
-- Local Kubernetes (kind) (planned — Milestone 4)
+- Local Kubernetes (kind) (implemented — Milestone 4)
+- Helm chart packaging (planned — Milestone 5)
 - Full observability stack
 - SRE practices and incident simulation
 - AI-assisted operations (final phase)

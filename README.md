@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–3 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, and Docker Compose containerization are implemented and verified. **Milestone 4 — Kubernetes** is next (not started).
+> **Milestones 0–4 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, and Kubernetes (kind) deployment are implemented and verified. **Milestone 5 — Helm** is next (not started).
 
 ## Quick Start
 
@@ -34,6 +34,10 @@ Stop the stack with `docker compose down` (omit `-v` to preserve the PostgreSQL 
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for full setup instructions.
 
+### Kubernetes (kind)
+
+Deploy to the local kind cluster using manifests in `k8s/`. See [k8s/README.md](k8s/README.md) for build, load, apply, and verification commands.
+
 ## Purpose
 
 The primary purpose is to learn and demonstrate:
@@ -54,7 +58,7 @@ The business logic is intentionally simple. The focus is on reliability engineer
 |-------|-------------|
 | Application | Python, FastAPI, Pydantic, SQLAlchemy, PostgreSQL, uv |
 | Containers | Docker, Docker Compose (implemented) |
-| Orchestration | Kubernetes, kind, kubectl, Helm (planned) |
+| Orchestration | Kubernetes, kind, kubectl (implemented); Helm (planned) |
 | CI/CD | GitHub Actions |
 | Metrics | Prometheus, PromQL |
 | Visualization | Grafana |
@@ -83,8 +87,9 @@ Three microservices with simple business logic, designed to create realistic ope
 | 1 | Application Foundation | COMPLETE |
 | 2 | Microservices | COMPLETE |
 | 3 | Docker | COMPLETE |
-| 4 | Kubernetes | NOT STARTED |
-| 5–17 | See roadmap | NOT STARTED |
+| 4 | Kubernetes | COMPLETE |
+| 5 | Helm | NOT STARTED |
+| 6–17 | See roadmap | NOT STARTED |
 
 **Tests:** 124 passing (86 unit, 36 integration, 2 E2E). See [docs/TESTING.md](docs/TESTING.md).
 
@@ -101,6 +106,7 @@ Three microservices with simple business logic, designed to create realistic ope
 | [Testing Strategy](docs/TESTING.md) | Testing approach |
 | [Decisions](docs/DECISIONS.md) | Architecture decision records |
 | [Roadmap](docs/ROADMAP.md) | Complete milestone roadmap |
+| [Kubernetes Deployment](k8s/README.md) | kind cluster deployment guide |
 
 ## Roadmap
 

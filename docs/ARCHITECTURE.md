@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 3 complete — User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, and Docker Compose containerization verified.
+> **Status:** Milestone 4 complete — User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, and Kubernetes (kind) deployment verified. Milestone 5 — Helm is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -30,7 +30,7 @@ User Service (FastAPI)          Client
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/user_service/`
-- **Status:** Complete — `GET /health` and `/users` CRUD endpoints verified against PostgreSQL
+- **Status:** Complete — `GET /health` and `/users` CRUD endpoints verified against PostgreSQL, Docker Compose, and Kubernetes
 
 ### Order Service
 
@@ -39,7 +39,7 @@ User Service (FastAPI)          Client
 - **Database:** PostgreSQL
 - **Location:** `services/order_service/`
 - **Dependencies:** Payment Service (synchronous HTTP on order creation via `PAYMENT_SERVICE_URL`)
-- **Status:** Complete — `/orders` CRUD endpoints and Order → Payment integration verified against PostgreSQL and Docker Compose
+- **Status:** Complete — `/orders` CRUD endpoints and Order → Payment integration verified against PostgreSQL, Docker Compose, and Kubernetes
 
 ### Payment Service
 
@@ -49,14 +49,14 @@ User Service (FastAPI)          Client
 - **Location:** `services/payment_service/`
 - **Port:** 8003
 - **Dependencies:** Order Service (reference via `order_id` only — no cross-service FK or reverse HTTP integration)
-- **Status:** Complete — `GET /health` and `/payments` CRUD endpoints verified against PostgreSQL and Docker Compose
+- **Status:** Complete — `GET /health` and `/payments` CRUD endpoints verified against PostgreSQL, Docker Compose, and Kubernetes
 
 ## Data Layer
 
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL (shared instance for local development)
 - **ORM:** SQLAlchemy 2.x (synchronous)
-- **Location:** `services/user_service/app/db/`
-- **Status:** Implemented — engine, session factory, declarative Base, `get_db` dependency, connectivity check, and `User` ORM model
+- **Location:** `services/<service_name>/app/db/` (each service has its own engine, session factory, and declarative Base)
+- **Status:** Implemented — engine, session factory, declarative Base, `get_db` dependency, connectivity check, and ORM models (`User`, `Order`, `Payment`)
 
 ## Containerization (Milestone 3 — implemented)
 
@@ -68,12 +68,25 @@ User Service (FastAPI)          Client
 - Order Service uses `PAYMENT_SERVICE_URL=http://payment-service:8003` inside Compose
 - **Status:** Complete — verified via `docker compose build`, `docker compose up`, and host/Compose-network checks
 
-## Kubernetes (Planned — Milestone 4–5)
+## Kubernetes (Milestone 4 — implemented)
 
-- Local Kubernetes cluster via kind
-- Deployments, Services, ConfigMaps, Secrets
-- Health probes and resource limits
-- Helm charts for packaging
+- Local Kubernetes cluster via kind (`krp`, context `kind-krp`)
+- Namespace `krp` (pre-existing; not managed by manifests)
+- Plain YAML manifests under `k8s/` (no Helm — Milestone 5)
+- Workloads: PostgreSQL, user-service, payment-service, order-service (Deployments, `replicas: 1`)
+- ClusterIP Services: `postgres:5432`, `user-service:8001`, `order-service:8002`, `payment-service:8003`
+- PostgreSQL `postgres:16` with PVC `postgres-data` (1Gi)
+- ConfigMaps for non-sensitive configuration (`user-service-config`, `payment-service-config`, `order-service-config`)
+- Shared Secret `postgres-credentials` for database credentials (local placeholder only)
+- Local application images (`krp-*-service:local`, `imagePullPolicy: Never`) loaded via `kind load docker-image`
+- Liveness and readiness probes with resource requests/limits on all workloads
+- Probe paths: postgres `pg_isready`; User/Payment `GET /health`; Order `GET /orders` (Order Service has no `/health` endpoint)
+- Order Service uses `PAYMENT_SERVICE_URL=http://payment-service:8003` inside the cluster
+- **Status:** Complete — verified via manual in-cluster checks; see `k8s/README.md` for operational commands
+
+## Helm (Planned — Milestone 5)
+
+- Package Kubernetes deployments as Helm charts
 - **Status:** Planned
 
 ## CI/CD (Planned — Milestone 6)

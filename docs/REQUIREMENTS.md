@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 3 complete — Milestone 4 — Kubernetes is next (not started). User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; and Docker Compose containerization are implemented and verified (124 tests passing).
+> **Status:** Milestone 4 complete — Milestone 5 — Helm is next (not started). User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; and Kubernetes (kind) deployment are implemented and verified (124 tests passing).
 
 ## Functional Requirements
 
@@ -41,9 +41,9 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-014 | Services shall be deployable to a local Kubernetes cluster (kind) | Planned |
-| FR-015 | Deployments shall include liveness and readiness probes | Planned |
-| FR-016 | Configuration shall use ConfigMaps and Secrets | Planned |
+| FR-014 | Services shall be deployable to a local Kubernetes cluster (kind) | Implemented (`k8s/` manifests, kind cluster `krp`) |
+| FR-015 | Deployments shall include liveness and readiness probes | Implemented (postgres `pg_isready`; user/payment `/health`; order `GET /orders`) |
+| FR-016 | Configuration shall use ConfigMaps and Secrets | Implemented (ConfigMaps + `postgres-credentials` Secret) |
 | FR-017 | Services shall be packaged as Helm charts | Planned |
 
 ### CI/CD
@@ -129,7 +129,7 @@
 |----|-------------|--------|
 | NFR-005 | Secrets shall never be committed to version control | Planned |
 | NFR-006 | Configuration shall be externalized via environment variables | Implemented |
-| NFR-007 | Kubernetes Secrets shall be used for sensitive cluster configuration | Planned |
+| NFR-007 | Kubernetes Secrets shall be used for sensitive cluster configuration | Implemented (`postgres-credentials` Secret) |
 | NFR-008 | AI operations shall follow least-privilege access principles | Planned |
 | NFR-009 | Destructive AI actions shall require explicit human approval | Planned |
 
@@ -154,4 +154,4 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-017 | Kubernetes shall use kind for local cluster provisioning | Planned |
+| NFR-017 | Kubernetes shall use kind for local cluster provisioning | Implemented (kind cluster `krp`) |

@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 3 — Docker (complete)
+> **Last updated:** Milestone 4 — Kubernetes (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -120,12 +120,12 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Objective:** Deploy services to a local Kubernetes cluster using kind.
 
 **Major Tasks:**
-- Set up kind cluster
-- Create Kubernetes Deployments and Services
-- Create ConfigMaps and Secrets
-- Configure liveness and readiness probes
-- Set resource limits
-- Verify service discovery and communication
+- [x] Set up kind cluster
+- [x] Create Kubernetes Deployments and Services
+- [x] Create ConfigMaps and Secrets
+- [x] Configure liveness and readiness probes
+- [x] Set resource limits
+- [x] Verify service discovery and communication
 
 **Completion Criteria:**
 - All services deploy to kind cluster
@@ -133,7 +133,23 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Services are accessible within the cluster
 - Configuration is externalized
 
-**Status:** NOT STARTED
+**Exit Validation:**
+- [x] kind cluster `krp` (context `kind-krp`) and namespace `krp` verified
+- [x] Plain YAML manifests under `k8s/` applied — postgres, user-service, payment-service, order-service
+- [x] All four workloads Running, READY 1/1, RESTARTS 0
+- [x] PostgreSQL `postgres:16` with PVC `postgres-data` (1Gi); ClusterIP Service on port 5432
+- [x] Application ClusterIP Services: user-service:8001, order-service:8002, payment-service:8003
+- [x] ConfigMaps (`user-service-config`, `payment-service-config`, `order-service-config`) and shared Secret `postgres-credentials` in use
+- [x] Local images (`krp-*-service:local`, `imagePullPolicy: Never`) loaded via `kind load docker-image`
+- [x] Probes verified: postgres `pg_isready`; user/payment `GET /health`; order `GET /orders` (no `/health` endpoint)
+- [x] In-cluster DNS and Order → Payment via `http://payment-service:8003` verified
+- [x] Database-backed workflow verified: user creation, order creation, payment record creation
+- [x] Existing pytest suite passes with no regression (86 unit, 36 integration, 2 E2E — 124 total)
+- [x] Docker Compose parity verified after Kubernetes work
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 4 verified — plain Kubernetes manifests in `k8s/` on kind cluster `krp`, namespace `krp`. PostgreSQL Deployment + 1Gi PVC; application Deployments with ConfigMaps, `postgres-credentials` Secret (local placeholder `change_me`), liveness/readiness probes, and resource requests/limits. Manual in-cluster verification (no automated Kubernetes pytest suite). Helm packaging deferred to Milestone 5. Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
 
 ---
 
@@ -401,7 +417,7 @@ Milestone 0  → Engineering Foundation        [COMPLETE]
 Milestone 1  → Application Foundation      [COMPLETE]
 Milestone 2  → Microservices               [COMPLETE]
 Milestone 3  → Docker                      [COMPLETE]
-Milestone 4  → Kubernetes                  [NOT STARTED]
+Milestone 4  → Kubernetes                  [COMPLETE]
 Milestone 5  → Helm                        [NOT STARTED]
 Milestone 6  → CI/CD                       [NOT STARTED]
 Milestone 7  → Metrics and Monitoring      [NOT STARTED]

@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 4 — Kubernetes (next). Milestone 3 — Docker is complete.
+> **Current Milestone:** Milestone 5 — Helm (next). Milestone 4 — Kubernetes is complete.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -208,7 +208,29 @@ docker compose down
 
 Use `docker compose down -v` only when you intentionally want to remove the named PostgreSQL volume.
 
-The pytest suite (`tests/unit`, `tests/integration`, `tests/e2e`) continues to run against host PostgreSQL via `.env` / `.env.example` defaults and does not require the Compose stack to be running.
+The pytest suite (`tests/unit`, `tests/integration`, `tests/e2e`) continues to run against host PostgreSQL via `.env` / `.env.example` defaults and does not require the Compose or Kubernetes stack to be running.
+
+## Kubernetes Workflow
+
+The Kubernetes local stack is defined by plain YAML manifests under `k8s/`. It deploys PostgreSQL and all three application services to a kind cluster.
+
+| Setting | Value |
+|---------|-------|
+| kind cluster | `krp` |
+| kubectl context | `kind-krp` |
+| Namespace | `krp` (must exist before applying manifests) |
+
+**Prerequisites:** kind and kubectl (see Future Prerequisites table below).
+
+**Apply order:**
+
+1. PostgreSQL — PVC, Secret, Deployment, Service (`k8s/postgres/`)
+2. Wait for PostgreSQL readiness
+3. Application services — payment-service, user-service, order-service (`k8s/payment-service/`, `k8s/user-service/`, `k8s/order-service/`)
+
+Build application images from the repository root, load them into kind with `kind load docker-image`, then apply manifests. Order Service reaches Payment Service at `http://payment-service:8003` via Kubernetes Service DNS.
+
+See [k8s/README.md](../k8s/README.md) for build, load, apply, verify, and teardown commands.
 
 ## FastAPI Development Workflow
 
@@ -253,7 +275,7 @@ Connectivity can be verified programmatically via `app.db.database.check_databas
 
 - The entire platform runs locally
 - No AWS or cloud dependencies for core implementation
-- Use kind for local Kubernetes clusters (Milestone 4+)
+- Use kind for local Kubernetes clusters (Milestone 4 — implemented; see Kubernetes Workflow above)
 - Use Docker Compose for local multi-service development (Milestone 3 — implemented; see Docker Compose Workflow above)
 
 ## Cursor Workflow

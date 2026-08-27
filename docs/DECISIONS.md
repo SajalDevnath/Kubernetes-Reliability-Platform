@@ -192,3 +192,19 @@ Milestone 2 requires Order → Payment communication without introducing message
 This is not a distributed transaction. Edge cases remain possible (for example, payment succeeds but order commit fails, or payment succeeds after a timeout from the caller's perspective). Phase 1 accepts this limitation explicitly.
 
 **Status:** Accepted
+
+---
+
+## ADR-014 — Milestone 4 Plain Kubernetes Manifests on kind
+
+**Date:** 2026-08-27
+
+**Decision:**
+Milestone 4 will deploy the platform using plain YAML manifests under `k8s/` on a local kind cluster (`krp`, namespace `krp`). Helm packaging is deferred to Milestone 5. PostgreSQL runs as a single shared Deployment with a 1Gi PVC (`postgres-data`). Non-sensitive configuration is supplied via ConfigMaps; database credentials use a shared `postgres-credentials` Secret (local placeholder `change_me` only). Application images are built locally, loaded into kind via `kind load docker-image`, and referenced with `imagePullPolicy: Never`. The pre-existing `krp` namespace is used explicitly and is not created by manifests. Order Service liveness and readiness probes use `GET /orders` because the service has no `/health` endpoint.
+
+**Reason:**
+Milestone 4 requires Deployments, Services, ConfigMaps, Secrets, probes, and resource limits on kind without introducing Helm, CI/CD, or application code changes. Plain manifests mirror the existing Docker Compose service topology and keep verification manual and repeatable, consistent with Milestone 3 container verification.
+
+**Status:** Accepted
+
+**Verification:** All four workloads verified Running on kind cluster `krp` (2026-08-27). In-cluster DNS, probes, database-backed workflows, and Order → Payment communication verified. Existing pytest suite (124 tests) and Docker Compose parity verified with no regression.
