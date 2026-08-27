@@ -2,9 +2,11 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestone 2 in progress.** User, Order, and Payment Service CRUD are complete and verified against PostgreSQL. Order → Payment HTTP integration is implemented. E2E workflows are not yet built.
+> **Milestones 0–3 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, and Docker Compose containerization are implemented and verified. **Milestone 4 — Kubernetes** is next (not started).
 
 ## Quick Start
+
+### Local development (uv)
 
 ```bash
 python -m uv sync --dev
@@ -13,7 +15,22 @@ python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8002 --app-dir ser
 python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8003 --app-dir services/payment_service
 python -m uv run pytest tests/unit -v
 python -m uv run pytest tests/integration -v -m integration
+python -m uv run pytest tests/e2e -v -m e2e
 ```
+
+### Docker Compose
+
+```bash
+docker compose config
+docker compose build
+docker compose up -d
+docker compose ps
+curl http://127.0.0.1:8001/health
+curl http://127.0.0.1:8003/health
+curl http://127.0.0.1:8002/orders
+```
+
+Stop the stack with `docker compose down` (omit `-v` to preserve the PostgreSQL volume).
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for full setup instructions.
 
@@ -36,8 +53,8 @@ The business logic is intentionally simple. The focus is on reliability engineer
 | Layer | Technologies |
 |-------|-------------|
 | Application | Python, FastAPI, Pydantic, SQLAlchemy, PostgreSQL, uv |
-| Containers | Docker, Docker Compose |
-| Orchestration | Kubernetes, kind, kubectl, Helm |
+| Containers | Docker, Docker Compose (implemented) |
+| Orchestration | Kubernetes, kind, kubectl, Helm (planned) |
 | CI/CD | GitHub Actions |
 | Metrics | Prometheus, PromQL |
 | Visualization | Grafana |
@@ -56,7 +73,7 @@ Client → Order Service → Payment Service
 All services → PostgreSQL
 ```
 
-Three microservices with simple business logic, designed to create realistic operational scenarios for learning observability, SRE, and incident response.
+Three microservices with simple business logic, designed to create realistic operational scenarios for learning observability, SRE, and incident response. Order Service calls Payment Service synchronously when an order is created; payment status updates remain owned by Payment Service and do not automatically change order status.
 
 ## Current Status
 
@@ -64,8 +81,12 @@ Three microservices with simple business logic, designed to create realistic ope
 |-----------|------|--------|
 | 0 | Engineering Foundation | COMPLETE |
 | 1 | Application Foundation | COMPLETE |
-| 2 | Microservices | IN PROGRESS |
-| 3–17 | See roadmap | NOT STARTED |
+| 2 | Microservices | COMPLETE |
+| 3 | Docker | COMPLETE |
+| 4 | Kubernetes | NOT STARTED |
+| 5–17 | See roadmap | NOT STARTED |
+
+**Tests:** 124 passing (86 unit, 36 integration, 2 E2E). See [docs/TESTING.md](docs/TESTING.md).
 
 ## Documentation
 

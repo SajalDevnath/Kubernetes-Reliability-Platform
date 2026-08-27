@@ -1,5 +1,7 @@
 # Kubernetes Reliability Platform
 
+> **Current progress:** Milestones 0–3 complete (microservices, automated tests, Docker Compose). Milestone 4 — Kubernetes is next (not started).
+
 ## What This Project Is
 
 The Kubernetes Reliability Platform is a hands-on learning and demonstration project that builds a small set of Python/FastAPI microservices and progressively layers operational engineering capabilities on top — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
@@ -22,9 +24,10 @@ Modern platform and SRE engineering requires practical experience across applica
 
 **In scope:**
 
-- Three microservices: User, Order, Payment
-- PostgreSQL database
-- Local development and local Kubernetes (kind)
+- Three microservices: User, Order, Payment (implemented)
+- PostgreSQL database (implemented)
+- Docker and Docker Compose local orchestration (implemented)
+- Local Kubernetes (kind) (planned — Milestone 4)
 - Full observability stack
 - SRE practices and incident simulation
 - AI-assisted operations (final phase)

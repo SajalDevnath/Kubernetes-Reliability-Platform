@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 2 in progress — User, Order, and Payment Service CRUD complete and verified.
+> **Status:** Milestone 3 complete — Milestone 4 — Kubernetes is next (not started). User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; and Docker Compose containerization are implemented and verified (124 tests passing).
 
 ## Functional Requirements
 
@@ -34,8 +34,8 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-012 | Each microservice shall be packaged as a Docker image | Planned |
-| FR-013 | Services shall be orchestrated locally via Docker Compose | Planned |
+| FR-012 | Each microservice shall be packaged as a Docker image | Implemented (Dockerfiles for User, Order, and Payment services) |
+| FR-013 | Services shall be orchestrated locally via Docker Compose | Implemented (`docker-compose.yml` with PostgreSQL and all services) |
 
 ### Kubernetes
 
@@ -138,14 +138,14 @@
 | ID | Requirement | Status |
 |----|-------------|--------|
 | NFR-010 | Code shall use type hints and follow Python conventions | Implemented |
-| NFR-011 | Services shall follow a consistent layered architecture | Partial (User Service complete; Order/Payment planned) |
+| NFR-011 | Services shall follow a consistent layered architecture | Implemented (User, Order, and Payment services) |
 | NFR-012 | Documentation shall be updated when implementation changes | Implemented |
 
 ### Testability
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Partial (User Service: 25 unit + 10 integration; E2E planned) |
+| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (86 unit + 36 integration + 2 E2E — 124 total) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
 | NFR-014 | Failure scenarios shall be testable and reproducible | Planned |
 | NFR-015 | Observability outputs shall be verifiable | Planned |
