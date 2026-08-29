@@ -208,3 +208,19 @@ Milestone 4 requires Deployments, Services, ConfigMaps, Secrets, probes, and res
 **Status:** Accepted
 
 **Verification:** All four workloads verified Running on kind cluster `krp` (2026-08-27). In-cluster DNS, probes, database-backed workflows, and Order → Payment communication verified. Existing pytest suite (124 tests) and Docker Compose parity verified with no regression.
+
+---
+
+## ADR-015 — Milestone 5 Helm Chart Packaging the M4 Topology
+
+**Date:** 2026-08-29
+
+**Decision:**
+Milestone 5 will package the Milestone 4 Kubernetes deployment as a single umbrella Helm chart at `helm/krp/` (`krp-0.1.0`). The chart reproduces the existing topology (postgres, user-service, payment-service, order-service) without redesigning workloads, service names, ports, probes, or in-cluster DNS contracts. Plain YAML manifests under `k8s/` remain the M4 reference implementation and are not removed or replaced. Configuration is parameterized via `values.yaml` with non-sensitive local overrides in `values-local.yaml`. Database credentials remain in a `postgres-credentials` Secret (local placeholder `change_me` only). For M4 → M5 migration on an existing kind cluster, `postgres.storage.existingClaim` allows Helm to reuse the existing `postgres-data` PVC so PostgreSQL data is preserved; when `existingClaim` is empty, the chart creates `postgres-data`.
+
+**Reason:**
+Milestone 5 requires Helm packaging and environment-specific configuration without changing application code or replacing the validated M4 manifests. A single umbrella chart with fixed service names preserves Order → Payment DNS (`http://payment-service:8003`) and keeps migration straightforward. Optional PVC reuse avoids data loss when transitioning from `kubectl apply` to Helm on the same cluster.
+
+**Status:** Accepted
+
+**Verification:** `helm lint` and `helm template` passed; Helm release `krp` installed and upgraded on kind cluster `krp` (2026-08-29). M4 PVC preserved; in-cluster and API workflows verified. Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.

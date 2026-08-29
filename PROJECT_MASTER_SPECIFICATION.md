@@ -167,7 +167,8 @@ kubernetes-reliability-platform/
 │   └── plans/          # Implementation plans per milestone
 │
 ├── docs/               # Project documentation
-├── k8s/                # Kubernetes manifests (Milestone 4)
+├── k8s/                # Kubernetes manifests (Milestone 4 — reference)
+├── helm/krp/           # Helm chart (Milestone 5)
 ├── services/           # Application microservices
 ├── tests/
 │   ├── unit/           # Unit tests
@@ -182,7 +183,7 @@ kubernetes-reliability-platform/
 └── README.md
 ```
 
-Application and infrastructure directories are introduced progressively during their respective milestones. Kubernetes manifests exist under `k8s/`; Helm charts are planned for Milestone 5.
+Application and infrastructure directories are introduced progressively during their respective milestones. Kubernetes manifests exist under `k8s/` (M4 reference); Helm chart `helm/krp/` packages the same deployment (Milestone 5).
 
 ## 9. Documentation Architecture
 
@@ -352,7 +353,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 5 — Helm (NOT STARTED)
+**Current Milestone:** Milestone 6 — CI/CD (NOT STARTED)
 
 **Status:**
 - Milestone 0 complete (engineering foundation, documentation, rules, roadmap)
@@ -360,6 +361,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 - Milestone 2 complete (User, Order, and Payment Service CRUD APIs; Order → Payment HTTP integration; E2E cross-service workflows verified — 86 unit, 36 integration, 2 E2E tests passing; 124 total)
 - Milestone 3 complete (Dockerfiles for all services, `docker-compose.yml`, PostgreSQL in Compose, container healthchecks, Compose-network Order → Payment verification)
 - Milestone 4 complete (plain YAML manifests under `k8s/`, kind cluster `krp`, namespace `krp`, Deployments/Services/ConfigMaps/Secret/PVC, probes, resource limits, in-cluster Order → Payment verification; 124 tests passing)
-- Kubernetes manifests exist under `k8s/`; Helm charts do not exist yet
+- Milestone 5 complete (Helm chart `helm/krp/` `krp-0.1.0`, `values.yaml` and `values-local.yaml`, `postgres.storage.existingClaim` for M4 → M5 PVC reuse, Helm install/upgrade verified on kind; `k8s/` retained as reference)
+- Kubernetes manifests exist under `k8s/`; Helm chart exists under `helm/krp/`
 
-**Next Milestone:** Milestone 5 — Helm
+**Next Milestone:** Milestone 6 — CI/CD

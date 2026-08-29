@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–4 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, and Kubernetes (kind) deployment are implemented and verified. **Milestone 5 — Helm** is next (not started).
+> **Milestones 0–5 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, and Helm chart packaging are implemented and verified. **Milestone 6 — CI/CD** is next (not started).
 
 ## Quick Start
 
@@ -38,6 +38,10 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for full setup instructions.
 
 Deploy to the local kind cluster using manifests in `k8s/`. See [k8s/README.md](k8s/README.md) for build, load, apply, and verification commands.
 
+### Helm
+
+Deploy to the local kind cluster using the Helm chart in `helm/krp/`. See [helm/krp/README.md](helm/krp/README.md) for install, upgrade, values, and M4 → M5 migration commands.
+
 ## Purpose
 
 The primary purpose is to learn and demonstrate:
@@ -58,7 +62,7 @@ The business logic is intentionally simple. The focus is on reliability engineer
 |-------|-------------|
 | Application | Python, FastAPI, Pydantic, SQLAlchemy, PostgreSQL, uv |
 | Containers | Docker, Docker Compose (implemented) |
-| Orchestration | Kubernetes, kind, kubectl (implemented); Helm (planned) |
+| Orchestration | Kubernetes, kind, kubectl (implemented); Helm (implemented) |
 | CI/CD | GitHub Actions |
 | Metrics | Prometheus, PromQL |
 | Visualization | Grafana |
@@ -88,7 +92,7 @@ Three microservices with simple business logic, designed to create realistic ope
 | 2 | Microservices | COMPLETE |
 | 3 | Docker | COMPLETE |
 | 4 | Kubernetes | COMPLETE |
-| 5 | Helm | NOT STARTED |
+| 5 | Helm | COMPLETE |
 | 6–17 | See roadmap | NOT STARTED |
 
 **Tests:** 124 passing (86 unit, 36 integration, 2 E2E). See [docs/TESTING.md](docs/TESTING.md).
@@ -106,7 +110,8 @@ Three microservices with simple business logic, designed to create realistic ope
 | [Testing Strategy](docs/TESTING.md) | Testing approach |
 | [Decisions](docs/DECISIONS.md) | Architecture decision records |
 | [Roadmap](docs/ROADMAP.md) | Complete milestone roadmap |
-| [Kubernetes Deployment](k8s/README.md) | kind cluster deployment guide |
+| [Kubernetes Deployment](k8s/README.md) | kind cluster deployment guide (M4 reference manifests) |
+| [Helm Chart](helm/krp/README.md) | Helm deployment guide (M5 parameterized packaging) |
 
 ## Roadmap
 

@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 4 complete — User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, and Kubernetes (kind) deployment verified. Milestone 5 — Helm is next.
+> **Status:** Milestone 5 complete — User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, and Helm chart packaging verified. Milestone 6 — CI/CD is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -30,7 +30,7 @@ User Service (FastAPI)          Client
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/user_service/`
-- **Status:** Complete — `GET /health` and `/users` CRUD endpoints verified against PostgreSQL, Docker Compose, and Kubernetes
+- **Status:** Complete — `GET /health` and `/users` CRUD endpoints verified against PostgreSQL, Docker Compose, Kubernetes, and Helm
 
 ### Order Service
 
@@ -39,7 +39,7 @@ User Service (FastAPI)          Client
 - **Database:** PostgreSQL
 - **Location:** `services/order_service/`
 - **Dependencies:** Payment Service (synchronous HTTP on order creation via `PAYMENT_SERVICE_URL`)
-- **Status:** Complete — `/orders` CRUD endpoints and Order → Payment integration verified against PostgreSQL, Docker Compose, and Kubernetes
+- **Status:** Complete — `/orders` CRUD endpoints and Order → Payment integration verified against PostgreSQL, Docker Compose, Kubernetes, and Helm
 
 ### Payment Service
 
@@ -49,7 +49,7 @@ User Service (FastAPI)          Client
 - **Location:** `services/payment_service/`
 - **Port:** 8003
 - **Dependencies:** Order Service (reference via `order_id` only — no cross-service FK or reverse HTTP integration)
-- **Status:** Complete — `GET /health` and `/payments` CRUD endpoints verified against PostgreSQL, Docker Compose, and Kubernetes
+- **Status:** Complete — `GET /health` and `/payments` CRUD endpoints verified against PostgreSQL, Docker Compose, Kubernetes, and Helm
 
 ## Data Layer
 
@@ -72,7 +72,7 @@ User Service (FastAPI)          Client
 
 - Local Kubernetes cluster via kind (`krp`, context `kind-krp`)
 - Namespace `krp` (pre-existing; not managed by manifests)
-- Plain YAML manifests under `k8s/` (no Helm — Milestone 5)
+- Plain YAML manifests under `k8s/` — M4 reference implementation (retained alongside Helm)
 - Workloads: PostgreSQL, user-service, payment-service, order-service (Deployments, `replicas: 1`)
 - ClusterIP Services: `postgres:5432`, `user-service:8001`, `order-service:8002`, `payment-service:8003`
 - PostgreSQL `postgres:16` with PVC `postgres-data` (1Gi)
@@ -82,12 +82,17 @@ User Service (FastAPI)          Client
 - Liveness and readiness probes with resource requests/limits on all workloads
 - Probe paths: postgres `pg_isready`; User/Payment `GET /health`; Order `GET /orders` (Order Service has no `/health` endpoint)
 - Order Service uses `PAYMENT_SERVICE_URL=http://payment-service:8003` inside the cluster
-- **Status:** Complete — verified via manual in-cluster checks; see `k8s/README.md` for operational commands
+- **Status:** Complete — verified via manual in-cluster checks; see `k8s/README.md` for `kubectl apply` workflow
 
-## Helm (Planned — Milestone 5)
+## Helm (Milestone 5 — implemented)
 
-- Package Kubernetes deployments as Helm charts
-- **Status:** Planned
+- Umbrella chart `helm/krp/` (`krp-0.1.0`) packages the same topology as `k8s/` manifests
+- Parameterized via `values.yaml` (baseline defaults) and `values-local.yaml` (non-sensitive local kind overrides)
+- `postgres.storage.existingClaim` — when set, reuses an existing PVC instead of creating `postgres-data` (M4 → M5 data preservation)
+- Deploy and manage releases with `helm upgrade --install`, `helm upgrade`, `helm history`, and `helm rollback`
+- Static validation: `helm lint`, `helm template`
+- Secrets remain local-development placeholders (`change_me`); not production credentials
+- **Status:** Complete — verified via Helm install/upgrade on kind cluster `krp`; see `helm/krp/README.md` for operational commands
 
 ## CI/CD (Planned — Milestone 6)
 

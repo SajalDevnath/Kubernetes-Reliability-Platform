@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 4 complete — application tests (124 passing), Docker Compose container verification, and Kubernetes (kind) manual verification complete.
+> **Status:** Milestone 5 complete — application tests (124 passing), Docker Compose container verification, Kubernetes (kind) manual verification, and Helm deployment verification complete.
 
 ## Philosophy
 
@@ -60,6 +60,22 @@ A task is not complete merely because the application starts. Every change must 
   - Existing pytest suite unchanged: 86 unit + 36 integration + 2 E2E = **124 passing**
   - Docker Compose parity verified after Kubernetes work
 
+### Helm Tests (Milestone 5 — manual verification complete)
+
+- **Scope:** Chart linting, template rendering, Helm install/upgrade, release history, PVC reuse during M4 → M5 migration, in-cluster and API workflow verification
+- **Location:** Manual verification against `helm/krp/` chart (automated Helm tests not in `tests/`)
+- **Status:** Verified — release `krp` deployed to kind cluster `krp` (namespace `krp`) via `helm upgrade --install`
+- **Verified checks:**
+  - `helm lint helm/krp` — 0 chart(s) failed
+  - `helm template krp helm/krp` renders PostgreSQL PVC `postgres-data`
+  - `helm template krp helm/krp -f helm/krp/values-local.yaml` skips PVC creation; Deployment uses `claimName: postgres-data`
+  - M4 application resources removed before install; existing PVC `postgres-data` preserved (Bound, 1Gi)
+  - Helm install (revision 1) and upgrades verified (revision 2: `userService.replicas=2` → `2/2`; revision 3: restored to `1/1`)
+  - All four workloads Running after stabilization; PostgreSQL 0 restarts
+  - In-cluster HTTP checks: User `/health`, Payment `/health`, Order `/orders` return HTTP 200
+  - API workflow via port-forward: order creation (ID 3) and payment creation (ID 4); M4 data (orders 1–2, payments 1–3) retained
+  - Plain `k8s/` manifests retained as M4 reference (not removed from repository)
+
 ### Failure Simulation Tests (Planned — Milestone 12)
 
 - **Scope:** Network failures, latency injection, dependency failures
@@ -85,7 +101,7 @@ A task is not complete merely because the application starts. Every change must 
 | Every code change | Relevant unit tests |
 | Service integration | Integration tests |
 | Before commit | Full test suite for changed area |
-| Milestone completion | All tests for that milestone; Milestone 3 requires Compose stack verification; Milestone 4 requires kind stack verification |
+| Milestone completion | All tests for that milestone; Milestone 3 requires Compose stack verification; Milestone 4 requires kind stack verification; Milestone 5 requires Helm deployment verification |
 
 ## Currently Available Tests
 

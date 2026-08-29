@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 4 complete — Milestone 5 — Helm is next (not started). User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; and Kubernetes (kind) deployment are implemented and verified (124 tests passing).
+> **Status:** Milestone 5 complete — Milestone 6 — CI/CD is next (not started). User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; and Helm chart packaging are implemented and verified (124 tests passing).
 
 ## Functional Requirements
 
@@ -44,7 +44,7 @@
 | FR-014 | Services shall be deployable to a local Kubernetes cluster (kind) | Implemented (`k8s/` manifests, kind cluster `krp`) |
 | FR-015 | Deployments shall include liveness and readiness probes | Implemented (postgres `pg_isready`; user/payment `/health`; order `GET /orders`) |
 | FR-016 | Configuration shall use ConfigMaps and Secrets | Implemented (ConfigMaps + `postgres-credentials` Secret) |
-| FR-017 | Services shall be packaged as Helm charts | Planned |
+| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.1.0`) |
 
 ### CI/CD
 

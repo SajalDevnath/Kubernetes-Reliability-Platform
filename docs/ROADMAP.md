@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 4 — Kubernetes (complete)
+> **Last updated:** Milestone 5 — Helm (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -149,7 +149,7 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 
 **Status:** COMPLETE
 
-> **Note:** Milestone 4 verified — plain Kubernetes manifests in `k8s/` on kind cluster `krp`, namespace `krp`. PostgreSQL Deployment + 1Gi PVC; application Deployments with ConfigMaps, `postgres-credentials` Secret (local placeholder `change_me`), liveness/readiness probes, and resource requests/limits. Manual in-cluster verification (no automated Kubernetes pytest suite). Helm packaging deferred to Milestone 5. Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
+> **Note:** Milestone 4 verified — plain Kubernetes manifests in `k8s/` on kind cluster `krp`, namespace `krp`. PostgreSQL Deployment + 1Gi PVC; application Deployments with ConfigMaps, `postgres-credentials` Secret (local placeholder `change_me`), liveness/readiness probes, and resource requests/limits. Manual in-cluster verification (no automated Kubernetes pytest suite). Helm packaging completed in Milestone 5 (`helm/krp/`). Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
 
 ---
 
@@ -158,17 +158,33 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Objective:** Package Kubernetes deployments as Helm charts.
 
 **Major Tasks:**
-- Create Helm chart structure
-- Parameterize deployments with values files
-- Support environment-specific configuration
-- Document Helm deployment workflow
+- [x] Create Helm chart structure
+- [x] Parameterize deployments with values files
+- [x] Support environment-specific configuration
+- [x] Document Helm deployment workflow
 
 **Completion Criteria:**
 - Services deploy via Helm install/upgrade
 - Values files support configuration changes
 - Helm charts are documented
 
-**Status:** NOT STARTED
+**Exit Validation:**
+- [x] Umbrella chart `helm/krp/` (`krp-0.1.0`) packages postgres, user-service, payment-service, and order-service
+- [x] `values.yaml` baseline defaults; `values-local.yaml` for non-sensitive local kind overrides
+- [x] `postgres.storage.existingClaim` supports reusing an existing PVC (`postgres-data`) for M4 → M5 migration
+- [x] `helm lint helm/krp` — 0 chart(s) failed
+- [x] `helm template` verified for default values (creates PVC) and `values-local.yaml` (reuses existing PVC, no PVC resource rendered)
+- [x] M4 application resources removed before first Helm install; PostgreSQL PVC `postgres-data` preserved (Bound, 1Gi, ReadWriteOnce)
+- [x] `helm upgrade --install krp helm/krp -n krp -f helm/krp/values.yaml -f helm/krp/values-local.yaml` — release `krp` revision 1 deployed
+- [x] Helm upgrade verified (`userService.replicas=2` → revision 2, `2/2`; restored to baseline → revision 3, all deployments `1/1`)
+- [x] All four workloads Running; PostgreSQL 0 restarts after stabilization
+- [x] In-cluster connectivity verified (`user-service` `/health`, `payment-service` `/health`, `order-service` `/orders`)
+- [x] API workflow verified via port-forward — order creation (ID 3) and payment creation (ID 4); existing orders/payments from M4 retained
+- [x] Plain `k8s/` manifests retained as M4 reference implementation (not removed or replaced)
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 5 verified — Helm chart `helm/krp/` deploys the same topology as M4 `k8s/` manifests on kind cluster `krp`, namespace `krp`. Configuration parameterized via `values.yaml` and `values-local.yaml` (including `existingClaim: postgres-data` to preserve PostgreSQL data during migration). Manual Helm verification (no automated Helm pytest suite). Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
 
 ---
 
@@ -418,7 +434,7 @@ Milestone 1  → Application Foundation      [COMPLETE]
 Milestone 2  → Microservices               [COMPLETE]
 Milestone 3  → Docker                      [COMPLETE]
 Milestone 4  → Kubernetes                  [COMPLETE]
-Milestone 5  → Helm                        [NOT STARTED]
+Milestone 5  → Helm                        [COMPLETE]
 Milestone 6  → CI/CD                       [NOT STARTED]
 Milestone 7  → Metrics and Monitoring      [NOT STARTED]
 Milestone 8  → Alerting                    [NOT STARTED]

@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 5 — Helm (next). Milestone 4 — Kubernetes is complete.
+> **Current Milestone:** Milestone 6 — CI/CD (next). Milestone 5 — Helm is complete.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -232,6 +232,54 @@ Build application images from the repository root, load them into kind with `kin
 
 See [k8s/README.md](../k8s/README.md) for build, load, apply, verify, and teardown commands.
 
+## Helm Workflow
+
+The Helm chart at `helm/krp/` packages the same application topology as the `k8s/` manifests. Use Helm for install, upgrade, and release management on the kind cluster.
+
+| Setting | Value |
+|---------|-------|
+| Chart | `helm/krp/` (`krp-0.1.0`) |
+| Release name | `krp` |
+| Namespace | `krp` (must exist; chart does not create it by default) |
+| Values files | `values.yaml` (baseline), `values-local.yaml` (local kind overrides) |
+
+**Prerequisites:** Helm 3 or 4 (see Future Prerequisites table below).
+
+**M4 → M5 migration:** Before the first Helm install on a cluster that already has M4 resources, remove M4 Deployments, Services, ConfigMaps, and the Secret while **preserving** the PostgreSQL PVC `postgres-data`. Set `postgres.storage.existingClaim: postgres-data` in `values-local.yaml` so Helm reuses the existing PVC and does not render a new one.
+
+**Install or upgrade:**
+
+```bash
+helm lint helm/krp
+helm template krp helm/krp
+helm template krp helm/krp -f helm/krp/values-local.yaml
+
+helm upgrade --install krp helm/krp \
+  --namespace krp \
+  --create-namespace=false \
+  -f helm/krp/values.yaml \
+  -f helm/krp/values-local.yaml
+```
+
+**Verify release:**
+
+```bash
+helm list -n krp
+helm history krp -n krp
+kubectl get pods,svc -n krp
+```
+
+Override configuration at upgrade time (example):
+
+```bash
+helm upgrade krp helm/krp -n krp \
+  -f helm/krp/values.yaml \
+  -f helm/krp/values-local.yaml \
+  --set userService.replicas=2
+```
+
+See [helm/krp/README.md](../helm/krp/README.md) for build, load, install, upgrade, rollback, teardown, and PVC reuse details.
+
 ## FastAPI Development Workflow
 
 1. Define Pydantic schemas for request/response models
@@ -276,6 +324,7 @@ Connectivity can be verified programmatically via `app.db.database.check_databas
 - The entire platform runs locally
 - No AWS or cloud dependencies for core implementation
 - Use kind for local Kubernetes clusters (Milestone 4 — implemented; see Kubernetes Workflow above)
+- Use Helm for parameterized Kubernetes deployment (Milestone 5 — implemented; see Helm Workflow above)
 - Use Docker Compose for local multi-service development (Milestone 3 — implemented; see Docker Compose Workflow above)
 
 ## Cursor Workflow
