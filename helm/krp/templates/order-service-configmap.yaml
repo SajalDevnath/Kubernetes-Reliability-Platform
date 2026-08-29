@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-service-config
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: order-service
+    {{- include "krp.labels" . | nindent 4 }}
+data:
+  POSTGRES_HOST: {{ .Values.orderService.config.postgresHost | quote }}
+  POSTGRES_PORT: {{ .Values.orderService.config.postgresPort | quote }}
+  POSTGRES_DB: {{ .Values.orderService.config.postgresDb | quote }}
+  APP_ENV: {{ .Values.orderService.config.appEnv | quote }}
+  LOG_LEVEL: {{ .Values.orderService.config.logLevel | quote }}
+  SERVICE_NAME: {{ .Values.orderService.config.serviceName | quote }}
+  HOST: {{ .Values.orderService.config.host | quote }}
+  PORT: {{ .Values.orderService.config.port | quote }}
+  PAYMENT_SERVICE_URL: {{ .Values.orderService.config.paymentServiceUrl | quote }}
+  PAYMENT_SERVICE_TIMEOUT_SECONDS: {{ .Values.orderService.config.paymentServiceTimeoutSeconds | quote }}

@@ -1,0 +1,13 @@
+# VCS
+.git/
+.gitignore
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Documentation build artifacts
+*.md~

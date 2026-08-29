@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: user-service
+    {{- include "krp.labels" . | nindent 4 }}
+data:
+  POSTGRES_HOST: {{ .Values.userService.config.postgresHost | quote }}
+  POSTGRES_PORT: {{ .Values.userService.config.postgresPort | quote }}
+  POSTGRES_DB: {{ .Values.userService.config.postgresDb | quote }}
+  APP_ENV: {{ .Values.userService.config.appEnv | quote }}
+  LOG_LEVEL: {{ .Values.userService.config.logLevel | quote }}
+  SERVICE_NAME: {{ .Values.userService.config.serviceName | quote }}
+  HOST: {{ .Values.userService.config.host | quote }}
+  PORT: {{ .Values.userService.config.port | quote }}

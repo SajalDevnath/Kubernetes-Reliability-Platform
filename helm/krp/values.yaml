@@ -1,0 +1,128 @@
+# Default values for the krp chart (local kind development baseline).
+# WARNING: postgres.database.password is a local-development placeholder only — not for production.
+
+namespace: krp
+
+images:
+  userService:
+    repository: krp-user-service
+    tag: local
+    pullPolicy: Never
+  orderService:
+    repository: krp-order-service
+    tag: local
+    pullPolicy: Never
+  paymentService:
+    repository: krp-payment-service
+    tag: local
+    pullPolicy: Never
+
+postgres:
+  image:
+    repository: postgres
+    tag: "16"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 5432
+  storage:
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    # When set, reuse an existing PVC instead of creating postgres-data (M4 → M5 migration).
+    existingClaim: ""
+  database:
+    name: k8s_reliability
+    user: app_user
+    password: change_me
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+userService:
+  replicas: 1
+  service:
+    port: 8001
+  config:
+    postgresHost: postgres
+    postgresPort: "5432"
+    postgresDb: k8s_reliability
+    appEnv: development
+    logLevel: info
+    serviceName: user-service
+    host: "0.0.0.0"
+    port: "8001"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  probes:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+paymentService:
+  replicas: 1
+  service:
+    port: 8003
+  config:
+    postgresHost: postgres
+    postgresPort: "5432"
+    postgresDb: k8s_reliability
+    appEnv: development
+    logLevel: info
+    serviceName: payment-service
+    host: "0.0.0.0"
+    port: "8003"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  probes:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+orderService:
+  replicas: 1
+  service:
+    port: 8002
+  config:
+    postgresHost: postgres
+    postgresPort: "5432"
+    postgresDb: k8s_reliability
+    appEnv: development
+    logLevel: info
+    serviceName: order-service
+    host: "0.0.0.0"
+    port: "8002"
+    paymentServiceUrl: http://payment-service:8003
+    paymentServiceTimeoutSeconds: "5.0"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  probes:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: postgres
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: {{ .Values.postgres.service.port }}
+      targetPort: {{ .Values.postgres.service.port }}

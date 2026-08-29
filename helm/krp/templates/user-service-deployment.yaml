@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: user-service
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.userService.replicas }}
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: {{ include "krp.userService.image" . }}
+          imagePullPolicy: {{ .Values.images.userService.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.userService.service.port }}
+              name: http
+          envFrom:
+            - configMapRef:
+                name: user-service-config
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+          resources:
+            {{- toYaml .Values.userService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.userService.service.port }}
+            initialDelaySeconds: {{ .Values.userService.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.userService.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.userService.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.userService.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.userService.service.port }}
+            initialDelaySeconds: {{ .Values.userService.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.userService.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.userService.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.userService.probes.failureThreshold }}

@@ -1,0 +1,170 @@
+# krp Helm Chart
+
+Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`.
+
+> **Warning:** The default `postgres.database.password` in `values.yaml` is the local-development placeholder `change_me` (matching `.env.example`, `docker-compose.yml`, and `k8s/postgres/secret.yaml`). **Do not use this credential in production.**
+
+## Relationship to `k8s/`
+
+| Path | Purpose |
+|------|---------|
+| `k8s/` | Raw Kubernetes reference implementation (Milestone 4). **Not deleted or replaced.** |
+| `helm/krp/` | Parameterized Helm packaging of the same deployment (Milestone 5). |
+
+Both produce equivalent resources when using default values. Use `k8s/` for direct `kubectl apply` workflows; use this chart for `helm install` / `helm upgrade` workflows.
+
+## Prerequisites
+
+- Docker Desktop (or Docker Engine) running
+- [kind](https://kind.sigs.k8s.io/) v0.33+ (tested with v0.33.0)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Helm](https://helm.sh/) 3 or 4
+
+## Cluster and namespace assumptions
+
+| Setting | Default |
+|---------|---------|
+| kind cluster name | `krp` |
+| kubectl context | `kind-krp` |
+| Namespace | `krp` |
+
+The `krp` namespace **must already exist**. This chart does not create a Namespace resource by default.
+
+```bash
+kubectl config current-context
+kubectl get namespace krp
+```
+
+## Build application images
+
+Build from the **repository root**:
+
+```bash
+docker build -f services/user_service/Dockerfile -t krp-user-service:local .
+docker build -f services/order_service/Dockerfile -t krp-order-service:local .
+docker build -f services/payment_service/Dockerfile -t krp-payment-service:local .
+```
+
+## Load images into kind
+
+kind nodes do not use the host Docker registry by default:
+
+```bash
+kind load docker-image krp-user-service:local --name krp
+kind load docker-image krp-order-service:local --name krp
+kind load docker-image krp-payment-service:local --name krp
+```
+
+Application images default to `imagePullPolicy: Never` for local kind workflows. PostgreSQL uses the public `postgres:16` image.
+
+## Static validation (before install)
+
+```bash
+helm lint helm/krp
+helm template krp helm/krp
+helm template krp helm/krp -f helm/krp/values-local.yaml
+```
+
+Inspect rendered output for namespaces, service names, ports, probes, and ConfigMap/Secret separation.
+
+## Install and upgrade
+
+> **Note:** If M4 resources from `k8s/` are already running in `krp`, remove them first to avoid ownership conflicts before the first Helm install.
+
+```bash
+helm upgrade --install krp helm/krp \
+  --namespace krp \
+  --create-namespace=false
+```
+
+With local overrides:
+
+```bash
+helm upgrade --install krp helm/krp \
+  --namespace krp \
+  -f helm/krp/values.yaml \
+  -f helm/krp/values-local.yaml
+```
+
+Override any value on the command line:
+
+```bash
+helm upgrade --install krp helm/krp -n krp \
+  --set userService.replicas=2
+```
+
+For sensitive values (e.g. database password), prefer `--set postgres.database.password=...` or a private values file **not committed to git**:
+
+```bash
+helm upgrade --install krp helm/krp -n krp \
+  -f helm/krp/values.yaml \
+  -f my-private-values.yaml
+```
+
+## Values files
+
+| File | Purpose |
+|------|---------|
+| `values.yaml` | Baseline defaults (local kind development) |
+| `values-local.yaml` | Optional non-sensitive local overrides (`pullPolicy`, `appEnv`, `logLevel`, existing PVC) |
+
+`values-local.yaml` contains **no secrets**. For developer-specific overrides, create a private file (e.g. `values-private.yaml`) and add it to `.gitignore`.
+
+### Reusing an existing PostgreSQL PVC (`postgres.storage.existingClaim`)
+
+By default (`existingClaim: ""`), the chart creates a `postgres-data` PersistentVolumeClaim and mounts it in the PostgreSQL Deployment.
+
+When migrating from the M4 `k8s/` manifests to Helm, an existing PVC may already be present in the cluster (for example, `postgres-data` from `k8s/postgres/pvc.yaml`). Set:
+
+```yaml
+postgres:
+  storage:
+    existingClaim: postgres-data
+```
+
+With a non-empty `existingClaim`:
+
+- The chart **does not** render a PVC resource (avoids ownership conflicts with the existing claim).
+- The PostgreSQL Deployment mounts the named existing claim instead.
+
+`values-local.yaml` sets `existingClaim: postgres-data` for the kind cluster so database data is preserved during the M4 → M5 transition.
+
+## Verification
+
+```bash
+kubectl get pods,svc -n krp
+kubectl wait --for=condition=available deployment/postgres -n krp --timeout=180s
+kubectl wait --for=condition=available deployment/user-service -n krp --timeout=180s
+kubectl wait --for=condition=available deployment/payment-service -n krp --timeout=180s
+kubectl wait --for=condition=available deployment/order-service -n krp --timeout=180s
+```
+
+Port-forward and smoke-test (from another terminal):
+
+```bash
+kubectl port-forward -n krp svc/user-service 8001:8001
+curl http://localhost:8001/health
+```
+
+## Teardown
+
+```bash
+helm uninstall krp -n krp
+```
+
+To remove PostgreSQL persistent data:
+
+```bash
+kubectl delete pvc postgres-data -n krp
+```
+
+## Workloads
+
+| Workload | Service | Port | Probe |
+|----------|---------|------|-------|
+| postgres | `postgres` | 5432 | `pg_isready` |
+| user-service | `user-service` | 8001 | `GET /health` |
+| payment-service | `payment-service` | 8003 | `GET /health` |
+| order-service | `order-service` | 8002 | `GET /orders` |
+
+Order Service calls Payment Service at `http://payment-service:8003` (in-cluster DNS).

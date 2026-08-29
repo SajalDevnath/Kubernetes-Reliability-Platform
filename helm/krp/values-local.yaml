@@ -1,0 +1,36 @@
+# Local kind development overrides (non-sensitive only).
+# Usage:
+#   helm upgrade --install krp helm/krp -n krp -f values.yaml -f values-local.yaml
+#
+# Do not store real passwords in this file. Use values.yaml placeholder or an
+# external Secret for non-local environments.
+
+namespace: krp
+
+postgres:
+  storage:
+    # Reuse the M4 PVC already present in the kind cluster (preserves database data).
+    existingClaim: postgres-data
+
+images:
+  userService:
+    pullPolicy: Never
+  orderService:
+    pullPolicy: Never
+  paymentService:
+    pullPolicy: Never
+
+userService:
+  config:
+    appEnv: development
+    logLevel: info
+
+paymentService:
+  config:
+    appEnv: development
+    logLevel: info
+
+orderService:
+  config:
+    appEnv: development
+    logLevel: info

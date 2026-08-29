@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: payment-service
+    {{- include "krp.labels" . | nindent 4 }}
+data:
+  POSTGRES_HOST: {{ .Values.paymentService.config.postgresHost | quote }}
+  POSTGRES_PORT: {{ .Values.paymentService.config.postgresPort | quote }}
+  POSTGRES_DB: {{ .Values.paymentService.config.postgresDb | quote }}
+  APP_ENV: {{ .Values.paymentService.config.appEnv | quote }}
+  LOG_LEVEL: {{ .Values.paymentService.config.logLevel | quote }}
+  SERVICE_NAME: {{ .Values.paymentService.config.serviceName | quote }}
+  HOST: {{ .Values.paymentService.config.host | quote }}
+  PORT: {{ .Values.paymentService.config.port | quote }}

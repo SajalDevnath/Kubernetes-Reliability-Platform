@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: postgres
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.postgres.replicas }}
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: {{ include "krp.postgres.image" . }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.postgres.service.port }}
+              name: postgres
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.database.user }}
+                - -d
+                - {{ .Values.postgres.database.name }}
+            initialDelaySeconds: {{ .Values.postgres.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.postgres.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.postgres.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.postgres.probes.failureThreshold }}
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.database.user }}
+                - -d
+                - {{ .Values.postgres.database.name }}
+            initialDelaySeconds: {{ .Values.postgres.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.postgres.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.postgres.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.postgres.probes.failureThreshold }}
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: {{ include "krp.postgres.claimName" . }}

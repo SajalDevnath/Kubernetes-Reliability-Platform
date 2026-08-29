@@ -1,0 +1,16 @@
+{{- if not .Values.postgres.storage.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: postgres
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.postgres.storage.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.storage.size }}
+{{- end }}

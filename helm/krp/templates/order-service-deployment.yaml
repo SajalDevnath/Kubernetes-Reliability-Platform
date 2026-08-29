@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: order-service
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.orderService.replicas }}
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-service
+          image: {{ include "krp.orderService.image" . }}
+          imagePullPolicy: {{ .Values.images.orderService.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.orderService.service.port }}
+              name: http
+          envFrom:
+            - configMapRef:
+                name: order-service-config
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+          resources:
+            {{- toYaml .Values.orderService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /orders
+              port: {{ .Values.orderService.service.port }}
+            initialDelaySeconds: {{ .Values.orderService.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.orderService.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.orderService.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.orderService.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /orders
+              port: {{ .Values.orderService.service.port }}
+            initialDelaySeconds: {{ .Values.orderService.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.orderService.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.orderService.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.orderService.probes.failureThreshold }}

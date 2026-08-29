@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: payment-service
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.paymentService.replicas }}
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: {{ include "krp.paymentService.image" . }}
+          imagePullPolicy: {{ .Values.images.paymentService.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.paymentService.service.port }}
+              name: http
+          envFrom:
+            - configMapRef:
+                name: payment-service-config
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+          resources:
+            {{- toYaml .Values.paymentService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.paymentService.service.port }}
+            initialDelaySeconds: {{ .Values.paymentService.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.paymentService.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.paymentService.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.paymentService.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.paymentService.service.port }}
+            initialDelaySeconds: {{ .Values.paymentService.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.paymentService.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.paymentService.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.paymentService.probes.failureThreshold }}
