@@ -1,6 +1,5 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
 
@@ -216,6 +215,7 @@ def test_create_order_returns_503_when_payment_unavailable(order_service_modules
 @pytest.mark.integration
 def test_create_order_returns_502_when_payment_returns_error(order_service_modules) -> None:
     import httpx
+
     from app.api.routes.orders import get_payment_client
     from app.clients.payment import PaymentServiceClient
     from app.core.config import get_settings
@@ -268,6 +268,7 @@ def test_create_order_returns_502_when_payment_returns_error(order_service_modul
 @pytest.mark.integration
 def test_create_order_returns_504_when_payment_times_out(order_service_modules) -> None:
     import httpx
+
     from app.api.routes.orders import get_payment_client
     from app.clients.payment import PaymentServiceClient
     from app.core.config import Settings

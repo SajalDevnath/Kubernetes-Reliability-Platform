@@ -21,7 +21,9 @@ def user_service(mock_repository: MagicMock) -> UserService:
     return service
 
 
-def test_create_user_returns_created_user(user_service: UserService, mock_repository: MagicMock) -> None:
+def test_create_user_returns_created_user(
+    user_service: UserService, mock_repository: MagicMock
+) -> None:
     user_data = UserCreate(email="user@example.com", full_name="Test User")
     created_user = User(id=1, email=user_data.email, full_name=user_data.full_name, is_active=True)
     mock_repository.get_by_email.return_value = None
@@ -81,7 +83,9 @@ def test_update_user_raises_conflict_for_duplicate_email(
         user_service.update_user(1, UserUpdate(email="other@example.com"))
 
 
-def test_delete_user_raises_not_found(user_service: UserService, mock_repository: MagicMock) -> None:
+def test_delete_user_raises_not_found(
+    user_service: UserService, mock_repository: MagicMock
+) -> None:
     mock_repository.get_by_id.return_value = None
 
     with pytest.raises(UserNotFoundError):

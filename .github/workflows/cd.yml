@@ -1,0 +1,105 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to ephemeral kind
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_BUILDKIT: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build user service Docker image
+        run: docker build -f services/user_service/Dockerfile -t krp-user-service:ci .
+
+      - name: Build order service Docker image
+        run: docker build -f services/order_service/Dockerfile -t krp-order-service:ci .
+
+      - name: Build payment service Docker image
+        run: docker build -f services/payment_service/Dockerfile -t krp-payment-service:ci .
+
+      - name: Set up kind
+        uses: engineerd/setup-kind@v0.3.0
+
+      - name: Create ephemeral kind cluster
+        run: kind create cluster --name krp
+
+      - name: Create krp namespace
+        run: kubectl create namespace krp
+
+      - name: Load images into kind
+        run: |
+          kind load docker-image krp-user-service:ci --name krp
+          kind load docker-image krp-order-service:ci --name krp
+          kind load docker-image krp-payment-service:ci --name krp
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: helm lint helm/krp
+
+      - name: Helm template
+        run: |
+          helm template krp helm/krp \
+            -f helm/krp/values.yaml \
+            --set images.userService.tag=ci \
+            --set images.orderService.tag=ci \
+            --set images.paymentService.tag=ci > /dev/null
+
+      - name: Helm upgrade --install
+        run: |
+          helm upgrade --install krp helm/krp \
+            --namespace krp \
+            --create-namespace=false \
+            -f helm/krp/values.yaml \
+            --set images.userService.tag=ci \
+            --set images.orderService.tag=ci \
+            --set images.paymentService.tag=ci
+
+      - name: Wait for PostgreSQL
+        run: kubectl wait --for=condition=available deployment/postgres -n krp --timeout=180s
+
+      - name: Wait for user-service
+        run: kubectl wait --for=condition=available deployment/user-service -n krp --timeout=180s
+
+      - name: Wait for payment-service
+        run: kubectl wait --for=condition=available deployment/payment-service -n krp --timeout=180s
+
+      - name: Wait for order-service
+        run: kubectl wait --for=condition=available deployment/order-service -n krp --timeout=180s
+
+      - name: Show deployment status
+        run: |
+          kubectl get pods -n krp
+          kubectl get svc -n krp
+          helm status krp -n krp
+
+      - name: Run in-cluster smoke tests
+        run: |
+          kubectl run curl-smoke \
+            --restart=Never \
+            --image=curlimages/curl:8.10.1 \
+            -n krp \
+            --command -- \
+            sh -c "curl -sf http://user-service:8001/health && curl -sf http://payment-service:8003/health && curl -sf http://order-service:8002/orders"
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/curl-smoke -n krp --timeout=120s
+          kubectl delete pod curl-smoke -n krp --ignore-not-found
+
+      - name: Delete kind cluster
+        if: always()
+        run: kind delete cluster --name krp || true

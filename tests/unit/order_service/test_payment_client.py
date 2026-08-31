@@ -1,6 +1,5 @@
 import json
 from decimal import Decimal
-from unittest.mock import MagicMock
 
 import httpx
 import pytest
