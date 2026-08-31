@@ -1,6 +1,6 @@
 # Kubernetes Reliability Platform
 
-> **Current progress:** Milestones 0–5 complete (microservices, automated tests, Docker Compose, Kubernetes on kind, Helm chart packaging). Milestone 6 — CI/CD is next (not started).
+> **Current progress:** Milestones 0–6 complete (microservices, automated tests, Docker Compose, Kubernetes on kind, Helm chart packaging, GitHub Actions CI/CD). Milestone 7 — Metrics and Monitoring is next (not started).
 
 ## What This Project Is
 
@@ -29,6 +29,7 @@ Modern platform and SRE engineering requires practical experience across applica
 - Docker and Docker Compose local orchestration (implemented)
 - Local Kubernetes (kind) (implemented — Milestone 4)
 - Helm chart packaging (implemented — Milestone 5)
+- GitHub Actions CI/CD (implemented — Milestone 6)
 - Full observability stack
 - SRE practices and incident simulation
 - AI-assisted operations (final phase)
@@ -46,7 +47,7 @@ Modern platform and SRE engineering requires practical experience across applica
 When complete, the platform will demonstrate:
 
 1. Running microservices locally and in Kubernetes
-2. Automated CI/CD pipelines
+2. Automated CI/CD pipelines (GitHub Actions — CI on pull requests; CD to ephemeral kind on `main`)
 3. Prometheus metrics, Grafana dashboards, and Alertmanager alerting
 4. Centralized logging with Loki
 5. Distributed tracing with OpenTelemetry

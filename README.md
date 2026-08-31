@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–5 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, and Helm chart packaging are implemented and verified. **Milestone 6 — CI/CD** is next (not started).
+> **Milestones 0–6 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD are implemented and verified. **Milestone 7 — Metrics and Monitoring** is next (not started).
 
 ## Quick Start
 
@@ -42,6 +42,19 @@ Deploy to the local kind cluster using manifests in `k8s/`. See [k8s/README.md](
 
 Deploy to the local kind cluster using the Helm chart in `helm/krp/`. See [helm/krp/README.md](helm/krp/README.md) for install, upgrade, values, and M4 → M5 migration commands.
 
+### CI/CD (GitHub Actions)
+
+| Workflow | File | Trigger |
+|----------|------|---------|
+| **CI** | `.github/workflows/ci.yml` | `pull_request` |
+| **CD** | `.github/workflows/cd.yml` | `push` to `main` |
+
+**CI** runs Ruff lint, the full 124-test pytest suite (PostgreSQL 16 service container), Docker builds for all three services, and Helm lint/template validation.
+
+**CD** builds images, creates an **ephemeral** kind cluster on the GitHub-hosted runner, loads `krp-*-service:ci` images, deploys `helm/krp/` into namespace `krp`, waits for all workloads, runs in-cluster HTTP smoke tests, and deletes the cluster. CD does not deploy to a developer's local kind cluster and is not a production deployment.
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the CI/CD workflow details.
+
 ## Purpose
 
 The primary purpose is to learn and demonstrate:
@@ -63,7 +76,7 @@ The business logic is intentionally simple. The focus is on reliability engineer
 | Application | Python, FastAPI, Pydantic, SQLAlchemy, PostgreSQL, uv |
 | Containers | Docker, Docker Compose (implemented) |
 | Orchestration | Kubernetes, kind, kubectl (implemented); Helm (implemented) |
-| CI/CD | GitHub Actions |
+| CI/CD | GitHub Actions (implemented) |
 | Metrics | Prometheus, PromQL |
 | Visualization | Grafana |
 | Alerting | Alertmanager |
@@ -93,9 +106,10 @@ Three microservices with simple business logic, designed to create realistic ope
 | 3 | Docker | COMPLETE |
 | 4 | Kubernetes | COMPLETE |
 | 5 | Helm | COMPLETE |
-| 6–17 | See roadmap | NOT STARTED |
+| 6 | CI/CD | COMPLETE |
+| 7–17 | See roadmap | NOT STARTED |
 
-**Tests:** 124 passing (86 unit, 36 integration, 2 E2E). See [docs/TESTING.md](docs/TESTING.md).
+**Tests:** 124 passing (86 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).
 
 ## Documentation
 

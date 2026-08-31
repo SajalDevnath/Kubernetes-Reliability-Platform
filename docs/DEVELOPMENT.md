@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 6 — CI/CD (next). Milestone 5 — Helm is complete.
+> **Current Milestone:** Milestone 7 — Metrics and Monitoring (next). Milestone 6 — CI/CD is complete.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -280,6 +280,72 @@ helm upgrade krp helm/krp -n krp \
 
 See [helm/krp/README.md](../helm/krp/README.md) for build, load, install, upgrade, rollback, teardown, and PVC reuse details.
 
+## CI/CD Workflow
+
+GitHub Actions automates build, test, and deployment validation. Workflows live under `.github/workflows/`.
+
+| Workflow | File | Trigger | Purpose |
+|----------|------|---------|---------|
+| CI | `ci.yml` | `pull_request` | Lint, test, build validation, Helm validation |
+| CD | `cd.yml` | `push` to `main` | Ephemeral kind deploy and smoke tests |
+
+Both workflows use `permissions: contents: read` only.
+
+### CI workflow (pull requests)
+
+Runs on `ubuntu-latest` with:
+
+1. **Checkout** and Python 3.10 setup
+2. **uv** — `uv sync --dev --frozen`
+3. **Ruff** — `uv run ruff check services tests`
+4. **pytest** — `uv run pytest tests/ -v` (full 124-test suite)
+5. **PostgreSQL 16** — GitHub Actions service container (`app_user` / `change_me` / `k8s_reliability` on port 5432)
+6. **Docker builds** — `krp-user-service:ci`, `krp-order-service:ci`, `krp-payment-service:ci` (validation only; no push)
+7. **Helm** — `helm lint helm/krp`; `helm template krp helm/krp` (output discarded to avoid logging Secret values)
+
+### CD workflow (push to main)
+
+Runs on `ubuntu-latest` with an **ephemeral** kind cluster created on the GitHub-hosted runner. CD does **not** deploy to a developer's local `kind-krp` cluster and is **not** a production deployment.
+
+1. **Checkout** and Docker Buildx setup
+2. **Docker builds** — three `krp-*-service:ci` images
+3. **kind v0.33.0** — installed from the official release URL
+4. **Ephemeral cluster** — `kind create cluster --name krp`
+5. **Namespace** — `kubectl create namespace krp`
+6. **Image load** — `kind load docker-image` for all three `:ci` images (`imagePullPolicy: Never` compatible)
+7. **Helm** — lint, template, then:
+
+```bash
+helm upgrade --install krp helm/krp \
+  --namespace krp \
+  --create-namespace=false \
+  -f helm/krp/values.yaml \
+  --set images.userService.tag=ci \
+  --set images.orderService.tag=ci \
+  --set images.paymentService.tag=ci
+```
+
+Uses `values.yaml` only — **not** `values-local.yaml` (which assumes a pre-existing local PVC).
+
+8. **Readiness** — `kubectl wait` for postgres, user-service, payment-service, order-service (180s each)
+9. **Smoke tests** — temporary `curlimages/curl:8.10.1` pod; in-cluster HTTP checks:
+   - `http://user-service:8001/health`
+   - `http://payment-service:8003/health`
+   - `http://order-service:8002/orders`
+10. **Cleanup** — `kind delete cluster --name krp` with `if: always()`
+
+### Credential handling in CI/CD
+
+- CI/CD credential handling was reviewed and documented; no GitHub Secrets or dedicated secrets-management mechanism was implemented
+- No GitHub Secrets are required for the current implementation
+- PostgreSQL uses the documented local-development placeholder (`change_me`) — not a production credential
+- No container registry credentials; images are built on the runner and loaded into kind
+- Workflows do not log rendered Helm Secret values or kubectl secret contents
+
+### Local parity
+
+Local commands mirror CI/CD validation steps. For CD simulation on a developer machine, use a **separate** kind cluster name (e.g. `krp-cd-test`) to avoid affecting the persistent local `krp` cluster. See Milestone 6 verification notes in `docs/TESTING.md`.
+
 ## FastAPI Development Workflow
 
 1. Define Pydantic schemas for request/response models
@@ -325,6 +391,7 @@ Connectivity can be verified programmatically via `app.db.database.check_databas
 - No AWS or cloud dependencies for core implementation
 - Use kind for local Kubernetes clusters (Milestone 4 — implemented; see Kubernetes Workflow above)
 - Use Helm for parameterized Kubernetes deployment (Milestone 5 — implemented; see Helm Workflow above)
+- Use GitHub Actions for automated CI/CD (Milestone 6 — implemented; see CI/CD Workflow above)
 - Use Docker Compose for local multi-service development (Milestone 3 — implemented; see Docker Compose Workflow above)
 
 ## Cursor Workflow

@@ -224,3 +224,19 @@ Milestone 5 requires Helm packaging and environment-specific configuration witho
 **Status:** Accepted
 
 **Verification:** `helm lint` and `helm template` passed; Helm release `krp` installed and upgraded on kind cluster `krp` (2026-08-29). M4 PVC preserved; in-cluster and API workflows verified. Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
+
+---
+
+## ADR-016 — Milestone 6 GitHub Actions CI/CD with Ephemeral kind CD
+
+**Date:** 2026-08-31
+
+**Decision:**
+Milestone 6 will automate build, test, and deployment validation using GitHub Actions. CI (`.github/workflows/ci.yml`) triggers on `pull_request` and runs Ruff lint, the full 124-test pytest suite with a PostgreSQL 16 service container, Docker build validation for all three services, and Helm lint/template checks. CD (`.github/workflows/cd.yml`) triggers on `push` to `main` and deploys to an **ephemeral** kind cluster created on the GitHub-hosted runner — not a developer's local kind cluster and not a production environment. CD builds `krp-*-service:ci` images, loads them into kind via `kind load docker-image` (no container registry), deploys `helm/krp/` with `values.yaml` and `--set images.*.tag=ci` (not `values-local.yaml`), waits for all deployments, runs in-cluster HTTP smoke tests, and deletes the cluster with `if: always()`. Both workflows use `permissions: contents: read` only. No GitHub Secrets are required for the current placeholder PostgreSQL credential model.
+
+**Reason:**
+Milestone 6 requires automated CI on pull requests and CD on merge to `main` without introducing cloud Kubernetes, container registries, or production credentials. Ephemeral kind on the runner reuses the validated M3–M5 stack (Docker images, Helm chart, in-cluster DNS) while keeping deployments disposable and isolated from developer local clusters.
+
+**Status:** Accepted
+
+**Verification:** GitHub Actions CI workflow passed on pull request; CD workflow passed on push to `main` (2026-08-31). Ephemeral kind deploy, readiness checks, and in-cluster smoke tests verified. Local-development placeholder credentials only.

@@ -167,6 +167,7 @@ kubernetes-reliability-platform/
 │   └── plans/          # Implementation plans per milestone
 │
 ├── docs/               # Project documentation
+├── .github/workflows/  # GitHub Actions CI/CD (Milestone 6)
 ├── k8s/                # Kubernetes manifests (Milestone 4 — reference)
 ├── helm/krp/           # Helm chart (Milestone 5)
 ├── services/           # Application microservices
@@ -183,7 +184,7 @@ kubernetes-reliability-platform/
 └── README.md
 ```
 
-Application and infrastructure directories are introduced progressively during their respective milestones. Kubernetes manifests exist under `k8s/` (M4 reference); Helm chart `helm/krp/` packages the same deployment (Milestone 5).
+Application and infrastructure directories are introduced progressively during their respective milestones. Kubernetes manifests exist under `k8s/` (M4 reference); Helm chart `helm/krp/` packages the same deployment (Milestone 5); GitHub Actions workflows under `.github/workflows/` automate CI/CD (Milestone 6).
 
 ## 9. Documentation Architecture
 
@@ -353,7 +354,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 6 — CI/CD (NOT STARTED)
+**Current Milestone:** Milestone 7 — Metrics and Monitoring (NOT STARTED)
 
 **Status:**
 - Milestone 0 complete (engineering foundation, documentation, rules, roadmap)
@@ -362,6 +363,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 - Milestone 3 complete (Dockerfiles for all services, `docker-compose.yml`, PostgreSQL in Compose, container healthchecks, Compose-network Order → Payment verification)
 - Milestone 4 complete (plain YAML manifests under `k8s/`, kind cluster `krp`, namespace `krp`, Deployments/Services/ConfigMaps/Secret/PVC, probes, resource limits, in-cluster Order → Payment verification; 124 tests passing)
 - Milestone 5 complete (Helm chart `helm/krp/` `krp-0.1.0`, `values.yaml` and `values-local.yaml`, `postgres.storage.existingClaim` for M4 → M5 PVC reuse, Helm install/upgrade verified on kind; `k8s/` retained as reference)
-- Kubernetes manifests exist under `k8s/`; Helm chart exists under `helm/krp/`
+- Milestone 6 complete (GitHub Actions CI/CD — CI on pull requests, CD to ephemeral kind on `main`; workflows verified on GitHub Actions)
+- Kubernetes manifests exist under `k8s/`; Helm chart exists under `helm/krp/`; CI/CD workflows exist under `.github/workflows/`
 
-**Next Milestone:** Milestone 6 — CI/CD
+**Next Milestone:** Milestone 7 — Metrics and Monitoring

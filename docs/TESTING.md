@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 5 complete — application tests (124 passing), Docker Compose container verification, Kubernetes (kind) manual verification, and Helm deployment verification complete.
+> **Status:** Milestone 6 complete — application tests (124 passing), Docker Compose container verification, Kubernetes (kind) manual verification, Helm deployment verification, and GitHub Actions CI/CD verification complete.
 
 ## Philosophy
 
@@ -76,6 +76,27 @@ A task is not complete merely because the application starts. Every change must 
   - API workflow via port-forward: order creation (ID 3) and payment creation (ID 4); M4 data (orders 1–2, payments 1–3) retained
   - Plain `k8s/` manifests retained as M4 reference (not removed from repository)
 
+### CI/CD Tests (Milestone 6 — GitHub Actions verification complete)
+
+- **Scope:** Automated CI on pull requests; automated CD on pushes to `main`; ephemeral kind deployment; in-cluster smoke tests
+- **Location:** `.github/workflows/ci.yml`, `.github/workflows/cd.yml` (not in `tests/`)
+- **Status:** Verified — GitHub Actions CI and CD workflows passed on GitHub
+- **CI verified checks:**
+  - Trigger: `pull_request`
+  - Python 3.10, `uv sync --dev --frozen`, Ruff lint passes
+  - Full pytest suite: **124 passed** with PostgreSQL 16 service container
+  - Docker build validation for `krp-user-service:ci`, `krp-order-service:ci`, `krp-payment-service:ci`
+  - `helm lint helm/krp` — 0 chart(s) failed; `helm template` succeeds
+- **CD verified checks:**
+  - Trigger: `push` to `main`
+  - Ephemeral kind cluster `krp` created on GitHub-hosted runner (not developer local cluster)
+  - kind v0.33.0; three `:ci` images loaded via `kind load docker-image`
+  - Helm deploy with `values.yaml` and `--set images.*.tag=ci` into namespace `krp`
+  - All four deployments reach Available (`kubectl wait`)
+  - In-cluster smoke tests: User `/health`, Payment `/health`, Order `/orders` return HTTP 200
+  - `kind delete cluster --name krp` runs with `if: always()`
+  - No container registry push; no production deployment
+
 ### Failure Simulation Tests (Planned — Milestone 12)
 
 - **Scope:** Network failures, latency injection, dependency failures
@@ -101,7 +122,7 @@ A task is not complete merely because the application starts. Every change must 
 | Every code change | Relevant unit tests |
 | Service integration | Integration tests |
 | Before commit | Full test suite for changed area |
-| Milestone completion | All tests for that milestone; Milestone 3 requires Compose stack verification; Milestone 4 requires kind stack verification; Milestone 5 requires Helm deployment verification |
+| Milestone completion | All tests for that milestone; Milestone 3 requires Compose stack verification; Milestone 4 requires kind stack verification; Milestone 5 requires Helm deployment verification; Milestone 6 requires GitHub Actions CI and CD workflow verification |
 
 ## Currently Available Tests
 

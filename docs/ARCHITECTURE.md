@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 5 complete — User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, and Helm chart packaging verified. Milestone 6 — CI/CD is next.
+> **Status:** Milestone 6 complete — User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 7 — Metrics and Monitoring is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -94,10 +94,15 @@ User Service (FastAPI)          Client
 - Secrets remain local-development placeholders (`change_me`); not production credentials
 - **Status:** Complete — verified via Helm install/upgrade on kind cluster `krp`; see `helm/krp/README.md` for operational commands
 
-## CI/CD (Planned — Milestone 6)
+## CI/CD (Milestone 6 — implemented)
 
-- GitHub Actions for build, test, and deploy pipelines
-- **Status:** Planned
+- **CI workflow:** `.github/workflows/ci.yml` — triggers on `pull_request`; `permissions: contents: read`
+- **CD workflow:** `.github/workflows/cd.yml` — triggers on `push` to `main`; `permissions: contents: read`
+- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (124 tests) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template`
+- **CD pipeline:** Docker Buildx builds, kind v0.33.0 ephemeral cluster on the GitHub-hosted runner, `kind load docker-image`, Helm deploy of `helm/krp/` into namespace `krp` using `values.yaml` with `--set images.*.tag=ci`, deployment readiness waits, in-cluster HTTP smoke tests, automatic cluster cleanup (`if: always()`)
+- **Not production deployment:** CD uses a disposable ephemeral kind cluster on the runner; no container registry, no cloud Kubernetes, no deployment to a developer's local kind cluster
+- **Credential handling:** CI/CD credential handling reviewed and documented; no GitHub Secrets or dedicated secrets-management mechanism; PostgreSQL password remains local-development placeholder (`change_me`)
+- **Status:** Complete — GitHub Actions CI and CD workflows verified
 
 ## Observability (Planned — Milestones 7–10)
 

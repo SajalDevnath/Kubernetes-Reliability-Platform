@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 5 complete — Milestone 6 — CI/CD is next (not started). User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; and Helm chart packaging are implemented and verified (124 tests passing).
+> **Status:** Milestone 6 complete — Milestone 7 — Metrics and Monitoring is next (not started). User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; and GitHub Actions CI/CD are implemented and verified (124 tests passing).
 
 ## Functional Requirements
 
@@ -50,8 +50,8 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-018 | The project shall use GitHub Actions for CI/CD | Planned |
-| FR-019 | Pipelines shall build, test, and deploy services | Planned |
+| FR-018 | The project shall use GitHub Actions for CI/CD | Implemented (`.github/workflows/ci.yml`, `.github/workflows/cd.yml`) |
+| FR-019 | Pipelines shall build, test, and deploy services | Implemented (CI: lint, test, build, Helm validation; CD: ephemeral kind deploy) |
 
 ### Monitoring
 

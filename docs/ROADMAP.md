@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 5 — Helm (complete)
+> **Last updated:** Milestone 6 — CI/CD (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -193,17 +193,33 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Objective:** Automate build, test, and deploy with GitHub Actions.
 
 **Major Tasks:**
-- Create CI pipeline (lint, test, build)
-- Create CD pipeline (deploy to kind)
-- Configure pipeline secrets management
-- Document CI/CD workflow
+- [x] Create CI pipeline (lint, test, build)
+- [x] Create CD pipeline (deploy to kind)
+- [x] Review and document CI/CD credential handling (no GitHub Secrets required for placeholder credentials)
+- [x] Document CI/CD workflow
 
 **Completion Criteria:**
 - CI runs on pull requests
 - CD deploys on merge to main
-- Pipeline secrets are managed securely
+- CI/CD credential handling is reviewed and documented; no GitHub Secrets are required for the current placeholder-credential implementation
 
-**Status:** NOT STARTED
+**Exit Validation:**
+- [x] `.github/workflows/ci.yml` — triggers on `pull_request`; `permissions: contents: read`
+- [x] CI: Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (124 tests) with PostgreSQL 16 service container
+- [x] CI: Docker build validation for `krp-user-service:ci`, `krp-order-service:ci`, `krp-payment-service:ci`
+- [x] CI: `helm lint helm/krp` and `helm template` validation
+- [x] `.github/workflows/cd.yml` — triggers on `push` to `main`; `permissions: contents: read`
+- [x] CD: builds three service images, installs kind v0.33.0, creates ephemeral kind cluster `krp` on the GitHub-hosted runner
+- [x] CD: loads `:ci` images via `kind load docker-image`; deploys `helm/krp/` with `values.yaml` and `--set images.*.tag=ci` (not `values-local.yaml`)
+- [x] CD: `kubectl wait` for postgres, user-service, payment-service, order-service; in-cluster smoke tests (`user-service` `/health`, `payment-service` `/health`, `order-service` `/orders`)
+- [x] CD: `kind delete cluster --name krp` with `if: always()` — cluster is disposable; not a production deployment
+- [x] GitHub Actions CI workflow verified on pull request
+- [x] GitHub Actions CD workflow verified on push to `main`
+- [x] CI/CD credential handling reviewed and documented (`docs/DEVELOPMENT.md`, `docs/ARCHITECTURE.md`); no GitHub Secrets required for placeholder PostgreSQL credential (`change_me`); no registry push
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 6 verified — GitHub Actions CI on pull requests and CD on pushes to `main`. CD deploys to an ephemeral kind cluster created on the runner (not a developer's local `kind-krp` cluster). Images are built and loaded into kind without a container registry. PostgreSQL credentials remain the documented local-development placeholder (`change_me`). Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
 
 ---
 
@@ -435,7 +451,7 @@ Milestone 2  → Microservices               [COMPLETE]
 Milestone 3  → Docker                      [COMPLETE]
 Milestone 4  → Kubernetes                  [COMPLETE]
 Milestone 5  → Helm                        [COMPLETE]
-Milestone 6  → CI/CD                       [NOT STARTED]
+Milestone 6  → CI/CD                       [COMPLETE]
 Milestone 7  → Metrics and Monitoring      [NOT STARTED]
 Milestone 8  → Alerting                    [NOT STARTED]
 Milestone 9  → Logging                     [NOT STARTED]
