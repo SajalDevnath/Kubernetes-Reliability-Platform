@@ -32,8 +32,12 @@ jobs:
       - name: Build payment service Docker image
         run: docker build -f services/payment_service/Dockerfile -t krp-payment-service:ci .
 
-      - name: Set up kind
-        uses: engineerd/setup-kind@v0.3.0
+      - name: Install kind
+        run: |
+          curl -fsSL -o kind "https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64"
+          chmod +x kind
+          sudo mv kind /usr/local/bin/kind
+          kind version
 
       - name: Create ephemeral kind cluster
         run: kind create cluster --name krp
