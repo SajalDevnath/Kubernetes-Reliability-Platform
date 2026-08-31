@@ -17,7 +17,6 @@ async def lifespan(application: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    settings = get_settings()
     application = FastAPI(
         title="User Service",
         version="0.1.0",

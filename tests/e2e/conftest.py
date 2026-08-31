@@ -65,8 +65,8 @@ def payment_api_client():
     """FastAPI test client for Payment Service."""
     _set_service_path(PAYMENT_SERVICE_ROOT)
     from app.db.database import Base, engine
-    from app.models.payment import Payment  # noqa: F401
     from app.main import app
+    from app.models.payment import Payment  # noqa: F401
 
     try:
         Base.metadata.create_all(bind=engine)

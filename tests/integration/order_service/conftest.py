@@ -41,8 +41,8 @@ def payment_http_client():
         import json
 
         from app.db.database import Base, engine
-        from app.models.payment import Payment  # noqa: F401
         from app.main import app as payment_app
+        from app.models.payment import Payment  # noqa: F401
 
         try:
             Base.metadata.create_all(bind=engine)
