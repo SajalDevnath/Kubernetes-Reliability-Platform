@@ -87,6 +87,12 @@ jobs:
       - name: Wait for order-service
         run: kubectl wait --for=condition=available deployment/order-service -n krp --timeout=180s
 
+      - name: Wait for prometheus
+        run: kubectl wait --for=condition=available deployment/prometheus -n krp --timeout=180s
+
+      - name: Wait for grafana
+        run: kubectl wait --for=condition=available deployment/grafana -n krp --timeout=180s
+
       - name: Show deployment status
         run: |
           kubectl get pods -n krp
@@ -100,8 +106,44 @@ jobs:
             --image=curlimages/curl:8.10.1 \
             -n krp \
             --command -- \
-            sh -c "curl -sf http://user-service:8001/health && curl -sf http://payment-service:8003/health && curl -sf http://order-service:8002/orders"
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/curl-smoke -n krp --timeout=120s
+            sh -ec "$(cat <<'EOS'
+          set -e
+
+          curl -sf http://user-service:8001/health
+          curl -sf http://payment-service:8003/health
+          curl -sf http://order-service:8002/orders
+
+          curl -sf http://prometheus:9090/-/ready
+          curl -sf http://grafana:3000/api/health
+
+          for url in \
+            http://user-service:8001/metrics \
+            http://order-service:8002/metrics \
+            http://payment-service:8003/metrics; do
+            body=$(curl -sf "$url")
+            echo "$body" | grep -q http_requests_total
+            echo "$body" | grep -q http_request_duration_seconds
+          done
+
+          attempt=1
+          while [ "$attempt" -le 12 ]; do
+            result=$(curl -sf "http://prometheus:9090/api/v1/query?query=up%7Bjob%3D~%22user-service%7Corder-service%7Cpayment-service%22%7D")
+            if echo "$result" | grep user-service | grep -q '"1"' \
+              && echo "$result" | grep order-service | grep -q '"1"' \
+              && echo "$result" | grep payment-service | grep -q '"1"'; then
+              echo "All Prometheus targets are UP"
+              exit 0
+            fi
+            echo "Waiting for Prometheus targets (attempt ${attempt}/12)..."
+            attempt=$((attempt + 1))
+            sleep 5
+          done
+
+          echo "Prometheus targets did not all become UP in time"
+          exit 1
+          EOS
+          )"
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/curl-smoke -n krp --timeout=180s
           kubectl delete pod curl-smoke -n krp --ignore-not-found
 
       - name: Delete kind cluster

@@ -354,16 +354,17 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 7 — Metrics and Monitoring (NOT STARTED)
+**Current Milestone:** Milestone 7 — Metrics and Monitoring (IN PROGRESS — implementation complete; final verification gate pending)
 
 **Status:**
 - Milestone 0 complete (engineering foundation, documentation, rules, roadmap)
 - Milestone 1 complete (User Service foundation, health endpoint, PostgreSQL/SQLAlchemy)
-- Milestone 2 complete (User, Order, and Payment Service CRUD APIs; Order → Payment HTTP integration; E2E cross-service workflows verified — 86 unit, 36 integration, 2 E2E tests passing; 124 total)
+- Milestone 2 complete (User, Order, and Payment Service CRUD APIs; Order → Payment HTTP integration; E2E cross-service workflows verified — 86 unit, 36 integration, 2 E2E tests passing; 124 total at M2 close)
 - Milestone 3 complete (Dockerfiles for all services, `docker-compose.yml`, PostgreSQL in Compose, container healthchecks, Compose-network Order → Payment verification)
-- Milestone 4 complete (plain YAML manifests under `k8s/`, kind cluster `krp`, namespace `krp`, Deployments/Services/ConfigMaps/Secret/PVC, probes, resource limits, in-cluster Order → Payment verification; 124 tests passing)
+- Milestone 4 complete (plain YAML manifests under `k8s/`, kind cluster `krp`, namespace `krp`, Deployments/Services/ConfigMaps/Secret/PVC, probes, resource limits, in-cluster Order → Payment verification)
 - Milestone 5 complete (Helm chart `helm/krp/` `krp-0.1.0`, `values.yaml` and `values-local.yaml`, `postgres.storage.existingClaim` for M4 → M5 PVC reuse, Helm install/upgrade verified on kind; `k8s/` retained as reference)
 - Milestone 6 complete (GitHub Actions CI/CD — CI on pull requests, CD to ephemeral kind on `main`; workflows verified on GitHub Actions)
+- Milestone 7 in progress — application `/metrics` instrumentation (`prometheus-client`), Prometheus and Grafana deployed via `helm/krp/`, static Service-DNS scraping, provisioned Prometheus datasource and **KRP Service Health** dashboard (`krp-services`), CD monitoring smoke checks implemented; **139 tests collected** (101 unit, including 15 metrics tests; 36 integration; 2 E2E); local kind verification complete; **GitHub Actions CD end-to-end verification pending**
 - Kubernetes manifests exist under `k8s/`; Helm chart exists under `helm/krp/`; CI/CD workflows exist under `.github/workflows/`
 
-**Next Milestone:** Milestone 7 — Metrics and Monitoring
+**Next Milestone:** Complete Milestone 7 final verification gate (including successful GitHub Actions CD run), then Milestone 8 — Alerting

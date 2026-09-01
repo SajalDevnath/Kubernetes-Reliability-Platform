@@ -1,0 +1,61 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: prometheus
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.prometheus.replicas }}
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: {{ include "krp.prometheus.image" . }}
+          imagePullPolicy: {{ .Values.prometheus.image.pullPolicy }}
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.enable-lifecycle
+          ports:
+            - containerPort: {{ .Values.prometheus.service.port }}
+              name: http
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus
+              readOnly: true
+            - name: prometheus-data
+              mountPath: /prometheus
+          resources:
+            {{- toYaml .Values.prometheus.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: {{ .Values.prometheus.service.port }}
+            initialDelaySeconds: {{ .Values.prometheus.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.prometheus.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.prometheus.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.prometheus.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: {{ .Values.prometheus.service.port }}
+            initialDelaySeconds: {{ .Values.prometheus.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.prometheus.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.prometheus.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.prometheus.probes.failureThreshold }}
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config
+        - name: prometheus-data
+          emptyDir: {}
+{{- end }}

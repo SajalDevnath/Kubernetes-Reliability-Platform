@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 6 — CI/CD (complete)
+> **Last updated:** Milestone 7 — Metrics and Monitoring (in progress)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -228,18 +228,32 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Objective:** Implement Prometheus metrics collection and Grafana dashboards.
 
 **Major Tasks:**
-- Instrument services with Prometheus metrics
-- Deploy Prometheus to the cluster
-- Deploy Grafana with dashboards
-- Write PromQL queries for key metrics
-- Document monitoring setup
+- [x] Instrument services with Prometheus metrics
+- [x] Deploy Prometheus to the cluster
+- [x] Deploy Grafana with dashboards
+- [x] Write PromQL queries for key metrics
+- [x] Document monitoring setup
+- [x] Extend CD pipeline with monitoring smoke checks
 
 **Completion Criteria:**
 - Services expose `/metrics` endpoints
 - Prometheus scrapes all services
 - Grafana dashboards visualize service health
 
-**Status:** NOT STARTED
+**Exit Validation:**
+- [x] All three services expose `GET /metrics` with `http_requests_total` and `http_request_duration_seconds` (prometheus-client)
+- [x] Prometheus deployed via `helm/krp/` (`prom/prometheus:v2.55.1`); static Service-DNS scrape targets for user-service, order-service, payment-service
+- [x] Grafana deployed via `helm/krp/` (`grafana/grafana:11.4.0`); provisioned Prometheus datasource (`http://prometheus:9090`); **KRP Service Health** dashboard (UID `krp-services`)
+- [x] Non-persistent `emptyDir` storage for Prometheus and Grafana
+- [x] Order Service continues using `GET /orders` for Kubernetes probes (no `/health` endpoint added)
+- [x] Metrics unit tests added (15 tests; **139 total** — 101 unit, 36 integration, 2 E2E)
+- [x] CD workflow extended: `kubectl wait` for prometheus and grafana; in-cluster smoke tests for Prometheus readiness, Grafana health, `/metrics` exposition, and Prometheus target UP status (bounded retry)
+- [x] Local kind verification complete (deploy, targets UP, dashboard panels return data)
+- [ ] GitHub Actions CD end-to-end verification with monitoring smoke checks (**pending** — requires push to `main`)
+
+**Status:** IN PROGRESS (implementation complete; final verification gate pending)
+
+> **Note:** Milestone 7 implementation verified locally on kind cluster `krp`. Application metrics use low-cardinality labels (`service`, `method`, `handler` route template, `status`). Prometheus uses static scrape config (no ServiceMonitor, Prometheus Operator, or exporters). Grafana admin credentials remain local-development placeholders (`admin` / `change_me`). Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
 
 ---
 
@@ -452,7 +466,7 @@ Milestone 3  → Docker                      [COMPLETE]
 Milestone 4  → Kubernetes                  [COMPLETE]
 Milestone 5  → Helm                        [COMPLETE]
 Milestone 6  → CI/CD                       [COMPLETE]
-Milestone 7  → Metrics and Monitoring      [NOT STARTED]
+Milestone 7  → Metrics and Monitoring      [IN PROGRESS]
 Milestone 8  → Alerting                    [NOT STARTED]
 Milestone 9  → Logging                     [NOT STARTED]
 Milestone 10 → Distributed Tracing         [NOT STARTED]

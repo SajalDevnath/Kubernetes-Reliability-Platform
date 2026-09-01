@@ -46,3 +46,17 @@ Application image references.
 {{- define "krp.paymentService.image" -}}
 {{- printf "%s:%s" .Values.images.paymentService.repository .Values.images.paymentService.tag }}
 {{- end }}
+
+{{/*
+Prometheus image reference.
+*/}}
+{{- define "krp.prometheus.image" -}}
+{{- printf "%s:%s" .Values.prometheus.image.repository .Values.prometheus.image.tag }}
+{{- end }}
+
+{{/*
+Grafana image reference.
+*/}}
+{{- define "krp.grafana.image" -}}
+{{- printf "%s:%s" .Values.grafana.image.repository .Values.grafana.image.tag }}
+{{- end }}

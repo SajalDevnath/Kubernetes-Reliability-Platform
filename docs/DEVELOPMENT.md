@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 7 — Metrics and Monitoring (next). Milestone 6 — CI/CD is complete.
+> **Current Milestone:** Milestone 7 — Metrics and Monitoring (in progress — implementation complete; final verification gate pending). Milestone 8 — Alerting is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -238,7 +238,7 @@ The Helm chart at `helm/krp/` packages the same application topology as the `k8s
 
 | Setting | Value |
 |---------|-------|
-| Chart | `helm/krp/` (`krp-0.1.0`) |
+| Chart | `helm/krp/` (`krp-0.2.0`) |
 | Release name | `krp` |
 | Namespace | `krp` (must exist; chart does not create it by default) |
 | Values files | `values.yaml` (baseline), `values-local.yaml` (local kind overrides) |
@@ -278,7 +278,84 @@ helm upgrade krp helm/krp -n krp \
   --set userService.replicas=2
 ```
 
-See [helm/krp/README.md](../helm/krp/README.md) for build, load, install, upgrade, rollback, teardown, and PVC reuse details.
+See [helm/krp/README.md](../helm/krp/README.md) for build, load, install, upgrade, rollback, teardown, PVC reuse, and monitoring verification details.
+
+## Monitoring Workflow (Milestone 7)
+
+Prometheus and Grafana are deployed as part of the `helm/krp/` chart when `prometheus.enabled` and `grafana.enabled` are `true` (default).
+
+| Component | Image | Service | Port |
+|-----------|-------|---------|------|
+| Prometheus | `prom/prometheus:v2.55.1` | `prometheus` | 9090 |
+| Grafana | `grafana/grafana:11.4.0` | `grafana` | 3000 |
+
+Prometheus scrapes all three application services via static Kubernetes Service DNS targets (`user-service:8001/metrics`, `order-service:8002/metrics`, `payment-service:8003/metrics`) with a 15s scrape interval. No ServiceMonitor, Prometheus Operator, or exporters are used.
+
+Grafana provisions a Prometheus datasource (`http://prometheus:9090`, proxy access, default) and the **KRP Service Health** dashboard (UID `krp-services`).
+
+### Access (port-forward)
+
+```bash
+kubectl port-forward svc/prometheus 9090:9090 -n krp
+kubectl port-forward svc/grafana 3000:3000 -n krp
+```
+
+- Prometheus: `http://127.0.0.1:9090/-/ready`, targets at `/targets`
+- Grafana: `http://127.0.0.1:3000/api/health` (login `admin` / `change_me` — local-development placeholder only)
+
+### Application metrics
+
+Each service exposes `GET /metrics` with:
+
+- `http_requests_total` — labels: `service`, `method`, `handler` (route template), `status`
+- `http_request_duration_seconds` — labels: `service`, `method`, `handler`
+
+### PromQL queries (KRP Service Health dashboard)
+
+**Service availability (scrape health):**
+
+```promql
+up{job=~"user-service|order-service|payment-service"}
+```
+
+**Request rate (per service):**
+
+```promql
+sum by (service) (rate(http_requests_total[5m]))
+```
+
+**5xx error rate (per service):**
+
+```promql
+sum by (service) (rate(http_requests_total{status=~"5.."}[5m]))
+/
+sum by (service) (rate(http_requests_total[5m]))
+```
+
+**P95 request latency (per service):**
+
+```promql
+histogram_quantile(
+  0.95,
+  sum by (service, le) (rate(http_request_duration_seconds_bucket[5m]))
+)
+```
+
+**Request rate by status:**
+
+```promql
+sum by (service, status) (rate(http_requests_total[5m]))
+```
+
+### Local verification
+
+After deploying the chart and generating application traffic:
+
+1. Confirm all three Prometheus targets are UP (`/targets` or `up{job=~"user-service|order-service|payment-service"}`)
+2. Confirm Grafana datasource points to `http://prometheus:9090`
+3. Confirm **KRP Service Health** dashboard panels return data
+
+Prometheus and Grafana use non-persistent `emptyDir` storage (acceptable for local kind/CD).
 
 ## CI/CD Workflow
 
@@ -298,7 +375,7 @@ Runs on `ubuntu-latest` with:
 1. **Checkout** and Python 3.10 setup
 2. **uv** — `uv sync --dev --frozen`
 3. **Ruff** — `uv run ruff check services tests`
-4. **pytest** — `uv run pytest tests/ -v` (full 124-test suite)
+4. **pytest** — `uv run pytest tests/ -v` (full 139-test suite)
 5. **PostgreSQL 16** — GitHub Actions service container (`app_user` / `change_me` / `k8s_reliability` on port 5432)
 6. **Docker builds** — `krp-user-service:ci`, `krp-order-service:ci`, `krp-payment-service:ci` (validation only; no push)
 7. **Helm** — `helm lint helm/krp`; `helm template krp helm/krp` (output discarded to avoid logging Secret values)
@@ -327,11 +404,15 @@ helm upgrade --install krp helm/krp \
 
 Uses `values.yaml` only — **not** `values-local.yaml` (which assumes a pre-existing local PVC).
 
-8. **Readiness** — `kubectl wait` for postgres, user-service, payment-service, order-service (180s each)
-9. **Smoke tests** — temporary `curlimages/curl:8.10.1` pod; in-cluster HTTP checks:
+8. **Readiness** — `kubectl wait` for postgres, user-service, payment-service, order-service, prometheus, grafana (180s each)
+9. **Smoke tests** — temporary `curlimages/curl:8.10.1` pod; in-cluster checks:
    - `http://user-service:8001/health`
    - `http://payment-service:8003/health`
    - `http://order-service:8002/orders`
+   - `http://prometheus:9090/-/ready`
+   - `http://grafana:3000/api/health`
+   - `/metrics` on all three services (Prometheus exposition format)
+   - Prometheus targets UP for user-service, order-service, payment-service (bounded retry — up to 60s)
 10. **Cleanup** — `kind delete cluster --name krp` with `if: always()`
 
 ### Credential handling in CI/CD

@@ -240,3 +240,83 @@ Milestone 6 requires automated CI on pull requests and CD on merge to `main` wit
 **Status:** Accepted
 
 **Verification:** GitHub Actions CI workflow passed on pull request; CD workflow passed on push to `main` (2026-08-31). Ephemeral kind deploy, readiness checks, and in-cluster smoke tests verified. Local-development placeholder credentials only.
+
+---
+
+## ADR-017 — Milestone 7 Application Metrics with prometheus-client
+
+**Date:** 2026-09-01
+
+**Decision:**
+Milestone 7 will instrument all three FastAPI services with `prometheus-client`. Each service exposes `GET /metrics` with HTTP request instrumentation via middleware:
+
+- `http_requests_total` (Counter) — labels: `service`, `method`, `handler` (FastAPI route template, not raw URL), `status`
+- `http_request_duration_seconds` (Histogram) — labels: `service`, `method`, `handler`
+
+The `/metrics` endpoint is excluded from request metrics. Each service uses a per-application `CollectorRegistry` to avoid pytest registration conflicts. `http_requests_in_progress` is not implemented (handler is unknown before routing).
+
+**Reason:**
+Milestone 7 requires Prometheus-compatible metrics with low-cardinality labels across all three services. Standard HTTP counters and histograms are sufficient for the **KRP Service Health** dashboard without introducing custom business metrics or high-cardinality labels (user IDs, order IDs, etc.).
+
+**Status:** Accepted
+
+**Verification:** 15 metrics unit tests added (5 per service); **139 total tests passing**. `/metrics` verified on kind cluster (2026-09-01).
+
+---
+
+## ADR-018 — Prometheus Static Service DNS Scraping
+
+**Date:** 2026-09-01
+
+**Decision:**
+Prometheus will be deployed via `helm/krp/` with a ConfigMap containing static scrape targets using Kubernetes Service DNS:
+
+- `user-service:8001/metrics`
+- `order-service:8002/metrics`
+- `payment-service:8003/metrics`
+
+Scrape interval: 15s. No ServiceMonitor, Prometheus Operator, pod annotation discovery, kube-state-metrics, node-exporter, or PostgreSQL exporter will be introduced in M7.
+
+**Reason:**
+Milestone 7 requires Prometheus to scrape all three application services on a local kind cluster without introducing additional operators or exporters. Static Service DNS targets match the existing Helm chart service names and ports and keep the deployment self-contained.
+
+**Status:** Accepted
+
+**Verification:** All three Prometheus targets UP on kind cluster `krp` (2026-09-01). `up{job=~"user-service|order-service|payment-service"}` returns `1` for all services.
+
+---
+
+## ADR-019 — Non-Persistent Prometheus and Grafana on kind
+
+**Date:** 2026-09-01
+
+**Decision:**
+Prometheus and Grafana deployed via `helm/krp/` will use non-persistent `emptyDir` storage:
+
+- Prometheus TSDB: `/prometheus`
+- Grafana data: `/var/lib/grafana`
+
+Pinned images: `prom/prometheus:v2.55.1`, `grafana/grafana:11.4.0`. Single replica each. Grafana admin credentials (`admin` / `change_me`) stored in a Kubernetes Secret (`grafana-credentials`) as local-development placeholders only.
+
+**Reason:**
+Milestone 7 targets local kind development and ephemeral CD validation. Non-persistent storage is acceptable for learning and demonstration; production-grade persistent monitoring storage is out of scope for M7.
+
+**Status:** Accepted
+
+**Verification:** Prometheus and Grafana pods Running/Ready on kind cluster `krp`; Grafana datasource and dashboard provisioned via ConfigMaps (2026-09-01).
+
+---
+
+## ADR-020 — Order Service Health Endpoint Unchanged
+
+**Date:** 2026-09-01
+
+**Decision:**
+Order Service will not gain a `/health` endpoint in Milestone 7. Kubernetes liveness and readiness probes continue to use `GET /orders`. Docker Compose, `k8s/`, and Helm probe configurations remain unchanged.
+
+**Reason:**
+Milestone 7 scope is metrics instrumentation and monitoring deployment, not probe redesign. Order Service was validated in M4 with `GET /orders` probes; adding `/health` would be an unrelated application change with no M7 requirement.
+
+**Status:** Accepted
+
+**Verification:** Order Service probes unchanged in `helm/krp/` templates; Order Service `GET /metrics` added without modifying probe paths (2026-09-01).

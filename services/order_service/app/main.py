@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.database import Base, engine
+from app.metrics import setup_metrics
 from app.models.order import Order  # noqa: F401 — register ORM model metadata
 
 
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     application.include_router(api_router)
+    setup_metrics(application, get_settings().service_name)
     return application
 
 

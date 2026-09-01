@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 6 complete — User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 7 — Metrics and Monitoring is next.
+> **Status:** Milestone 7 in progress — application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and locally verified. User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 8 — Alerting is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -30,7 +30,7 @@ User Service (FastAPI)          Client
 - **Technology:** Python, FastAPI, Pydantic, SQLAlchemy
 - **Database:** PostgreSQL
 - **Location:** `services/user_service/`
-- **Status:** Complete — `GET /health` and `/users` CRUD endpoints verified against PostgreSQL, Docker Compose, Kubernetes, and Helm
+- **Status:** Complete — `GET /health`, `GET /metrics`, and `/users` CRUD endpoints verified against PostgreSQL, Docker Compose, Kubernetes, and Helm
 
 ### Order Service
 
@@ -39,7 +39,7 @@ User Service (FastAPI)          Client
 - **Database:** PostgreSQL
 - **Location:** `services/order_service/`
 - **Dependencies:** Payment Service (synchronous HTTP on order creation via `PAYMENT_SERVICE_URL`)
-- **Status:** Complete — `/orders` CRUD endpoints and Order → Payment integration verified against PostgreSQL, Docker Compose, Kubernetes, and Helm
+- **Status:** Complete — `/orders` CRUD endpoints, Order → Payment integration, and `GET /metrics` verified against PostgreSQL, Docker Compose, Kubernetes, and Helm. Kubernetes probes remain on `GET /orders` (no `/health` endpoint)
 
 ### Payment Service
 
@@ -49,7 +49,7 @@ User Service (FastAPI)          Client
 - **Location:** `services/payment_service/`
 - **Port:** 8003
 - **Dependencies:** Order Service (reference via `order_id` only — no cross-service FK or reverse HTTP integration)
-- **Status:** Complete — `GET /health` and `/payments` CRUD endpoints verified against PostgreSQL, Docker Compose, Kubernetes, and Helm
+- **Status:** Complete — `GET /health`, `GET /metrics`, and `/payments` CRUD endpoints verified against PostgreSQL, Docker Compose, Kubernetes, and Helm
 
 ## Data Layer
 
@@ -86,7 +86,7 @@ User Service (FastAPI)          Client
 
 ## Helm (Milestone 5 — implemented)
 
-- Umbrella chart `helm/krp/` (`krp-0.1.0`) packages the same topology as `k8s/` manifests
+- Umbrella chart `helm/krp/` (`krp-0.2.0`) packages postgres, user-service, payment-service, order-service, prometheus, and grafana
 - Parameterized via `values.yaml` (baseline defaults) and `values-local.yaml` (non-sensitive local kind overrides)
 - `postgres.storage.existingClaim` — when set, reuses an existing PVC instead of creating `postgres-data` (M4 → M5 data preservation)
 - Deploy and manage releases with `helm upgrade --install`, `helm upgrade`, `helm history`, and `helm rollback`
@@ -98,21 +98,34 @@ User Service (FastAPI)          Client
 
 - **CI workflow:** `.github/workflows/ci.yml` — triggers on `pull_request`; `permissions: contents: read`
 - **CD workflow:** `.github/workflows/cd.yml` — triggers on `push` to `main`; `permissions: contents: read`
-- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (124 tests) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template`
-- **CD pipeline:** Docker Buildx builds, kind v0.33.0 ephemeral cluster on the GitHub-hosted runner, `kind load docker-image`, Helm deploy of `helm/krp/` into namespace `krp` using `values.yaml` with `--set images.*.tag=ci`, deployment readiness waits, in-cluster HTTP smoke tests, automatic cluster cleanup (`if: always()`)
+- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (139 tests) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template`
+- **CD pipeline:** Docker Buildx builds, kind v0.33.0 ephemeral cluster on the GitHub-hosted runner, `kind load docker-image`, Helm deploy of `helm/krp/` into namespace `krp` using `values.yaml` with `--set images.*.tag=ci`, deployment readiness waits (postgres, user-service, payment-service, order-service, prometheus, grafana), in-cluster HTTP and monitoring smoke tests, automatic cluster cleanup (`if: always()`)
 - **Not production deployment:** CD uses a disposable ephemeral kind cluster on the runner; no container registry, no cloud Kubernetes, no deployment to a developer's local kind cluster
 - **Credential handling:** CI/CD credential handling reviewed and documented; no GitHub Secrets or dedicated secrets-management mechanism; PostgreSQL password remains local-development placeholder (`change_me`)
-- **Status:** Complete — GitHub Actions CI and CD workflows verified
+- **Status:** Complete — GitHub Actions CI verified; CD workflow extended for M7 monitoring smoke checks (GHA end-to-end verification pending)
 
-## Observability (Planned — Milestones 7–10)
+## Application Metrics (Milestone 7 — implemented)
+
+All three services expose Prometheus-compatible `GET /metrics` via `prometheus-client`:
+
+| Metric | Type | Labels |
+|--------|------|--------|
+| `http_requests_total` | Counter | `service`, `method`, `handler` (FastAPI route template), `status` |
+| `http_request_duration_seconds` | Histogram | `service`, `method`, `handler` |
+
+- Middleware records request count and duration; `/metrics` endpoint is excluded from request metrics
+- Per-service `CollectorRegistry` avoids test registration conflicts
+- **Status:** Implemented — 15 metrics unit tests; verified locally on kind
+
+## Observability
 
 | Component | Purpose | Status |
 |-----------|---------|--------|
-| Prometheus | Metrics collection and PromQL queries | Planned |
-| Grafana | Dashboards and visualization | Planned |
-| Alertmanager | Alert routing and notification | Planned |
-| Loki | Centralized log aggregation | Planned |
-| OpenTelemetry | Distributed tracing | Planned |
+| Prometheus | Metrics collection and PromQL queries | Implemented (M7 — `helm/krp/`, static Service-DNS scraping) |
+| Grafana | Dashboards and visualization | Implemented (M7 — provisioned datasource and **KRP Service Health** dashboard) |
+| Alertmanager | Alert routing and notification | Planned (M8) |
+| Loki | Centralized log aggregation | Planned (M9) |
+| OpenTelemetry | Distributed tracing | Planned (M10) |
 
 ## SRE Layer (Planned — Milestones 11–13)
 

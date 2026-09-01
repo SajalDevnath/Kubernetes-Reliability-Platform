@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–6 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD are implemented and verified. **Milestone 7 — Metrics and Monitoring** is next (not started).
+> **Milestones 0–6 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD are implemented and verified. **Milestone 7 — Metrics and Monitoring** is in progress (implementation complete; final verification gate pending, including GitHub Actions CD end-to-end run).
 
 ## Quick Start
 
@@ -49,9 +49,9 @@ Deploy to the local kind cluster using the Helm chart in `helm/krp/`. See [helm/
 | **CI** | `.github/workflows/ci.yml` | `pull_request` |
 | **CD** | `.github/workflows/cd.yml` | `push` to `main` |
 
-**CI** runs Ruff lint, the full 124-test pytest suite (PostgreSQL 16 service container), Docker builds for all three services, and Helm lint/template validation.
+**CI** runs Ruff lint, the full 139-test pytest suite (PostgreSQL 16 service container), Docker builds for all three services, and Helm lint/template validation.
 
-**CD** builds images, creates an **ephemeral** kind cluster on the GitHub-hosted runner, loads `krp-*-service:ci` images, deploys `helm/krp/` into namespace `krp`, waits for all workloads, runs in-cluster HTTP smoke tests, and deletes the cluster. CD does not deploy to a developer's local kind cluster and is not a production deployment.
+**CD** builds images, creates an **ephemeral** kind cluster on the GitHub-hosted runner, loads `krp-*-service:ci` images, deploys `helm/krp/` into namespace `krp`, waits for all workloads (including Prometheus and Grafana), runs in-cluster HTTP and monitoring smoke tests, and deletes the cluster. CD does not deploy to a developer's local kind cluster and is not a production deployment.
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the CI/CD workflow details.
 
@@ -77,8 +77,8 @@ The business logic is intentionally simple. The focus is on reliability engineer
 | Containers | Docker, Docker Compose (implemented) |
 | Orchestration | Kubernetes, kind, kubectl (implemented); Helm (implemented) |
 | CI/CD | GitHub Actions (implemented) |
-| Metrics | Prometheus, PromQL |
-| Visualization | Grafana |
+| Metrics | Prometheus, PromQL (implemented — M7) |
+| Visualization | Grafana (implemented — M7) |
 | Alerting | Alertmanager |
 | Logging | Loki |
 | Tracing | OpenTelemetry |
@@ -107,9 +107,10 @@ Three microservices with simple business logic, designed to create realistic ope
 | 4 | Kubernetes | COMPLETE |
 | 5 | Helm | COMPLETE |
 | 6 | CI/CD | COMPLETE |
-| 7–17 | See roadmap | NOT STARTED |
+| 7 | Metrics and Monitoring | IN PROGRESS |
+| 8–17 | See roadmap | NOT STARTED |
 
-**Tests:** 124 passing (86 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).
+**Tests:** 139 passing (101 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).
 
 ## Documentation
 

@@ -1,6 +1,6 @@
 # Kubernetes Reliability Platform
 
-> **Current progress:** Milestones 0–6 complete (microservices, automated tests, Docker Compose, Kubernetes on kind, Helm chart packaging, GitHub Actions CI/CD). Milestone 7 — Metrics and Monitoring is next (not started).
+> **Current progress:** Milestones 0–6 complete; Milestone 7 — Metrics and Monitoring in progress (implementation complete; final verification gate pending). Application metrics, Prometheus, and Grafana deployed via Helm and locally verified.
 
 ## What This Project Is
 
@@ -30,7 +30,7 @@ Modern platform and SRE engineering requires practical experience across applica
 - Local Kubernetes (kind) (implemented — Milestone 4)
 - Helm chart packaging (implemented — Milestone 5)
 - GitHub Actions CI/CD (implemented — Milestone 6)
-- Full observability stack
+- Application metrics and Prometheus/Grafana monitoring (implemented — Milestone 7; GHA CD verification pending)
 - SRE practices and incident simulation
 - AI-assisted operations (final phase)
 
@@ -48,7 +48,7 @@ When complete, the platform will demonstrate:
 
 1. Running microservices locally and in Kubernetes
 2. Automated CI/CD pipelines (GitHub Actions — CI on pull requests; CD to ephemeral kind on `main`)
-3. Prometheus metrics, Grafana dashboards, and Alertmanager alerting
+3. Prometheus metrics collection and Grafana dashboards (Milestone 7 — implemented; Alertmanager planned for M8)
 4. Centralized logging with Loki
 5. Distributed tracing with OpenTelemetry
 6. SRE practices including SLOs and error budgets

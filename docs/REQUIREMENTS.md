@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 6 complete — Milestone 7 — Metrics and Monitoring is next (not started). User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; and GitHub Actions CI/CD are implemented and verified (124 tests passing).
+> **Status:** Milestone 7 in progress — application metrics, Prometheus, and Grafana implemented and locally verified (139 tests passing). Milestone 8 — Alerting is next. User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; and GitHub Actions CI/CD are implemented and verified.
 
 ## Functional Requirements
 
@@ -44,7 +44,7 @@
 | FR-014 | Services shall be deployable to a local Kubernetes cluster (kind) | Implemented (`k8s/` manifests, kind cluster `krp`) |
 | FR-015 | Deployments shall include liveness and readiness probes | Implemented (postgres `pg_isready`; user/payment `/health`; order `GET /orders`) |
 | FR-016 | Configuration shall use ConfigMaps and Secrets | Implemented (ConfigMaps + `postgres-credentials` Secret) |
-| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.1.0`) |
+| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.2.0`) |
 
 ### CI/CD
 
@@ -57,8 +57,8 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-020 | Services shall expose Prometheus-compatible metrics | Planned |
-| FR-021 | Grafana dashboards shall visualize service health and performance | Planned |
+| FR-020 | Services shall expose Prometheus-compatible metrics | Implemented (`GET /metrics` on all three services; `prometheus-client`) |
+| FR-021 | Grafana dashboards shall visualize service health and performance | Implemented (**KRP Service Health** dashboard, UID `krp-services`; locally verified) |
 
 ### Logging
 
@@ -145,10 +145,10 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (86 unit + 36 integration + 2 E2E — 124 total) |
+| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (101 unit + 36 integration + 2 E2E — 139 total) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
 | NFR-014 | Failure scenarios shall be testable and reproducible | Planned |
-| NFR-015 | Observability outputs shall be verifiable | Planned |
+| NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally; CD monitoring smoke checks implemented; GitHub Actions CD verification pending) |
 
 ### Portability
 

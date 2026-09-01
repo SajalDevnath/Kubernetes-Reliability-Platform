@@ -126,3 +126,51 @@ orderService:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 5
+
+prometheus:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    tag: v2.55.1
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 9090
+  scrapeInterval: 15s
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    tag: "11.4.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 3000
+  # Local-development placeholder only — not for production.
+  adminUser: admin
+  adminPassword: change_me
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  probes:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5

@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 6 complete — application tests (124 passing), Docker Compose container verification, Kubernetes (kind) manual verification, Helm deployment verification, and GitHub Actions CI/CD verification complete.
+> **Status:** Milestone 7 in progress — application metrics tests (15 passing), Prometheus/Grafana local verification, and CD monitoring smoke checks implemented. **139 tests passing** (101 unit, 36 integration, 2 E2E). GitHub Actions CD end-to-end verification with monitoring checks pending.
 
 ## Philosophy
 
@@ -13,7 +13,7 @@ A task is not complete merely because the application starts. Every change must 
 - **Scope:** Individual functions, classes, API endpoint behavior, schemas, repository, and service logic
 - **Location:** `tests/unit/`
 - **Tools:** pytest, FastAPI TestClient, httpx, SQLite (repository tests)
-- **Status:** Complete for User Service (25 tests), Order Service (32 tests), and Payment Service (29 tests) — 86 unit tests passing
+- **Status:** Complete for User Service (30 tests), Order Service (37 tests), and Payment Service (34 tests) — 101 unit tests passing
 
 ### Integration Tests (Milestone 2 — User, Order, and Payment services complete)
 
@@ -96,6 +96,24 @@ A task is not complete merely because the application starts. Every change must 
   - In-cluster smoke tests: User `/health`, Payment `/health`, Order `/orders` return HTTP 200
   - `kind delete cluster --name krp` runs with `if: always()`
   - No container registry push; no production deployment
+- **CD M7 extensions (implemented; GHA verification pending):**
+  - `kubectl wait` for prometheus and grafana deployments
+  - In-cluster monitoring smoke tests: Prometheus `/-/ready`, Grafana `/api/health`, `/metrics` on all three services, Prometheus targets UP (bounded retry)
+
+### Observability Verification (Milestone 7 — in progress)
+
+- **Scope:** `/metrics` endpoint behavior, Prometheus scrape targets, Grafana datasource and dashboard, CD monitoring smoke checks
+- **Location:** `tests/unit/test_metrics.py`, `tests/unit/order_service/test_order_metrics.py`, `tests/unit/payment_service/test_payment_metrics.py`; manual verification against `helm/krp/` on kind; CD workflow smoke tests
+- **Status:** Locally verified — metrics unit tests pass (15 tests); Prometheus targets UP; Grafana **KRP Service Health** dashboard panels return data; CD monitoring smoke checks implemented
+- **Pending:** GitHub Actions CD end-to-end verification with monitoring smoke checks
+- **Verified checks:**
+  - `GET /metrics` returns HTTP 200 with Prometheus text format
+  - Metrics include `http_requests_total` and `http_request_duration_seconds`
+  - Handler label uses FastAPI route template (not raw URL path)
+  - `/metrics` endpoint excluded from request counters
+  - Prometheus scrapes user-service, order-service, payment-service (static Service DNS)
+  - Grafana datasource provisioned at `http://prometheus:9090`
+  - Dashboard UID `krp-services` provisioned with documented PromQL queries
 
 ### Failure Simulation Tests (Planned — Milestone 12)
 
@@ -103,9 +121,9 @@ A task is not complete merely because the application starts. Every change must 
 - **Purpose:** Verify observability captures failure symptoms
 - **Status:** Planned
 
-### Observability Verification (Planned — Milestones 7–10)
+### Observability Verification — Logging and Tracing (Planned — Milestones 9–10)
 
-- **Scope:** Metrics appear in Prometheus, logs in Loki, traces in OpenTelemetry
+- **Scope:** Logs in Loki, traces in OpenTelemetry
 - **Purpose:** Confirm instrumentation is correct
 - **Status:** Planned
 
@@ -128,6 +146,9 @@ A task is not complete merely because the application starts. Every change must 
 
 | Test File | Coverage |
 |-----------|----------|
+| `tests/unit/test_metrics.py` | User Service `/metrics` endpoint, content type, metric names, route template labels |
+| `tests/unit/order_service/test_order_metrics.py` | Order Service metrics instrumentation |
+| `tests/unit/payment_service/test_payment_metrics.py` | Payment Service metrics instrumentation |
 | `tests/unit/test_health.py` | `GET /health` status code, response body, schema shape |
 | `tests/unit/test_database_config.py` | PostgreSQL URL construction and settings defaults |
 | `tests/unit/test_database.py` | SQLAlchemy engine, session factory, `get_db`, declarative Base |
@@ -159,16 +180,16 @@ python -m uv run pytest tests/e2e -v -m e2e
 
 ```
 tests/
-├── unit/                          # Unit tests (86 passing)
-│   ├── order_service/             # Order Service unit tests (32 passing)
-│   └── payment_service/           # Payment Service unit tests (29 passing)
+├── unit/                          # Unit tests (101 passing)
+│   ├── order_service/             # Order Service unit tests (37 passing)
+│   └── payment_service/           # Payment Service unit tests (34 passing)
 ├── integration/                   # PostgreSQL + API tests (36 passing)
 │   ├── order_service/             # Order Service integration tests (14 passing)
 │   └── payment_service/           # Payment Service integration tests (12 passing)
 └── e2e/                           # End-to-end cross-service tests (2 passing)
 ```
 
-**Verified totals:** 86 unit + 36 integration + 2 E2E = **124 tests passing**.
+**Verified totals:** 101 unit + 36 integration + 2 E2E = **139 tests passing**.
 
 ## Quality Gates
 

@@ -1,0 +1,86 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: grafana
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.grafana.replicas }}
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: {{ include "krp.grafana.image" . }}
+          imagePullPolicy: {{ .Values.grafana.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.grafana.service.port }}
+              name: http
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-credentials
+                  key: admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-credentials
+                  key: admin-password
+          volumeMounts:
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+            - name: grafana-dashboards-provider
+              mountPath: /etc/grafana/provisioning/dashboards
+              readOnly: true
+            - name: grafana-dashboards-json
+              mountPath: /var/lib/grafana/dashboards
+              readOnly: true
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+          resources:
+            {{- toYaml .Values.grafana.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.grafana.service.port }}
+            initialDelaySeconds: {{ .Values.grafana.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.grafana.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.grafana.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.grafana.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.grafana.service.port }}
+            initialDelaySeconds: {{ .Values.grafana.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.grafana.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.grafana.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.grafana.probes.failureThreshold }}
+      volumes:
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources
+        - name: grafana-dashboards-provider
+          configMap:
+            name: grafana-dashboards
+            items:
+              - key: dashboards.yaml
+                path: dashboards.yaml
+        - name: grafana-dashboards-json
+          configMap:
+            name: grafana-dashboards
+            items:
+              - key: krp-service-health.json
+                path: krp-service-health.json
+        - name: grafana-data
+          emptyDir: {}
+{{- end }}
