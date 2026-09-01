@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 7 — Metrics and Monitoring (in progress)
+> **Last updated:** Milestone 7 — Metrics and Monitoring (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -249,11 +249,11 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - [x] Metrics unit tests added (15 tests; **139 total** — 101 unit, 36 integration, 2 E2E)
 - [x] CD workflow extended: `kubectl wait` for prometheus and grafana; in-cluster smoke tests for Prometheus readiness, Grafana health, `/metrics` exposition, and Prometheus target UP status (bounded retry)
 - [x] Local kind verification complete (deploy, targets UP, dashboard panels return data)
-- [ ] GitHub Actions CD end-to-end verification with monitoring smoke checks (**pending** — requires push to `main`)
+- [x] GitHub Actions CD end-to-end verification with monitoring smoke checks **PASSED** (verified by successful CD run for commit `34f919b`, `feat: add metrics and monitoring`)
 
-**Status:** IN PROGRESS (implementation complete; final verification gate pending)
+**Status:** COMPLETE
 
-> **Note:** Milestone 7 implementation verified locally on kind cluster `krp`. Application metrics use low-cardinality labels (`service`, `method`, `handler` route template, `status`). Prometheus uses static scrape config (no ServiceMonitor, Prometheus Operator, or exporters). Grafana admin credentials remain local-development placeholders (`admin` / `change_me`). Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
+> **Note:** Milestone 7 verified — local kind cluster `krp` and GitHub Actions CD run for commit `34f919b` (`feat: add metrics and monitoring`). Application metrics use low-cardinality labels (`service`, `method`, `handler` route template, `status`). Prometheus uses static scrape config (no ServiceMonitor, Prometheus Operator, or exporters). Grafana admin credentials remain local-development placeholders (`admin` / `change_me`). Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
 
 ---
 
@@ -466,7 +466,7 @@ Milestone 3  → Docker                      [COMPLETE]
 Milestone 4  → Kubernetes                  [COMPLETE]
 Milestone 5  → Helm                        [COMPLETE]
 Milestone 6  → CI/CD                       [COMPLETE]
-Milestone 7  → Metrics and Monitoring      [IN PROGRESS]
+Milestone 7  → Metrics and Monitoring      [COMPLETE]
 Milestone 8  → Alerting                    [NOT STARTED]
 Milestone 9  → Logging                     [NOT STARTED]
 Milestone 10 → Distributed Tracing         [NOT STARTED]

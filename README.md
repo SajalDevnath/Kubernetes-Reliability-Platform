@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–6 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD are implemented and verified. **Milestone 7 — Metrics and Monitoring** is in progress (implementation complete; final verification gate pending, including GitHub Actions CD end-to-end run).
+> **Milestones 0–7 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, and Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation) are implemented and verified.
 
 ## Quick Start
 
@@ -107,7 +107,7 @@ Three microservices with simple business logic, designed to create realistic ope
 | 4 | Kubernetes | COMPLETE |
 | 5 | Helm | COMPLETE |
 | 6 | CI/CD | COMPLETE |
-| 7 | Metrics and Monitoring | IN PROGRESS |
+| 7 | Metrics and Monitoring | COMPLETE |
 | 8–17 | See roadmap | NOT STARTED |
 
 **Tests:** 139 passing (101 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).

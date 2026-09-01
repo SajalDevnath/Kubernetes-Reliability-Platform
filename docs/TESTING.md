@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 7 in progress — application metrics tests (15 passing), Prometheus/Grafana local verification, and CD monitoring smoke checks implemented. **139 tests passing** (101 unit, 36 integration, 2 E2E). GitHub Actions CD end-to-end verification with monitoring checks pending.
+> **Status:** Milestone 7 complete — application metrics tests (15 passing, included in 101 unit tests), Prometheus/Grafana local verification, CD monitoring smoke checks, and GitHub Actions CD end-to-end verification with monitoring checks **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`). **139 tests passing** (101 unit, 36 integration, 2 E2E).
 
 ## Philosophy
 
@@ -96,16 +96,16 @@ A task is not complete merely because the application starts. Every change must 
   - In-cluster smoke tests: User `/health`, Payment `/health`, Order `/orders` return HTTP 200
   - `kind delete cluster --name krp` runs with `if: always()`
   - No container registry push; no production deployment
-- **CD M7 extensions (implemented; GHA verification pending):**
+- **CD M7 extensions (verified):**
   - `kubectl wait` for prometheus and grafana deployments
   - In-cluster monitoring smoke tests: Prometheus `/-/ready`, Grafana `/api/health`, `/metrics` on all three services, Prometheus targets UP (bounded retry)
+  - GitHub Actions CD end-to-end verification **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`)
 
-### Observability Verification (Milestone 7 — in progress)
+### Observability Verification (Milestone 7 — complete)
 
 - **Scope:** `/metrics` endpoint behavior, Prometheus scrape targets, Grafana datasource and dashboard, CD monitoring smoke checks
 - **Location:** `tests/unit/test_metrics.py`, `tests/unit/order_service/test_order_metrics.py`, `tests/unit/payment_service/test_payment_metrics.py`; manual verification against `helm/krp/` on kind; CD workflow smoke tests
-- **Status:** Locally verified — metrics unit tests pass (15 tests); Prometheus targets UP; Grafana **KRP Service Health** dashboard panels return data; CD monitoring smoke checks implemented
-- **Pending:** GitHub Actions CD end-to-end verification with monitoring smoke checks
+- **Status:** Complete — metrics unit tests pass (15 tests, included in 101 unit tests); Prometheus targets UP; Grafana **KRP Service Health** dashboard panels return data; CD monitoring smoke checks verified locally and via GitHub Actions CD (commit `34f919b`)
 - **Verified checks:**
   - `GET /metrics` returns HTTP 200 with Prometheus text format
   - Metrics include `http_requests_total` and `http_request_duration_seconds`

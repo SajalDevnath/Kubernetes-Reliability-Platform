@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 7 — Metrics and Monitoring (in progress — implementation complete; final verification gate pending). Milestone 8 — Alerting is next.
+> **Current Milestone:** Milestone 7 — Metrics and Monitoring (complete). Milestone 8 — Alerting is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 

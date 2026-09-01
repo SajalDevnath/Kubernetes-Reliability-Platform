@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 7 in progress — application metrics, Prometheus, and Grafana implemented and locally verified (139 tests passing). Milestone 8 — Alerting is next. User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; and GitHub Actions CI/CD are implemented and verified.
+> **Status:** Milestone 7 complete — application metrics, Prometheus, and Grafana implemented and verified (**139 tests passing**: 101 unit, including 15 metrics tests; 36 integration; 2 E2E). Milestone 8 — Alerting is next. User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; and GitHub Actions CI/CD are implemented and verified.
 
 ## Functional Requirements
 
@@ -148,7 +148,7 @@
 | NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (101 unit + 36 integration + 2 E2E — 139 total) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
 | NFR-014 | Failure scenarios shall be testable and reproducible | Planned |
-| NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally; CD monitoring smoke checks implemented; GitHub Actions CD verification pending) |
+| NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally and via GitHub Actions CD (commit `34f919b`); CD monitoring smoke checks verified) |
 
 ### Portability
 

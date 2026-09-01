@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 7 in progress — application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and locally verified. User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 8 — Alerting is next.
+> **Status:** Milestone 7 complete — application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 8 — Alerting is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -102,7 +102,7 @@ User Service (FastAPI)          Client
 - **CD pipeline:** Docker Buildx builds, kind v0.33.0 ephemeral cluster on the GitHub-hosted runner, `kind load docker-image`, Helm deploy of `helm/krp/` into namespace `krp` using `values.yaml` with `--set images.*.tag=ci`, deployment readiness waits (postgres, user-service, payment-service, order-service, prometheus, grafana), in-cluster HTTP and monitoring smoke tests, automatic cluster cleanup (`if: always()`)
 - **Not production deployment:** CD uses a disposable ephemeral kind cluster on the runner; no container registry, no cloud Kubernetes, no deployment to a developer's local kind cluster
 - **Credential handling:** CI/CD credential handling reviewed and documented; no GitHub Secrets or dedicated secrets-management mechanism; PostgreSQL password remains local-development placeholder (`change_me`)
-- **Status:** Complete — GitHub Actions CI verified; CD workflow extended for M7 monitoring smoke checks (GHA end-to-end verification pending)
+- **Status:** Complete — GitHub Actions CI and CD verified; CD workflow includes M7 monitoring smoke checks (GitHub Actions CD end-to-end verification **PASSED**, commit `34f919b`)
 
 ## Application Metrics (Milestone 7 — implemented)
 
@@ -115,7 +115,7 @@ All three services expose Prometheus-compatible `GET /metrics` via `prometheus-c
 
 - Middleware records request count and duration; `/metrics` endpoint is excluded from request metrics
 - Per-service `CollectorRegistry` avoids test registration conflicts
-- **Status:** Implemented — 15 metrics unit tests; verified locally on kind
+- **Status:** Implemented — 15 metrics unit tests (included in 101 unit tests); verified locally on kind and via GitHub Actions CD
 
 ## Observability
 

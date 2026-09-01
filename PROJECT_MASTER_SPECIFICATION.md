@@ -354,7 +354,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 7 — Metrics and Monitoring (IN PROGRESS — implementation complete; final verification gate pending)
+**Current Milestone:** Milestone 7 — Metrics and Monitoring (COMPLETE)
 
 **Status:**
 - Milestone 0 complete (engineering foundation, documentation, rules, roadmap)
@@ -364,7 +364,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 - Milestone 4 complete (plain YAML manifests under `k8s/`, kind cluster `krp`, namespace `krp`, Deployments/Services/ConfigMaps/Secret/PVC, probes, resource limits, in-cluster Order → Payment verification)
 - Milestone 5 complete (Helm chart `helm/krp/` `krp-0.1.0`, `values.yaml` and `values-local.yaml`, `postgres.storage.existingClaim` for M4 → M5 PVC reuse, Helm install/upgrade verified on kind; `k8s/` retained as reference)
 - Milestone 6 complete (GitHub Actions CI/CD — CI on pull requests, CD to ephemeral kind on `main`; workflows verified on GitHub Actions)
-- Milestone 7 in progress — application `/metrics` instrumentation (`prometheus-client`), Prometheus and Grafana deployed via `helm/krp/`, static Service-DNS scraping, provisioned Prometheus datasource and **KRP Service Health** dashboard (`krp-services`), CD monitoring smoke checks implemented; **139 tests collected** (101 unit, including 15 metrics tests; 36 integration; 2 E2E); local kind verification complete; **GitHub Actions CD end-to-end verification pending**
+- Milestone 7 complete — application `/metrics` instrumentation (`prometheus-client`), Prometheus (`v2.55.1`) and Grafana (`11.4.0`) deployed via `helm/krp/` (`krp-0.2.0`), static Service-DNS scraping, provisioned Prometheus datasource and **KRP Service Health** dashboard (`krp-services`), CD monitoring smoke checks implemented; **139 tests collected** (101 unit, including 15 metrics tests; 36 integration; 2 E2E); local kind verification and GitHub Actions CD end-to-end verification **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`)
 - Kubernetes manifests exist under `k8s/`; Helm chart exists under `helm/krp/`; CI/CD workflows exist under `.github/workflows/`
 
-**Next Milestone:** Complete Milestone 7 final verification gate (including successful GitHub Actions CD run), then Milestone 8 — Alerting
+**Next Milestone:** Milestone 8 — Alerting
