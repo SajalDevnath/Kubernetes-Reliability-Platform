@@ -1,0 +1,33 @@
+{{- if .Values.alertmanager.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: alertmanager
+    {{- include "krp.labels" . | nindent 4 }}
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    route:
+      receiver: default
+      group_by: ['alertname', 'service', 'job']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      routes:
+        - matchers:
+            - severity="critical"
+          receiver: critical
+        - matchers:
+            - severity="warning"
+          receiver: warning
+
+    receivers:
+      - name: default
+      - name: critical
+      - name: warning
+{{- end }}

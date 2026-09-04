@@ -60,3 +60,10 @@ Grafana image reference.
 {{- define "krp.grafana.image" -}}
 {{- printf "%s:%s" .Values.grafana.image.repository .Values.grafana.image.tag }}
 {{- end }}
+
+{{/*
+Alertmanager image reference.
+*/}}
+{{- define "krp.alertmanager.image" -}}
+{{- printf "%s:%s" .Values.alertmanager.image.repository .Values.alertmanager.image.tag }}
+{{- end }}

@@ -174,3 +174,25 @@ grafana:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 5
+
+alertmanager:
+  enabled: true
+  image:
+    repository: prom/alertmanager
+    tag: v0.27.0
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 9093
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  probes:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5

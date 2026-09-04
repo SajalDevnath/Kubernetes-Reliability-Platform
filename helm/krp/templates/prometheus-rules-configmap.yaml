@@ -1,0 +1,41 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: prometheus
+    {{- include "krp.labels" . | nindent 4 }}
+data:
+  krp_alerts.yml: |
+    groups:
+      - name: krp-service-health
+        rules:
+          - alert: KRPServiceTargetDown
+            expr: up{job=~"user-service|order-service|payment-service"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: Application scrape target is down
+              description: Prometheus cannot scrape {{ "{{" }} $labels.job {{ "}}" }} at {{ "{{" }} $labels.instance {{ "}}" }}.
+
+          - alert: KRPHigh5xxErrorRate
+            expr: |
+              (
+                sum by (service) (
+                  rate(http_requests_total{status=~"5.."}[5m])
+                )
+                /
+                sum by (service) (
+                  rate(http_requests_total[5m])
+                )
+              ) > 0.50
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: High 5xx error rate for {{ "{{" }} $labels.service {{ "}}" }}
+              description: More than 50% of requests to {{ "{{" }} $labels.service {{ "}}" }} returned 5xx over the last 5 minutes.
+{{- end }}

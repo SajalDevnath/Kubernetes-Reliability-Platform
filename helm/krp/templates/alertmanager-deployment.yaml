@@ -1,0 +1,60 @@
+{{- if .Values.alertmanager.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: alertmanager
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.alertmanager.replicas }}
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+        - name: alertmanager
+          image: {{ include "krp.alertmanager.image" . }}
+          imagePullPolicy: {{ .Values.alertmanager.image.pullPolicy }}
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+            - --storage.path=/alertmanager
+          ports:
+            - containerPort: {{ .Values.alertmanager.service.port }}
+              name: http
+          volumeMounts:
+            - name: alertmanager-config
+              mountPath: /etc/alertmanager
+              readOnly: true
+            - name: alertmanager-data
+              mountPath: /alertmanager
+          resources:
+            {{- toYaml .Values.alertmanager.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: {{ .Values.alertmanager.service.port }}
+            initialDelaySeconds: {{ .Values.alertmanager.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.alertmanager.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.alertmanager.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.alertmanager.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: {{ .Values.alertmanager.service.port }}
+            initialDelaySeconds: {{ .Values.alertmanager.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.alertmanager.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.alertmanager.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.alertmanager.probes.failureThreshold }}
+      volumes:
+        - name: alertmanager-config
+          configMap:
+            name: alertmanager-config
+        - name: alertmanager-data
+          emptyDir: {}
+{{- end }}
