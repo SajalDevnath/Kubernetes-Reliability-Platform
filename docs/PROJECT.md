@@ -1,6 +1,6 @@
 # Kubernetes Reliability Platform
 
-> **Current progress:** Milestones 0–7 complete. Application metrics, Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD).
+> **Current progress:** Milestones 0–8 complete. Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified (manual E2E on kind cluster `krp`). Application metrics, Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD).
 
 ## What This Project Is
 
@@ -31,6 +31,7 @@ Modern platform and SRE engineering requires practical experience across applica
 - Helm chart packaging (implemented — Milestone 5)
 - GitHub Actions CI/CD (implemented — Milestone 6)
 - Application metrics and Prometheus/Grafana monitoring (implemented and verified — Milestone 7)
+- Alertmanager alerting with Prometheus rules and severity-based routing (implemented and verified — Milestone 8)
 - SRE practices and incident simulation
 - AI-assisted operations (final phase)
 
@@ -48,7 +49,7 @@ When complete, the platform will demonstrate:
 
 1. Running microservices locally and in Kubernetes
 2. Automated CI/CD pipelines (GitHub Actions — CI on pull requests; CD to ephemeral kind on `main`)
-3. Prometheus metrics collection and Grafana dashboards (Milestone 7 — implemented; Alertmanager planned for M8)
+3. Prometheus metrics collection, Grafana dashboards, and Alertmanager alerting (Milestones 7–8 — implemented; Loki planned for M9)
 4. Centralized logging with Loki
 5. Distributed tracing with OpenTelemetry
 6. SRE practices including SLOs and error budgets

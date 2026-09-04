@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 7 — Metrics and Monitoring (complete). Milestone 8 — Alerting is next.
+> **Current Milestone:** Milestone 8 — Alerting (complete). Milestone 9 — Logging is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -238,7 +238,7 @@ The Helm chart at `helm/krp/` packages the same application topology as the `k8s
 
 | Setting | Value |
 |---------|-------|
-| Chart | `helm/krp/` (`krp-0.2.0`) |
+| Chart | `helm/krp/` (`krp-0.3.0`) |
 | Release name | `krp` |
 | Namespace | `krp` (must exist; chart does not create it by default) |
 | Values files | `values.yaml` (baseline), `values-local.yaml` (local kind overrides) |
@@ -356,6 +356,70 @@ After deploying the chart and generating application traffic:
 3. Confirm **KRP Service Health** dashboard panels return data
 
 Prometheus and Grafana use non-persistent `emptyDir` storage (acceptable for local kind/CD).
+
+## Alerting Workflow (Milestone 8)
+
+Alertmanager and Prometheus alert rules are deployed as part of the `helm/krp/` chart when `alertmanager.enabled` and `prometheus.enabled` are `true` (default).
+
+| Component | Image | Service | Port |
+|-----------|-------|---------|------|
+| Alertmanager | `prom/alertmanager:v0.27.0` | `alertmanager` | 9093 |
+
+Prometheus evaluates alert rules from ConfigMap `prometheus-rules` (`krp_alerts.yml`) and forwards firing alerts to Alertmanager at `alertmanager:9093`.
+
+### Alert rules
+
+| Alert | Severity | `for` | Condition |
+|-------|----------|-------|-----------|
+| `KRPServiceTargetDown` | `critical` | `1m` | `up{job=~"user-service\|order-service\|payment-service"} == 0` |
+| `KRPHigh5xxErrorRate` | `warning` | `2m` | 5xx request ratio `> 0.50` per `service` |
+
+### Alertmanager routing
+
+- Default receiver: `default`
+- `group_by: [alertname, service, job]`
+- `group_wait: 30s`, `group_interval: 5m`, `repeat_interval: 12h`
+- `severity="critical"` → `critical` receiver
+- `severity="warning"` → `warning` receiver
+- Receivers (`default`, `critical`, `warning`) are local/null only — no Slack, email, PagerDuty, or webhook integrations
+
+### Access (port-forward)
+
+```bash
+kubectl port-forward svc/alertmanager 9093:9093 -n krp
+```
+
+- Alertmanager: `http://127.0.0.1:9093/-/ready`
+- Active alerts: `http://127.0.0.1:9093/api/v2/alerts`
+- Prometheus alert state: `http://127.0.0.1:9090/api/v1/alerts` (port-forward Prometheus separately)
+
+### Prometheus ConfigMap rollout
+
+After a Helm upgrade that changes Prometheus or alert rule ConfigMaps, restart Prometheus so it reloads configuration (the Deployment has no checksum annotation):
+
+```bash
+kubectl rollout restart deployment/prometheus -n krp
+kubectl rollout status deployment/prometheus -n krp --timeout=180s
+```
+
+### Manual E2E verification (kind cluster `krp`)
+
+**Critical path — `KRPServiceTargetDown`:**
+
+1. Scale a scrape target to zero (e.g. `kubectl scale deployment/user-service --replicas=0 -n krp`)
+2. Confirm Prometheus rule transitions inactive → pending → firing (~1m `for`)
+3. Confirm Alertmanager receives the alert with `receivers: [{"name": "critical"}]`
+4. Scale back to 1 and confirm resolution
+
+**Warning path — `KRPHigh5xxErrorRate`:**
+
+1. Scale `payment-service` to zero and generate sustained `POST /orders` traffic to Order Service (in-cluster HTTP client recommended)
+2. Confirm measured 5xx ratio exceeds 50% (verified ~71% for `order-service`)
+3. Confirm Prometheus rule transitions inactive → pending → firing (~2m `for`)
+4. Confirm Alertmanager receives the alert with `severity=warning`, `service=order-service`, `receivers: [{"name": "warning"}]`
+5. Restore `payment-service` and confirm alert resolution in Prometheus and Alertmanager
+
+Alertmanager uses non-persistent `emptyDir` storage (acceptable for local kind). CD workflow unchanged — no Alertmanager smoke checks were added in M8.
 
 ## CI/CD Workflow
 

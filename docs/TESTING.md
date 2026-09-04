@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 7 complete — application metrics tests (15 passing, included in 101 unit tests), Prometheus/Grafana local verification, CD monitoring smoke checks, and GitHub Actions CD end-to-end verification with monitoring checks **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`). **139 tests passing** (101 unit, 36 integration, 2 E2E).
+> **Status:** Milestone 8 complete — manual E2E alerting verification on kind cluster `krp` (critical and warning paths). Application metrics tests (15 passing, included in 101 unit tests), Prometheus/Grafana local verification, CD monitoring smoke checks, and GitHub Actions CD end-to-end verification with monitoring checks **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`). **139 tests passing** (101 unit, 36 integration, 2 E2E; M8 added no automated tests).
 
 ## Philosophy
 
@@ -114,6 +114,20 @@ A task is not complete merely because the application starts. Every change must 
   - Prometheus scrapes user-service, order-service, payment-service (static Service DNS)
   - Grafana datasource provisioned at `http://prometheus:9090`
   - Dashboard UID `krp-services` provisioned with documented PromQL queries
+
+### Alerting Verification (Milestone 8 — complete)
+
+- **Scope:** Prometheus alert rule evaluation, Alertmanager alert receipt and routing, alert firing and resolution
+- **Location:** Manual verification against `helm/krp/` on kind cluster `krp` (no automated alert tests in `tests/`; CD workflow unchanged)
+- **Status:** Complete — manual in-cluster E2E verification for both approved alert rules; **139 tests** unchanged (M8 added no automated tests)
+- **Verified checks:**
+  - Alertmanager deployed and Ready (`prom/alertmanager:v0.27.0`, port 9093, `emptyDir` storage)
+  - Prometheus → Alertmanager integration (`alertmanager:9093`)
+  - Prometheus rules loaded from `prometheus-rules` ConfigMap (`KRPServiceTargetDown`, `KRPHigh5xxErrorRate`)
+  - **`KRPServiceTargetDown` (critical):** `user-service` scaled to 0 → inactive → pending → firing (`for: 1m`) → Alertmanager `critical` receiver → resolved on scale-up
+  - **`KRPHigh5xxErrorRate` (warning):** `payment-service` scaled to 0 + sustained in-cluster `POST /orders` traffic → measured ~71% 5xx ratio for `order-service` → inactive → pending → firing (`for: 2m`) → Alertmanager `warning` receiver (`service=order-service`) → resolved after payment restore
+  - Receivers are local/null only — no external notification integrations verified (none configured)
+  - CD workflow unchanged — no Alertmanager smoke checks added
 
 ### Failure Simulation Tests (Planned — Milestone 12)
 

@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 7 — Metrics and Monitoring (complete)
+> **Last updated:** Milestone 8 — Alerting (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -262,18 +262,35 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 **Objective:** Configure Alertmanager for alert routing and notification.
 
 **Major Tasks:**
-- Define alerting rules in Prometheus
-- Deploy and configure Alertmanager
-- Create alert routes and receivers
-- Test alert firing and resolution
-- Document alerting setup
+- [x] Define alerting rules in Prometheus
+- [x] Deploy and configure Alertmanager
+- [x] Create alert routes and receivers
+- [x] Test alert firing and resolution
+- [x] Document alerting setup
 
 **Completion Criteria:**
 - Alerts fire on defined conditions
 - Alertmanager routes alerts correctly
 - Alert resolution is observable
 
-**Status:** NOT STARTED
+**Exit Validation:**
+- [x] Alertmanager deployed via `helm/krp/` (`prom/alertmanager:v0.27.0`); single replica; ClusterIP Service on port 9093; non-persistent `emptyDir` storage at `/alertmanager`
+- [x] Prometheus → Alertmanager integration (`alerting.alertmanagers` → `alertmanager:9093` when `alertmanager.enabled`)
+- [x] Prometheus alert rules ConfigMap (`prometheus-rules` / `krp_alerts.yml`) mounted at `/etc/prometheus/rules`
+- [x] `KRPServiceTargetDown` — `up{job=~"user-service|order-service|payment-service"} == 0`, `severity: critical`, `for: 1m`
+- [x] `KRPHigh5xxErrorRate` — 5xx ratio `> 0.50` per `service`, `severity: warning`, `for: 2m`
+- [x] Alertmanager routing: default receiver `default`; `group_by: [alertname, service, job]`; `group_wait: 30s`; `group_interval: 5m`; `repeat_interval: 12h`; `severity="critical"` → `critical` receiver; `severity="warning"` → `warning` receiver
+- [x] Receivers (`default`, `critical`, `warning`) are local/null only — no external notification integrations (Slack, email, PagerDuty, webhooks)
+- [x] Manual E2E on kind cluster `krp`: `KRPServiceTargetDown` fires and resolves (`user-service` scaled to 0); Alertmanager routes to `critical` receiver
+- [x] Manual E2E on kind cluster `krp`: `KRPHigh5xxErrorRate` fires and resolves (`payment-service` scaled to 0 + sustained in-cluster Order traffic); measured ~71% 5xx ratio for `order-service`; Alertmanager routes to `warning` receiver
+- [x] Helm chart version bumped to `krp-0.3.0` (from `krp-0.2.0` at M7 close)
+- [x] CD workflow unchanged — no Alertmanager smoke checks added
+- [x] **139 tests** unchanged (M8 added no automated tests)
+- [x] Prometheus ConfigMap changes require manual `kubectl rollout restart deployment/prometheus -n krp` after Helm upgrade (no checksum annotation on Deployment)
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 8 verified — Alertmanager, Prometheus alert rules, and severity-based routing deployed via `helm/krp/` on kind cluster `krp`. Two alert rules only (no P95 latency, no SLO/error-budget alerts — deferred to Milestone 11). Manual in-cluster E2E verification for critical (`KRPServiceTargetDown`) and warning (`KRPHigh5xxErrorRate`) paths including firing, Alertmanager receipt, receiver routing, and resolution. Payment status updates remain owned by Payment Service; Order status is not automatically synchronized when a payment becomes `successful`.
 
 ---
 
@@ -467,7 +484,7 @@ Milestone 4  → Kubernetes                  [COMPLETE]
 Milestone 5  → Helm                        [COMPLETE]
 Milestone 6  → CI/CD                       [COMPLETE]
 Milestone 7  → Metrics and Monitoring      [COMPLETE]
-Milestone 8  → Alerting                    [NOT STARTED]
+Milestone 8  → Alerting                    [COMPLETE]
 Milestone 9  → Logging                     [NOT STARTED]
 Milestone 10 → Distributed Tracing         [NOT STARTED]
 Milestone 11 → SRE Practices               [NOT STARTED]

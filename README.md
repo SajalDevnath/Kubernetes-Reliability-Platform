@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–7 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, and Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation) are implemented and verified.
+> **Milestones 0–8 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation), and Alerting (Alertmanager, Prometheus alert rules) are implemented and verified.
 
 ## Quick Start
 
@@ -79,7 +79,7 @@ The business logic is intentionally simple. The focus is on reliability engineer
 | CI/CD | GitHub Actions (implemented) |
 | Metrics | Prometheus, PromQL (implemented — M7) |
 | Visualization | Grafana (implemented — M7) |
-| Alerting | Alertmanager |
+| Alerting | Alertmanager (implemented — M8) |
 | Logging | Loki |
 | Tracing | OpenTelemetry |
 | AI | LLM API, tool calling, RAG, human-in-the-loop remediation |
@@ -108,7 +108,8 @@ Three microservices with simple business logic, designed to create realistic ope
 | 5 | Helm | COMPLETE |
 | 6 | CI/CD | COMPLETE |
 | 7 | Metrics and Monitoring | COMPLETE |
-| 8–17 | See roadmap | NOT STARTED |
+| 8 | Alerting | COMPLETE |
+| 9–17 | See roadmap | NOT STARTED |
 
 **Tests:** 139 passing (101 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).
 

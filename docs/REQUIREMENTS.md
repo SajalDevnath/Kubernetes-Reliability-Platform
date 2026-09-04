@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 7 complete — application metrics, Prometheus, and Grafana implemented and verified (**139 tests passing**: 101 unit, including 15 metrics tests; 36 integration; 2 E2E). Milestone 8 — Alerting is next. User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; and GitHub Actions CI/CD are implemented and verified.
+> **Status:** Milestone 8 complete — Alertmanager, Prometheus alert rules, and severity-based routing implemented and verified via manual E2E on kind cluster `krp` (**139 tests passing**: 101 unit, including 15 metrics tests; 36 integration; 2 E2E; M8 added no automated tests). Milestone 9 — Logging is next. User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; GitHub Actions CI/CD; and Metrics and Monitoring (Prometheus/Grafana) are implemented and verified.
 
 ## Functional Requirements
 
@@ -44,7 +44,7 @@
 | FR-014 | Services shall be deployable to a local Kubernetes cluster (kind) | Implemented (`k8s/` manifests, kind cluster `krp`) |
 | FR-015 | Deployments shall include liveness and readiness probes | Implemented (postgres `pg_isready`; user/payment `/health`; order `GET /orders`) |
 | FR-016 | Configuration shall use ConfigMaps and Secrets | Implemented (ConfigMaps + `postgres-credentials` Secret) |
-| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.2.0`) |
+| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.3.0`) |
 
 ### CI/CD
 
@@ -78,8 +78,8 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-026 | Alertmanager shall route alerts based on defined rules | Planned |
-| FR-027 | Alerts shall be triggered for SLO violations and failure conditions | Planned |
+| FR-026 | Alertmanager shall route alerts based on defined rules | Implemented (Alertmanager deployed via `helm/krp/`; severity-based routing to `critical` and `warning` receivers; manually verified on kind) |
+| FR-027 | Alerts shall be triggered for SLO violations and failure conditions | Partially implemented (M8 — failure-condition alerts `KRPServiceTargetDown` and `KRPHigh5xxErrorRate` implemented and manually verified; SLO-violation alerting deferred to M11) |
 
 ### SRE
 
@@ -148,7 +148,7 @@
 | NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (101 unit + 36 integration + 2 E2E — 139 total) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
 | NFR-014 | Failure scenarios shall be testable and reproducible | Planned |
-| NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally and via GitHub Actions CD (commit `34f919b`); CD monitoring smoke checks verified) |
+| NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally and via GitHub Actions CD (commit `34f919b`); CD monitoring smoke checks verified; M8 — manual alert firing and resolution verified on kind via Prometheus `/api/v1/alerts` and Alertmanager `/api/v2/alerts`) |
 
 ### Portability
 

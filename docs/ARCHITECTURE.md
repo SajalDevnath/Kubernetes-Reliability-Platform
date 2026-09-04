@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 7 complete — application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 8 — Alerting is next.
+> **Status:** Milestone 8 complete — Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified (manual E2E on kind cluster `krp`). Application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 9 — Logging is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -86,7 +86,7 @@ User Service (FastAPI)          Client
 
 ## Helm (Milestone 5 — implemented)
 
-- Umbrella chart `helm/krp/` (`krp-0.2.0`) packages postgres, user-service, payment-service, order-service, prometheus, and grafana
+- Umbrella chart `helm/krp/` (`krp-0.3.0`) packages postgres, user-service, payment-service, order-service, prometheus, grafana, and alertmanager
 - Parameterized via `values.yaml` (baseline defaults) and `values-local.yaml` (non-sensitive local kind overrides)
 - `postgres.storage.existingClaim` — when set, reuses an existing PVC instead of creating `postgres-data` (M4 → M5 data preservation)
 - Deploy and manage releases with `helm upgrade --install`, `helm upgrade`, `helm history`, and `helm rollback`
@@ -117,13 +117,30 @@ All three services expose Prometheus-compatible `GET /metrics` via `prometheus-c
 - Per-service `CollectorRegistry` avoids test registration conflicts
 - **Status:** Implemented — 15 metrics unit tests (included in 101 unit tests); verified locally on kind and via GitHub Actions CD
 
+## Alerting (Milestone 8 — implemented)
+
+- Alertmanager deployed via `helm/krp/` when `alertmanager.enabled` is `true` (default)
+- Image: `prom/alertmanager:v0.27.0`; single replica; ClusterIP Service on port 9093; non-persistent `emptyDir` storage at `/alertmanager`
+- Prometheus forwards alerts to `alertmanager:9093` via `alerting.alertmanagers` in the Prometheus ConfigMap
+- Prometheus alert rules in ConfigMap `prometheus-rules` (`krp_alerts.yml`), mounted at `/etc/prometheus/rules`
+- Alert rules:
+  - **`KRPServiceTargetDown`** — `up{job=~"user-service|order-service|payment-service"} == 0`, `severity: critical`, `for: 1m`
+  - **`KRPHigh5xxErrorRate`** — 5xx request ratio `> 0.50` per `service`, `severity: warning`, `for: 2m`
+- Alertmanager routing: default receiver `default`; `group_by: [alertname, service, job]`; `group_wait: 30s`; `group_interval: 5m`; `repeat_interval: 12h`
+- Severity routing: `severity="critical"` → `critical` receiver; `severity="warning"` → `warning` receiver
+- Receivers (`default`, `critical`, `warning`) are local/null only — no external notification integrations
+- No P95 latency, SLO, or error-budget alert rules in M8 (deferred to Milestone 11)
+- Prometheus ConfigMap changes require manual `kubectl rollout restart deployment/prometheus -n krp` after Helm upgrade (no checksum annotation on Deployment)
+- CD workflow unchanged — no Alertmanager smoke checks added in M8
+- **Status:** Implemented — manual E2E verification on kind cluster `krp` for critical and warning alert paths (firing, Alertmanager receipt, receiver routing, resolution)
+
 ## Observability
 
 | Component | Purpose | Status |
 |-----------|---------|--------|
 | Prometheus | Metrics collection and PromQL queries | Implemented (M7 — `helm/krp/`, static Service-DNS scraping) |
 | Grafana | Dashboards and visualization | Implemented (M7 — provisioned datasource and **KRP Service Health** dashboard) |
-| Alertmanager | Alert routing and notification | Planned (M8) |
+| Alertmanager | Alert routing and notification | Implemented (M8 — local/null receivers; severity-based routing) |
 | Loki | Centralized log aggregation | Planned (M9) |
 | OpenTelemetry | Distributed tracing | Planned (M10) |
 

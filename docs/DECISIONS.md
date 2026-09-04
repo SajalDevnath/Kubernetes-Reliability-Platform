@@ -320,3 +320,30 @@ Milestone 7 scope is metrics instrumentation and monitoring deployment, not prob
 **Status:** Accepted
 
 **Verification:** Order Service probes unchanged in `helm/krp/` templates; Order Service `GET /metrics` added without modifying probe paths (2026-09-01).
+
+---
+
+## ADR-021 — Local-Only Alertmanager Deployment, Routing, and Alert Rules for kind
+
+**Date:** 2026-09-04
+
+**Decision:**
+Milestone 8 will deploy Alertmanager via `helm/krp/` with local-only (null) receivers and two Prometheus alert rules:
+
+- **Alertmanager:** `prom/alertmanager:v0.27.0`, single replica, ClusterIP Service on port 9093, non-persistent `emptyDir` storage at `/alertmanager`
+- **Prometheus integration:** `alerting.alertmanagers` → `alertmanager:9093` when `alertmanager.enabled`; alert rules in ConfigMap `prometheus-rules` (`krp_alerts.yml`) mounted at `/etc/prometheus/rules`
+- **Alert rules:**
+  - `KRPServiceTargetDown` — `up{job=~"user-service|order-service|payment-service"} == 0`, `severity: critical`, `for: 1m`
+  - `KRPHigh5xxErrorRate` — 5xx request ratio `> 0.50` per `service`, `severity: warning`, `for: 2m`
+- **Routing:** default receiver `default`; `group_by: [alertname, service, job]`; `group_wait: 30s`; `group_interval: 5m`; `repeat_interval: 12h`; `severity="critical"` → `critical` receiver; `severity="warning"` → `warning` receiver
+- **Receivers:** `default`, `critical`, `warning` — empty (local/null only); no Slack, email, PagerDuty, or webhook integrations
+- **Helm chart version:** `krp-0.3.0` (bump from `krp-0.2.0` at M7 close)
+- **Explicit exclusions:** no P95 latency alert; no SLO or error-budget alerts (Milestone 11); no Prometheus Operator or ServiceMonitor; no CD workflow changes; no automated alert tests; no promtool/amtool CI integration
+- **Operational note:** Prometheus ConfigMap changes require manual `kubectl rollout restart deployment/prometheus -n krp` after Helm upgrade (no checksum annotation on Deployment)
+
+**Reason:**
+Milestone 8 requires alert routing and failure-condition alerting on a local kind cluster without external notification providers or production-grade persistence. Two focused alert rules exercise critical and warning severity paths using existing M7 metrics. Local/null receivers keep the stack self-contained for learning and demonstration. SLO-violation alerting belongs to Milestone 11.
+
+**Status:** Accepted
+
+**Verification:** Manual E2E on kind cluster `krp` (2026-09-03) — `KRPServiceTargetDown` fires and routes to `critical` receiver (`user-service` scale to 0); `KRPHigh5xxErrorRate` fires at ~71% 5xx ratio and routes to `warning` receiver for `order-service` (`payment-service` scale to 0 + sustained Order traffic); both alerts resolve after workload restoration. **139 tests** unchanged.

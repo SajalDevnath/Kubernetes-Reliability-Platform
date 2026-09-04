@@ -1,6 +1,6 @@
 # krp Helm Chart
 
-Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`, plus Prometheus and Grafana (Milestone 7).
+Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`, plus Prometheus and Grafana (Milestone 7) and Alertmanager with Prometheus alert rules (Milestone 8).
 
 > **Warning:** Default credentials in `values.yaml` are local-development placeholders only (`postgres.database.password: change_me`, `grafana.adminPassword: change_me`). **Do not use these credentials in production.**
 
@@ -9,7 +9,7 @@ Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kin
 | Path | Purpose |
 |------|---------|
 | `k8s/` | Raw Kubernetes reference implementation (Milestone 4). **Not deleted or replaced.** |
-| `helm/krp/` | Parameterized Helm packaging of the deployment including Prometheus and Grafana (Milestones 5 and 7). |
+| `helm/krp/` | Parameterized Helm packaging of the deployment including Prometheus, Grafana (Milestones 5 and 7), and Alertmanager with alert rules (Milestone 8). |
 
 Both produce equivalent resources when using default values. Use `k8s/` for direct `kubectl apply` workflows; use this chart for `helm install` / `helm upgrade` workflows.
 
@@ -55,7 +55,7 @@ kind load docker-image krp-order-service:local --name krp
 kind load docker-image krp-payment-service:local --name krp
 ```
 
-Application images default to `imagePullPolicy: Never` for local kind workflows. PostgreSQL uses the public `postgres:16` image. Prometheus (`prom/prometheus:v2.55.1`) and Grafana (`grafana/grafana:11.4.0`) use public images with `pullPolicy: IfNotPresent`.
+Application images default to `imagePullPolicy: Never` for local kind workflows. PostgreSQL uses the public `postgres:16` image. Prometheus (`prom/prometheus:v2.55.1`), Grafana (`grafana/grafana:11.4.0`), and Alertmanager (`prom/alertmanager:v0.27.0`) use public images with `pullPolicy: IfNotPresent`.
 
 ## Static validation (before install)
 
@@ -139,6 +139,7 @@ kubectl wait --for=condition=available deployment/payment-service -n krp --timeo
 kubectl wait --for=condition=available deployment/order-service -n krp --timeout=180s
 kubectl wait --for=condition=available deployment/prometheus -n krp --timeout=180s
 kubectl wait --for=condition=available deployment/grafana -n krp --timeout=180s
+kubectl wait --for=condition=available deployment/alertmanager -n krp --timeout=180s
 ```
 
 Port-forward and smoke-test (from another terminal):
@@ -162,6 +163,27 @@ curl http://localhost:3000/api/health
 # Dashboard: KRP Service Health (UID krp-services)
 ```
 
+### Alerting verification
+
+```bash
+kubectl port-forward -n krp svc/alertmanager 9093:9093
+curl http://localhost:9093/-/ready
+# Active alerts: http://localhost:9093/api/v2/alerts
+
+kubectl port-forward -n krp svc/prometheus 9090:9090
+curl http://localhost:9090/api/v1/rules?type=alert
+# Confirm KRPServiceTargetDown and KRPHigh5xxErrorRate are loaded
+```
+
+After a Helm upgrade that changes Prometheus or alert rule ConfigMaps, restart Prometheus (no checksum annotation on the Deployment):
+
+```bash
+kubectl rollout restart deployment/prometheus -n krp
+kubectl rollout status deployment/prometheus -n krp --timeout=180s
+```
+
+Manual E2E alert tests on kind cluster `krp` are documented in `docs/DEVELOPMENT.md` and `docs/TESTING.md`.
+
 ## Teardown
 
 ```bash
@@ -184,7 +206,25 @@ kubectl delete pvc postgres-data -n krp
 | order-service | `order-service` | 8002 | `GET /orders` |
 | prometheus | `prometheus` | 9090 | `GET /-/healthy`, `GET /-/ready` |
 | grafana | `grafana` | 3000 | `GET /api/health` |
+| alertmanager | `alertmanager` | 9093 | `GET /-/healthy`, `GET /-/ready` |
 
-Order Service calls Payment Service at `http://payment-service:8003` (in-cluster DNS). Prometheus scrapes application metrics at `user-service:8001/metrics`, `order-service:8002/metrics`, and `payment-service:8003/metrics` via static Service DNS (15s interval). Grafana connects to Prometheus at `http://prometheus:9090`.
+Order Service calls Payment Service at `http://payment-service:8003` (in-cluster DNS). Prometheus scrapes application metrics at `user-service:8001/metrics`, `order-service:8002/metrics`, and `payment-service:8003/metrics` via static Service DNS (15s interval). Grafana connects to Prometheus at `http://prometheus:9090`. Prometheus forwards alerts to Alertmanager at `alertmanager:9093`.
 
-Prometheus and Grafana use non-persistent `emptyDir` storage.
+### Prometheus alert rules (Milestone 8)
+
+| Alert | Severity | `for` | Condition |
+|-------|----------|-------|-----------|
+| `KRPServiceTargetDown` | `critical` | `1m` | `up{job=~"user-service\|order-service\|payment-service"} == 0` |
+| `KRPHigh5xxErrorRate` | `warning` | `2m` | 5xx request ratio `> 0.50` per `service` |
+
+Rules are defined in ConfigMap `prometheus-rules` (`krp_alerts.yml`) and mounted at `/etc/prometheus/rules`.
+
+### Alertmanager routing
+
+- Default receiver: `default`
+- `group_by: [alertname, service, job]`
+- `group_wait: 30s`, `group_interval: 5m`, `repeat_interval: 12h`
+- `severity="critical"` → `critical` receiver; `severity="warning"` → `warning` receiver
+- Receivers are local/null only — no external notification integrations
+
+Prometheus, Grafana, and Alertmanager use non-persistent `emptyDir` storage.

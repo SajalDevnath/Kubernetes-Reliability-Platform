@@ -354,7 +354,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 7 — Metrics and Monitoring (COMPLETE)
+**Current Milestone:** Milestone 8 — Alerting (COMPLETE)
 
 **Status:**
 - Milestone 0 complete (engineering foundation, documentation, rules, roadmap)
@@ -365,6 +365,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 - Milestone 5 complete (Helm chart `helm/krp/` `krp-0.1.0`, `values.yaml` and `values-local.yaml`, `postgres.storage.existingClaim` for M4 → M5 PVC reuse, Helm install/upgrade verified on kind; `k8s/` retained as reference)
 - Milestone 6 complete (GitHub Actions CI/CD — CI on pull requests, CD to ephemeral kind on `main`; workflows verified on GitHub Actions)
 - Milestone 7 complete — application `/metrics` instrumentation (`prometheus-client`), Prometheus (`v2.55.1`) and Grafana (`11.4.0`) deployed via `helm/krp/` (`krp-0.2.0`), static Service-DNS scraping, provisioned Prometheus datasource and **KRP Service Health** dashboard (`krp-services`), CD monitoring smoke checks implemented; **139 tests collected** (101 unit, including 15 metrics tests; 36 integration; 2 E2E); local kind verification and GitHub Actions CD end-to-end verification **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`)
+- Milestone 8 complete — Alertmanager (`prom/alertmanager:v0.27.0`) deployed via `helm/krp/` (`krp-0.3.0`); Prometheus → Alertmanager integration; Prometheus alert rules ConfigMap (`KRPServiceTargetDown` critical `for: 1m`, `KRPHigh5xxErrorRate` warning `> 0.50` `for: 2m`); severity-based routing to local/null receivers (`default`, `critical`, `warning`); manual E2E verification on kind cluster `krp` for critical and warning paths (including ~71% 5xx ratio warning test); **139 tests** unchanged (M8 added no automated tests); CD workflow unchanged (no Alertmanager smoke checks)
 - Kubernetes manifests exist under `k8s/`; Helm chart exists under `helm/krp/`; CI/CD workflows exist under `.github/workflows/`
 
-**Next Milestone:** Milestone 8 — Alerting
+**Next Milestone:** Milestone 9 — Logging
