@@ -1,0 +1,18 @@
+{{- if .Values.loki.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: loki
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: loki
+  ports:
+    - name: http
+      port: {{ .Values.loki.service.port }}
+      targetPort: {{ .Values.loki.service.port }}
+{{- end }}

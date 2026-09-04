@@ -18,4 +18,13 @@ data:
         url: http://prometheus:{{ .Values.prometheus.service.port }}
         isDefault: true
         editable: false
+{{- if .Values.loki.enabled }}
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki:{{ .Values.loki.service.port }}
+        isDefault: false
+        editable: false
+{{- end }}
 {{- end }}

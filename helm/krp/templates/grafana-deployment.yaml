@@ -81,6 +81,10 @@ spec:
             items:
               - key: krp-service-health.json
                 path: krp-service-health.json
+{{- if .Values.loki.enabled }}
+              - key: krp-service-logs.json
+                path: krp-service-logs.json
+{{- end }}
         - name: grafana-data
           emptyDir: {}
 {{- end }}

@@ -1,0 +1,60 @@
+{{- if .Values.loki.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: loki
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.loki.replicas }}
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+        - name: loki
+          image: {{ include "krp.loki.image" . }}
+          imagePullPolicy: {{ .Values.loki.image.pullPolicy }}
+          args:
+            - -config.file=/etc/loki/loki.yaml
+            - -target=all
+          ports:
+            - containerPort: {{ .Values.loki.service.port }}
+              name: http
+          volumeMounts:
+            - name: loki-config
+              mountPath: /etc/loki
+              readOnly: true
+            - name: loki-data
+              mountPath: /loki
+          resources:
+            {{- toYaml .Values.loki.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: {{ .Values.loki.service.port }}
+            initialDelaySeconds: {{ .Values.loki.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.loki.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.loki.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.loki.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: {{ .Values.loki.service.port }}
+            initialDelaySeconds: {{ .Values.loki.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.loki.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.loki.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.loki.probes.failureThreshold }}
+      volumes:
+        - name: loki-config
+          configMap:
+            name: loki-config
+        - name: loki-data
+          emptyDir: {}
+{{- end }}

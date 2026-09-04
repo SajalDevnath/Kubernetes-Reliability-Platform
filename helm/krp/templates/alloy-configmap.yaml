@@ -1,0 +1,81 @@
+{{- if .Values.alloy.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: alloy
+    {{- include "krp.labels" . | nindent 4 }}
+data:
+  config.alloy: |
+    discovery.kubernetes "pods" {
+      role = "pod"
+      namespaces {
+        names = ["{{ include "krp.namespace" . }}"]
+      }
+      selectors {
+        role  = "pod"
+        field = "spec.nodeName=" + coalesce(sys.env("NODE_NAME"), constants.hostname)
+      }
+    }
+
+    discovery.relabel "app_logs" {
+      targets = discovery.kubernetes.pods.targets
+
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        action        = "replace"
+        target_label  = "namespace"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        action        = "keep"
+        regex         = "{{ include "krp.alloy.collectAppsRegex" . }}"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        action        = "replace"
+        target_label  = "service"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        action        = "replace"
+        target_label  = "container"
+      }
+    }
+
+    loki.source.kubernetes "app_logs" {
+      targets    = discovery.relabel.app_logs.output
+      forward_to = [loki.process.app_logs.receiver]
+    }
+
+    loki.process "app_logs" {
+      stage.json {
+        expressions = {
+          level = "level",
+        }
+      }
+
+      stage.labels {
+        values = {
+          level = "level",
+        }
+      }
+
+      stage.label_drop {
+        values = ["pod", "job", "app", "instance", "filename", "stream", "service_name"]
+      }
+
+      forward_to = [loki.write.loki.receiver]
+    }
+
+    loki.write "loki" {
+      endpoint {
+        url = "{{ .Values.alloy.loki.pushUrl }}"
+      }
+    }
+{{- end }}

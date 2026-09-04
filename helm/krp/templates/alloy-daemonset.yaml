@@ -1,0 +1,67 @@
+{{- if .Values.alloy.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: alloy
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: alloy
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: alloy
+  template:
+    metadata:
+      labels:
+        app: alloy
+    spec:
+      serviceAccountName: alloy
+      containers:
+        - name: alloy
+          image: {{ include "krp.alloy.image" . }}
+          imagePullPolicy: {{ .Values.alloy.image.pullPolicy }}
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --server.http.listen-addr=0.0.0.0:{{ .Values.alloy.service.port }}
+            - --storage.path=/var/lib/alloy/data
+          ports:
+            - containerPort: {{ .Values.alloy.service.port }}
+              name: http
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: alloy-config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: alloy-data
+              mountPath: /var/lib/alloy/data
+          resources:
+            {{- toYaml .Values.alloy.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: {{ .Values.alloy.service.port }}
+            initialDelaySeconds: {{ .Values.alloy.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.alloy.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.alloy.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.alloy.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: {{ .Values.alloy.service.port }}
+            initialDelaySeconds: {{ .Values.alloy.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.alloy.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.alloy.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.alloy.probes.failureThreshold }}
+      volumes:
+        - name: alloy-config
+          configMap:
+            name: alloy-config
+        - name: alloy-data
+          emptyDir: {}
+{{- end }}

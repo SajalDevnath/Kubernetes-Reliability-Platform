@@ -1,0 +1,41 @@
+{{- if .Values.alloy.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: alloy
+    {{- include "krp.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "krp.namespace" . }}-alloy
+  labels:
+    app: alloy
+    {{- include "krp.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "krp.namespace" . }}-alloy
+  labels:
+    app: alloy
+    {{- include "krp.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "krp.namespace" . }}-alloy
+subjects:
+  - kind: ServiceAccount
+    name: alloy
+    namespace: {{ include "krp.namespace" . }}
+{{- end }}

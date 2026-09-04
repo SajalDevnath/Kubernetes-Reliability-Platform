@@ -67,3 +67,24 @@ Alertmanager image reference.
 {{- define "krp.alertmanager.image" -}}
 {{- printf "%s:%s" .Values.alertmanager.image.repository .Values.alertmanager.image.tag }}
 {{- end }}
+
+{{/*
+Loki image reference.
+*/}}
+{{- define "krp.loki.image" -}}
+{{- printf "%s:%s" .Values.loki.image.repository .Values.loki.image.tag }}
+{{- end }}
+
+{{/*
+Alloy image reference.
+*/}}
+{{- define "krp.alloy.image" -}}
+{{- printf "%s:%s" .Values.alloy.image.repository .Values.alloy.image.tag }}
+{{- end }}
+
+{{/*
+Regex matching application pods collected by Alloy.
+*/}}
+{{- define "krp.alloy.collectAppsRegex" -}}
+{{- .Values.alloy.collectApps | join "|" }}
+{{- end }}

@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.database import Base, engine
+from app.logging import build_log_config, setup_logging
 from app.metrics import setup_metrics
 from app.models.user import User  # noqa: F401 — register ORM model metadata
 
@@ -18,6 +19,9 @@ async def lifespan(application: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+    settings = get_settings()
+    setup_logging(settings.service_name, settings.log_level)
+
     application = FastAPI(
         title="User Service",
         version="0.1.0",
@@ -43,6 +47,7 @@ def main() -> None:
         host=settings.host,
         port=settings.port,
         reload=settings.app_env == "development",
+        log_config=build_log_config(settings.service_name, settings.log_level),
     )
 
 
