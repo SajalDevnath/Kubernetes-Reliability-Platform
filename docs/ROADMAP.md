@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 8 — Alerting (complete)
+> **Last updated:** Milestone 9 — Logging (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -310,7 +310,21 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Logs are searchable in Grafana
 - Log correlation with metrics is possible
 
-**Status:** NOT STARTED
+**Delivered (M9 close):**
+- [x] Structured JSON logging in user-service, order-service, and payment-service (stdout; required fields: `timestamp`, `level`, `service`, `logger`, `message`; Uvicorn access/error logs structured per ADR-022)
+- [x] Loki deployed via `helm/krp/` (`grafana/loki:3.4.2`, monolithic `-target=all`, ClusterIP `loki:3100`, `emptyDir` storage, 72h retention)
+- [x] Grafana Alloy DaemonSet (`grafana/alloy:v1.9.2`) collects application pod logs in namespace `krp` and ships to `http://loki:3100/loki/api/v1/push`
+- [x] Low-cardinality Loki labels: `namespace`, `service`, `container`, `level`
+- [x] Grafana Loki datasource provisioned (`uid: loki`, `http://loki:3100`; Prometheus remains default)
+- [x] **KRP Service Logs** dashboard provisioned (UID `krp-service-logs`; service and level filters; log volume and log stream panels)
+- [x] Log/metric correlation verified manually using shared `service` label and overlapping time window (order-service traffic)
+- [x] Helm chart version bumped to `krp-0.4.0` (from `krp-0.3.0` at M8 close)
+- [x] CD workflow unchanged — no Loki/Alloy smoke checks added
+- [x] **166 tests** (128 unit, including 27 M9 logging tests; 36 integration; 2 E2E; M7 baseline was 139)
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 9 verified — structured application logs, Loki, Grafana Alloy, and Grafana log dashboard deployed via `helm/krp/` on kind cluster `krp`. Logs from all three application services are searchable in Grafana. Log/metric correlation demonstrated using the M7 `service` label anchor. Loki and Alloy use non-persistent `emptyDir` storage (acceptable for local kind). No external logging backend. No CI/CD workflow changes.
 
 ---
 
@@ -485,7 +499,7 @@ Milestone 5  → Helm                        [COMPLETE]
 Milestone 6  → CI/CD                       [COMPLETE]
 Milestone 7  → Metrics and Monitoring      [COMPLETE]
 Milestone 8  → Alerting                    [COMPLETE]
-Milestone 9  → Logging                     [NOT STARTED]
+Milestone 9  → Logging                     [COMPLETE]
 Milestone 10 → Distributed Tracing         [NOT STARTED]
 Milestone 11 → SRE Practices               [NOT STARTED]
 Milestone 12 → Incident Simulation         [NOT STARTED]

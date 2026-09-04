@@ -347,3 +347,204 @@ Milestone 8 requires alert routing and failure-condition alerting on a local kin
 **Status:** Accepted
 
 **Verification:** Manual E2E on kind cluster `krp` (2026-09-03) — `KRPServiceTargetDown` fires and routes to `critical` receiver (`user-service` scale to 0); `KRPHigh5xxErrorRate` fires at ~71% 5xx ratio and routes to `warning` receiver for `order-service` (`payment-service` scale to 0 + sustained Order traffic); both alerts resolve after workload restoration. **139 tests** unchanged.
+
+---
+
+## ADR-022 — Structured Application Logging, Loki, and Log Collection on kind
+
+**Date:** 2026-09-04
+
+**Decision:**
+
+Milestone 9 implements centralized structured logging with Loki on the local kind cluster. Application services emit JSON logs to stdout; Grafana Alloy collects and ships logs to Loki via Kubernetes API-based collection; Grafana provisions a Loki datasource and a complementary log dashboard. Log/metric correlation uses the existing M7 `service` label as the shared anchor.
+
+### Scope (M9 includes)
+
+- Structured JSON logging in `user-service`, `order-service`, and `payment-service`
+- Loki deployment via `helm/krp/`
+- Kubernetes log collection and shipping with Grafana Alloy
+- Grafana Loki datasource and **KRP Service Logs** dashboard
+- Log/metric correlation demonstration (manual E2E)
+- Documentation updates at M9 closeout
+
+### Scope (M9 excludes)
+
+- OpenTelemetry / distributed tracing (Milestone 10)
+- SLO / error-budget alerting (Milestone 11)
+- Incident simulation, runbooks, AI features, frontend
+- Production-grade persistent logging or external logging backends
+- Unrelated Prometheus / Alertmanager changes
+- Changes to `k8s/` reference manifests
+- Mandatory CI/CD workflow changes (same precedent as M8)
+- Promtail (end-of-life March 2, 2026; not suitable for new deployments)
+
+### Structured log format
+
+All application stdout logs (including Uvicorn access and error logs) use **one JSON-per-line** format written to stdout. No additional logging dependencies (stdlib `logging` with a shared JSON formatter).
+
+**Required fields:**
+
+| Field | Type | Source | Notes |
+|-------|------|--------|-------|
+| `timestamp` | string | logger | ISO 8601 UTC with `Z` suffix (e.g. `2026-09-04T12:00:00.123Z`) |
+| `level` | string | logger | Uppercase: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+| `service` | string | `SERVICE_NAME` env / `Settings.service_name` | Must match M7 metric label: `user-service`, `order-service`, `payment-service` |
+| `logger` | string | logger | Python logger name (module path) |
+| `message` | string | logger | Human-readable log message |
+
+**Optional fields (JSON body only — never Loki labels):**
+
+| Field | When present |
+|-------|----------------|
+| `method`, `path`, `status_code`, `duration_ms` | HTTP access logs (Uvicorn access + application request logging) |
+| `exc_type`, `exc_message` | Logged exceptions |
+| `stack` | Exception stack trace (single string field) |
+| `request_id` | When HTTP middleware provides/propagates `X-Request-ID` (optional in M9; not required for correlation) |
+
+**Environment variables (existing, wired in M9):**
+
+- `LOG_LEVEL` → root and Uvicorn logger level (`Settings.log_level`)
+- `SERVICE_NAME` → `service` field in every log record (`Settings.service_name`; Helm already sets per-service values)
+
+### Uvicorn logging
+
+**All relevant stdout logs are structured JSON** — application logs, Uvicorn access logs, Uvicorn error logs, and startup/shutdown messages. Uvicorn loggers (`uvicorn`, `uvicorn.access`, `uvicorn.error`) use the same JSON formatter and `StreamHandler` as application loggers. This avoids a mixed text/JSON stream that complicates collection and querying.
+
+### Log collector: Grafana Alloy
+
+**Grafana Alloy** (`grafana/alloy:v1.9.2`) is the log collector and shipper.
+
+**Rationale (Promtail rejected):** Grafana Promtail reached end-of-life on March 2, 2026. Grafana Alloy is the official successor and the recommended collector for shipping Kubernetes container logs to Loki. Alloy is not a separate logging backend; it is the operational agent required to satisfy FR-023 (central Loki aggregation) without adopting EOL Promtail or unapproved alternatives (e.g. Fluent Bit, Elasticsearch).
+
+**Alloy suitability:** DaemonSet on kind; discovers pods via Kubernetes API; tails container logs via `loki.source.kubernetes` (no `hostPath` mounts); pushes to Loki; supports namespace and label filtering; low resource footprint; maintained by Grafana alongside Loki.
+
+**Alternatives considered:** Host filesystem log collection (e.g. mounting `/var/log/pods` or `/var/log/containers` read-only) was evaluated but not adopted. Kubernetes API-based collection via `loki.source.kubernetes` was chosen for the M9 implementation because it avoids host volume mounts, requires only read-only pod/log RBAC, and fits the single-node kind learning environment.
+
+### Loki version and deployment
+
+- **Image:** `grafana/loki:3.4.2`
+- **Mode:** Single-binary monolithic (`-target=all`) — smallest deployment appropriate for kind
+- **Workload:** `Deployment` (not StatefulSet), **1 replica**
+- **Service:** ClusterIP on port **3100** (`loki:3100`)
+- **Authentication:** `auth_enabled: false` (local kind only; consistent with no-auth Prometheus scraping)
+- **Storage:** Non-persistent `emptyDir` at `/loki` (chunks, index, compactor working directory) — consistent with ADR-019
+- **Schema:** TSDB + filesystem, schema `v13`, `replication_factor: 1`, in-memory ring KV store
+- **Retention:** `72h` (`limits_config.retention_period`) — sufficient for kind learning; data lost on pod restart
+- **Probes:** HTTP `GET /ready` (readiness and liveness) on port 3100
+- **Resources (requests/limits):** `100m/256Mi` → `500m/512Mi`
+
+Grafana `11.4.0` (ADR-019) supports Loki 3.x via the built-in Loki datasource; Grafana was not upgraded in M9.
+
+### Kubernetes log collection (Alloy)
+
+- **Workload:** `DaemonSet` (one Alloy pod per kind node)
+- **Namespace:** `krp` (chart namespace)
+- **RBAC:** ServiceAccount + ClusterRole (get/list/watch `namespaces` and `pods`; get `pods/log`) + ClusterRoleBinding — read-only; required for Kubernetes API pod discovery and log tailing; no secret access; no write permissions
+- **Collection scope:** Only application service pods — filter to `app` label in `user-service`, `order-service`, `payment-service`. Does **not** collect logs from `prometheus`, `grafana`, `alertmanager`, `loki`, `alloy`, or `postgres`.
+- **Collection mechanism:** Kubernetes API-based log tailing via `loki.source.kubernetes`. There are **no `hostPath` mounts** and no reliance on `/var/log/pods` or `/var/log/containers` in the Helm chart.
+- **Service identity:** Derive Loki label `service` from Kubernetes pod label `app` (matches Helm `app:` labels and M7 `service` metric label)
+- **Alloy pipeline (implemented):** `discovery.kubernetes` → `discovery.relabel` (namespace scope, `app` filter, label mapping) → `loki.source.kubernetes` → `loki.process` (JSON `level` extraction, `label_drop`) → `loki.write` to `http://loki:3100/loki/api/v1/push`
+
+### Loki label strategy (low cardinality)
+
+**Loki stream labels (low cardinality only):**
+
+| Label | Source | Values (typical) |
+|-------|--------|------------------|
+| `namespace` | Kubernetes | `krp` |
+| `service` | Pod label `app` | `user-service`, `order-service`, `payment-service` |
+| `container` | Kubernetes | `user-service`, `order-service`, `payment-service` |
+| `level` | Parsed from JSON `level` field | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+
+**Not Loki labels:** `request_id`, `user_id`, `order_id`, `payment_id`, `path`, `method`, `status_code`, `pod` (pod name omitted from labels to avoid unnecessary cardinality; query by `service` instead).
+
+All high-cardinality or request-specific fields remain in the JSON log line body and are queryable via LogQL JSON parsers (`| json`) when needed.
+
+### Grafana integration
+
+- **Datasource:** Loki at `http://loki:3100`, **uid:** `loki`, `access: proxy`, `editable: false`
+- **Default datasource:** Prometheus remains default (`isDefault: true` on Prometheus only) — M7 **KRP Service Health** dashboard unchanged
+- **Provisioning:** `grafana-datasources` ConfigMap extended with Loki; log dashboard JSON added via the existing Grafana dashboards ConfigMap pattern
+- **Dashboard:** **KRP Service Logs** — uid `krp-service-logs`
+  - Template variables: `service` (`user-service`, `order-service`, `payment-service`), `level` (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  - Panels: log volume by `service` over time; live log stream filtered by `service` and `level`; example LogQL: `{namespace="krp", service="$service", level=~"$level"} | json`
+  - Default time range: Last 15 minutes (complements M7 metrics dashboard)
+  - Purpose: searchable centralized logs; complements (does not replace) M7 metrics dashboard
+
+### Log / metric correlation
+
+Correlation anchor: M7 Prometheus metric label **`service`** (`user-service`, `order-service`, `payment-service`) matches Loki label **`service`** derived from pod label `app`.
+
+**Manual verification scenario (M9 E2E):**
+
+1. Generate HTTP traffic to Order Service (e.g. create/list orders) for ~2 minutes.
+2. In Grafana → M7 dashboard: confirm elevated `http_requests_total` rate for `service="order-service"` in Prometheus.
+3. In Grafana → M9 log dashboard: filter Loki logs `service="order-service"` over the same time window.
+4. Confirm log lines appear with matching `service` identity and overlapping timestamps (access/request logs visible).
+5. Logs and metrics need not share every field; shared `service` + time window is sufficient to demonstrate correlation.
+
+### Helm chart design (M9)
+
+- **Chart version:** `krp-0.4.0` (follows M7 `0.2.0` → M8 `0.3.0` milestone bump pattern)
+- **New `values.yaml` blocks:** `loki:` and `alloy:` with `enabled`, `image`, `replicas`/`daemonset`, `service.port`, `resources`, `probes`, `retention`, collection filters
+- **New templates:** `loki-configmap.yaml`, `loki-deployment.yaml`, `loki-service.yaml`, `alloy-configmap.yaml`, `alloy-daemonset.yaml`, `alloy-rbac.yaml`
+- **Modified templates:** `grafana-datasources-configmap.yaml`, `grafana-dashboards-configmap.yaml`, `grafana-deployment.yaml`, `_helpers.tpl` (image helpers)
+- **Conditional rendering:** `{{- if .Values.loki.enabled }}` / `{{- if .Values.alloy.enabled }}` (default `true`)
+- **Service names/ports:** `loki:3100`; Alloy HTTP UI on `12345` (DaemonSet health/readiness probes only; no ClusterIP Service required for collection)
+
+### Testing strategy
+
+**Automated (CI):**
+
+- **Application unit tests:** JSON schema fields (`timestamp`, `level`, `service`, `logger`, `message`); `service` matches `SERVICE_NAME`; `LOG_LEVEL` filters output; exception logging includes `exc_type` / `exc_message` when applicable
+- **Helm:** `helm lint` and `helm template` cover new templates; `helm template` with `loki.enabled=false` and `alloy.enabled=false` verified in manual checks
+
+**Manual E2E (kind cluster `krp`):**
+
+- Loki pod Ready; Alloy DaemonSet Ready
+- All three services generating structured JSON logs
+- Alloy discovers application pods only (not observability stack)
+- LogQL `{namespace="krp", service="user-service"}` (and order, payment) return lines
+- Grafana Loki datasource healthy; **KRP Service Logs** dashboard shows data
+- Correlation scenario (order-service traffic + overlapping metric/log time window)
+- Cleanup: remove temporary traffic jobs/resources; no stray test namespaces
+
+**Not in M9 automated suite:** Loki ingestion E2E, Alloy DaemonSet health, Grafana datasource health (manual kind verification; same pattern as M8 alert E2E). These were verified manually on kind cluster `krp`.
+
+### CI/CD
+
+No changes to `.github/workflows/ci.yml` or `.github/workflows/cd.yml` in M9. CI runs `helm lint` and `helm template`; new templates are picked up automatically. CD does not include Loki smoke checks (M8 Alertmanager precedent). Optional future CD extension is out of M9 scope.
+
+### Resource budget (single-node kind — conservative estimates)
+
+| Component | CPU req / limit | Memory req / limit |
+|-----------|-----------------|---------------------|
+| Loki | 100m / 500m | 256Mi / 512Mi |
+| Alloy (DaemonSet) | 50m / 200m | 128Mi / 256Mi |
+| Prometheus (existing) | 100m / 500m | 256Mi / 512Mi |
+| Grafana (existing) | 100m / 500m | 128Mi / 256Mi |
+| Alertmanager (existing) | 50m / 200m | 64Mi / 128Mi |
+| PostgreSQL (existing) | 100m / 500m | 256Mi / 512Mi |
+| Three app services (existing) | 150m / 750m | 384Mi / 768Mi |
+| **M9 incremental** | **~150m / ~700m** | **~384Mi / ~768Mi** |
+
+Combined observability + apps remain feasible on a typical kind single-node allocation (~4 CPU / 8Gi); M9 adds modest overhead versus M8.
+
+### Risks
+
+| Risk | Mitigation |
+|------|------------|
+| Alloy not in approved-stack table | Document as required Loki collection agent; official Grafana successor to EOL Promtail |
+| kind memory pressure | Conservative requests/limits; 72h retention; emptyDir; collect only three app pods |
+| Mixed log formats if Uvicorn not configured | ADR mandates all stdout JSON via shared formatter |
+| High-cardinality labels | Strict label allowlist; IDs stay in JSON body |
+| Log loss on Loki restart | Accepted for kind (ADR-019 pattern); document limitation |
+| Alloy RBAC breadth | ClusterRole limited to read-only `namespaces`/`pods`/`pods/log`; no write permissions; no secret access; no hostPath mounts |
+
+**Reason:**
+
+Milestone 9 requires structured application logs (FR-022), central aggregation in Loki (FR-023), Grafana searchability, and log/metric correlation on a local kind cluster. Grafana Alloy is the only maintained, Loki-native collector that fits project constraints after Promtail EOL. Monolithic Loki with emptyDir matches the established non-persistent observability pattern (ADR-019). JSON stdout logging with a shared `service` field aligns with M7 metrics for correlation without introducing tracing or production storage.
+
+**Status:** Accepted (implemented — Milestone 9)
+
+**Verification:** Structured logging unit tests (27); `helm lint` / `helm template`; manual kind E2E — Loki Ready, Alloy DaemonSet Ready, logs from all three services in Loki, Grafana Loki datasource healthy, **KRP Service Logs** dashboard functional, log/metric correlation via shared `service` label.

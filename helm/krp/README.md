@@ -1,6 +1,8 @@
 # krp Helm Chart
 
-Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`, plus Prometheus and Grafana (Milestone 7) and Alertmanager with Prometheus alert rules (Milestone 8).
+Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`, plus Prometheus and Grafana (Milestone 7), Alertmanager with Prometheus alert rules (Milestone 8), and Loki with Grafana Alloy log collection (Milestone 9).
+
+**Chart version:** `0.4.0` (M9 — Loki and Grafana Alloy; M8 was `0.3.0`, M7 was `0.2.0`, M5 was `0.1.0`)
 
 > **Warning:** Default credentials in `values.yaml` are local-development placeholders only (`postgres.database.password: change_me`, `grafana.adminPassword: change_me`). **Do not use these credentials in production.**
 
@@ -9,7 +11,7 @@ Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kin
 | Path | Purpose |
 |------|---------|
 | `k8s/` | Raw Kubernetes reference implementation (Milestone 4). **Not deleted or replaced.** |
-| `helm/krp/` | Parameterized Helm packaging of the deployment including Prometheus, Grafana (Milestones 5 and 7), and Alertmanager with alert rules (Milestone 8). |
+| `helm/krp/` | Parameterized Helm packaging of the deployment including Prometheus, Grafana (Milestones 5 and 7), Alertmanager with alert rules (Milestone 8), and Loki with Grafana Alloy (Milestone 9). |
 
 Both produce equivalent resources when using default values. Use `k8s/` for direct `kubectl apply` workflows; use this chart for `helm install` / `helm upgrade` workflows.
 
@@ -55,7 +57,7 @@ kind load docker-image krp-order-service:local --name krp
 kind load docker-image krp-payment-service:local --name krp
 ```
 
-Application images default to `imagePullPolicy: Never` for local kind workflows. PostgreSQL uses the public `postgres:16` image. Prometheus (`prom/prometheus:v2.55.1`), Grafana (`grafana/grafana:11.4.0`), and Alertmanager (`prom/alertmanager:v0.27.0`) use public images with `pullPolicy: IfNotPresent`.
+Application images default to `imagePullPolicy: Never` for local kind workflows. PostgreSQL uses the public `postgres:16` image. Prometheus (`prom/prometheus:v2.55.1`), Grafana (`grafana/grafana:11.4.0`), Alertmanager (`prom/alertmanager:v0.27.0`), Loki (`grafana/loki:3.4.2`), and Grafana Alloy (`grafana/alloy:v1.9.2`) use public images with `pullPolicy: IfNotPresent`.
 
 ## Static validation (before install)
 
@@ -140,6 +142,8 @@ kubectl wait --for=condition=available deployment/order-service -n krp --timeout
 kubectl wait --for=condition=available deployment/prometheus -n krp --timeout=180s
 kubectl wait --for=condition=available deployment/grafana -n krp --timeout=180s
 kubectl wait --for=condition=available deployment/alertmanager -n krp --timeout=180s
+kubectl wait --for=condition=available deployment/loki -n krp --timeout=180s
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=alloy -n krp --timeout=180s
 ```
 
 Port-forward and smoke-test (from another terminal):
@@ -161,7 +165,24 @@ kubectl port-forward -n krp svc/grafana 3000:3000
 curl http://localhost:3000/api/health
 # Login: admin / change_me (local-development placeholder)
 # Dashboard: KRP Service Health (UID krp-services)
+# Dashboard: KRP Service Logs (UID krp-service-logs)
 ```
+
+### Logging verification
+
+```bash
+kubectl port-forward -n krp svc/loki 3100:3100
+curl http://localhost:3100/ready
+
+# Direct LogQL query (after generating application traffic)
+curl -G "http://localhost:3100/loki/api/v1/query_range" \
+  --data-urlencode 'query={namespace="krp",service="order-service"}' \
+  --data-urlencode 'limit=5'
+
+kubectl logs -n krp -l app.kubernetes.io/component=alloy --tail=20
+```
+
+Grafana provisions a Loki datasource (`uid: loki`, `http://loki:3100`, not default). Use Explore or the **KRP Service Logs** dashboard with `service` and `level` filters.
 
 ### Alerting verification
 
@@ -207,8 +228,10 @@ kubectl delete pvc postgres-data -n krp
 | prometheus | `prometheus` | 9090 | `GET /-/healthy`, `GET /-/ready` |
 | grafana | `grafana` | 3000 | `GET /api/health` |
 | alertmanager | `alertmanager` | 9093 | `GET /-/healthy`, `GET /-/ready` |
+| loki | `loki` | 3100 | `GET /ready` |
+| alloy | (DaemonSet) | — | `GET /-/healthy`, `GET /-/ready` |
 
-Order Service calls Payment Service at `http://payment-service:8003` (in-cluster DNS). Prometheus scrapes application metrics at `user-service:8001/metrics`, `order-service:8002/metrics`, and `payment-service:8003/metrics` via static Service DNS (15s interval). Grafana connects to Prometheus at `http://prometheus:9090`. Prometheus forwards alerts to Alertmanager at `alertmanager:9093`.
+Order Service calls Payment Service at `http://payment-service:8003` (in-cluster DNS). Prometheus scrapes application metrics at `user-service:8001/metrics`, `order-service:8002/metrics`, and `payment-service:8003/metrics` via static Service DNS (15s interval). Grafana connects to Prometheus at `http://prometheus:9090` (default datasource) and Loki at `http://loki:3100`. Prometheus forwards alerts to Alertmanager at `alertmanager:9093`. Grafana Alloy collects application pod logs and ships them to Loki.
 
 ### Prometheus alert rules (Milestone 8)
 
@@ -227,4 +250,4 @@ Rules are defined in ConfigMap `prometheus-rules` (`krp_alerts.yml`) and mounted
 - `severity="critical"` → `critical` receiver; `severity="warning"` → `warning` receiver
 - Receivers are local/null only — no external notification integrations
 
-Prometheus, Grafana, and Alertmanager use non-persistent `emptyDir` storage.
+Prometheus, Grafana, Alertmanager, Loki, and Alloy use non-persistent `emptyDir` storage.

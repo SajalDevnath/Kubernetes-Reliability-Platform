@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 8 complete — Alertmanager, Prometheus alert rules, and severity-based routing implemented and verified via manual E2E on kind cluster `krp` (**139 tests passing**: 101 unit, including 15 metrics tests; 36 integration; 2 E2E; M8 added no automated tests). Milestone 9 — Logging is next. User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; GitHub Actions CI/CD; and Metrics and Monitoring (Prometheus/Grafana) are implemented and verified.
+> **Status:** Milestone 9 complete — structured JSON logging, Loki, Grafana Alloy, and Grafana **KRP Service Logs** dashboard implemented and verified via manual E2E on kind cluster `krp` (**166 tests passing**: 128 unit, including 27 M9 logging tests and 15 metrics tests; 36 integration; 2 E2E). Milestone 10 — Distributed Tracing is next. User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; GitHub Actions CI/CD; Metrics and Monitoring (Prometheus/Grafana); and Alerting (Alertmanager) are implemented and verified.
 
 ## Functional Requirements
 
@@ -64,8 +64,8 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-022 | Services shall emit structured logs | Planned |
-| FR-023 | Logs shall be aggregated centrally via Loki | Planned |
+| FR-022 | Services shall emit structured logs | Implemented (JSON to stdout on all three services; required fields per ADR-022; 27 unit tests) |
+| FR-023 | Logs shall be aggregated centrally via Loki | Implemented (Loki `grafana/loki:3.4.2` and Grafana Alloy `grafana/alloy:v1.9.2` via `helm/krp/`; locally verified on kind) |
 
 ### Tracing
 
@@ -145,10 +145,10 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (101 unit + 36 integration + 2 E2E — 139 total) |
+| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (128 unit + 36 integration + 2 E2E — 166 total) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
 | NFR-014 | Failure scenarios shall be testable and reproducible | Planned |
-| NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally and via GitHub Actions CD (commit `34f919b`); CD monitoring smoke checks verified; M8 — manual alert firing and resolution verified on kind via Prometheus `/api/v1/alerts` and Alertmanager `/api/v2/alerts`) |
+| NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally and via GitHub Actions CD (commit `34f919b`); CD monitoring smoke checks verified; M8 — manual alert firing and resolution verified on kind via Prometheus `/api/v1/alerts` and Alertmanager `/api/v2/alerts`; M9 — structured logging unit tests; Loki, Alloy, Grafana Loki datasource/dashboard, and log/metric correlation verified manually on kind) |
 
 ### Portability
 

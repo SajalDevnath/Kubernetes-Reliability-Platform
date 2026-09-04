@@ -49,8 +49,8 @@ When complete, the platform will demonstrate:
 
 1. Running microservices locally and in Kubernetes
 2. Automated CI/CD pipelines (GitHub Actions — CI on pull requests; CD to ephemeral kind on `main`)
-3. Prometheus metrics collection, Grafana dashboards, and Alertmanager alerting (Milestones 7–8 — implemented; Loki planned for M9)
-4. Centralized logging with Loki
+3. Prometheus metrics collection, Grafana dashboards, and Alertmanager alerting (Milestones 7–8 — implemented)
+4. Centralized logging with Loki and Grafana Alloy (Milestone 9 — implemented)
 5. Distributed tracing with OpenTelemetry
 6. SRE practices including SLOs and error budgets
 7. Incident simulation and runbook-driven response

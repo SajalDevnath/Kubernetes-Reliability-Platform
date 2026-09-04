@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 8 complete — Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified (manual E2E on kind cluster `krp`). Application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 9 — Logging is next.
+> **Status:** Milestone 9 complete — structured JSON logging, Loki, Grafana Alloy, and Grafana **KRP Service Logs** dashboard deployed via Helm and verified (manual E2E on kind cluster `krp`). Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified. Application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 10 — Distributed Tracing is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -98,7 +98,7 @@ User Service (FastAPI)          Client
 
 - **CI workflow:** `.github/workflows/ci.yml` — triggers on `pull_request`; `permissions: contents: read`
 - **CD workflow:** `.github/workflows/cd.yml` — triggers on `push` to `main`; `permissions: contents: read`
-- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (139 tests) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template`
+- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (166 tests) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template`
 - **CD pipeline:** Docker Buildx builds, kind v0.33.0 ephemeral cluster on the GitHub-hosted runner, `kind load docker-image`, Helm deploy of `helm/krp/` into namespace `krp` using `values.yaml` with `--set images.*.tag=ci`, deployment readiness waits (postgres, user-service, payment-service, order-service, prometheus, grafana), in-cluster HTTP and monitoring smoke tests, automatic cluster cleanup (`if: always()`)
 - **Not production deployment:** CD uses a disposable ephemeral kind cluster on the runner; no container registry, no cloud Kubernetes, no deployment to a developer's local kind cluster
 - **Credential handling:** CI/CD credential handling reviewed and documented; no GitHub Secrets or dedicated secrets-management mechanism; PostgreSQL password remains local-development placeholder (`change_me`)
@@ -134,14 +134,31 @@ All three services expose Prometheus-compatible `GET /metrics` via `prometheus-c
 - CD workflow unchanged — no Alertmanager smoke checks added in M8
 - **Status:** Implemented — manual E2E verification on kind cluster `krp` for critical and warning alert paths (firing, Alertmanager receipt, receiver routing, resolution)
 
+## Centralized Logging (Milestone 9 — implemented)
+
+Application services emit structured JSON logs to stdout (one JSON object per line). Grafana Alloy collects Kubernetes container logs from application pods in namespace `krp` and ships them to Loki.
+
+```
+Application services → structured JSON stdout → Kubernetes pod logs → Grafana Alloy → Loki → Grafana
+```
+
+- **Structured logging:** Python stdlib logging with JSON formatter; required fields: `timestamp`, `level`, `service`, `logger`, `message`; `service` aligns with M7 metric label (`user-service`, `order-service`, `payment-service`)
+- **Loki:** `grafana/loki:3.4.2`; monolithic `-target=all`; ClusterIP Service `loki:3100`; TSDB/filesystem storage; 72h retention; non-persistent `emptyDir` storage
+- **Grafana Alloy:** `grafana/alloy:v1.9.2`; DaemonSet; Kubernetes API-based log collection; collects only the three application services; pushes to `http://loki:3100/loki/api/v1/push`
+- **Loki labels (low cardinality):** `namespace`, `service`, `container`, `level`
+- **Grafana:** Loki datasource (`uid: loki`, not default); **KRP Service Logs** dashboard (`krp-service-logs`) with service and level filters
+- **Log/metric correlation:** Shared `service` label between Prometheus metrics and Loki logs; temporal overlap during request activity (not one-to-one event correlation)
+- **Status:** Implemented — 27 logging unit tests; manual kind E2E verification for Loki, Alloy, Grafana datasource/dashboard, and log/metric correlation
+
 ## Observability
 
 | Component | Purpose | Status |
 |-----------|---------|--------|
 | Prometheus | Metrics collection and PromQL queries | Implemented (M7 — `helm/krp/`, static Service-DNS scraping) |
-| Grafana | Dashboards and visualization | Implemented (M7 — provisioned datasource and **KRP Service Health** dashboard) |
+| Grafana | Dashboards and visualization | Implemented (M7/M9 — **KRP Service Health** and **KRP Service Logs** dashboards) |
 | Alertmanager | Alert routing and notification | Implemented (M8 — local/null receivers; severity-based routing) |
-| Loki | Centralized log aggregation | Planned (M9) |
+| Loki | Centralized log aggregation | Implemented (M9 — `helm/krp/`, Grafana Alloy collection) |
+| Grafana Alloy | Log collection and shipping to Loki | Implemented (M9 — DaemonSet in namespace `krp`) |
 | OpenTelemetry | Distributed tracing | Planned (M10) |
 
 ## SRE Layer (Planned — Milestones 11–13)

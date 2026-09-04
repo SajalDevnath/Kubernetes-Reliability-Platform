@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 8 complete — manual E2E alerting verification on kind cluster `krp` (critical and warning paths). Application metrics tests (15 passing, included in 101 unit tests), Prometheus/Grafana local verification, CD monitoring smoke checks, and GitHub Actions CD end-to-end verification with monitoring checks **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`). **139 tests passing** (101 unit, 36 integration, 2 E2E; M8 added no automated tests).
+> **Status:** Milestone 9 complete — structured logging unit tests (27); manual E2E logging verification on kind cluster `krp` (Loki, Alloy, Grafana datasource/dashboard, log/metric correlation). Application metrics tests (15 passing, included in 128 unit tests), Prometheus/Grafana local verification, CD monitoring smoke checks, and GitHub Actions CD end-to-end verification with monitoring checks **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`). **166 tests passing** (128 unit, 36 integration, 2 E2E; M7/M8 baseline was 139).
 
 ## Philosophy
 
@@ -129,15 +129,40 @@ A task is not complete merely because the application starts. Every change must 
   - Receivers are local/null only — no external notification integrations verified (none configured)
   - CD workflow unchanged — no Alertmanager smoke checks added
 
+### Logging Verification (Milestone 9 — complete)
+
+- **Scope:** Structured JSON log schema, service identity, log level handling, Uvicorn access log fields; Loki readiness, Alloy DaemonSet health, log ingestion for all three services, Grafana Loki datasource and **KRP Service Logs** dashboard, log/metric correlation
+- **Location:** `tests/unit/test_logging.py`, `tests/unit/order_service/test_order_logging.py`, `tests/unit/payment_service/test_payment_logging.py`; manual verification against `helm/krp/` on kind cluster `krp` (no automated Loki/Alloy/Grafana log tests in `tests/`; CD workflow unchanged)
+- **Status:** Complete — 27 structured logging unit tests (included in 128 unit tests); manual kind E2E verification for Loki, Alloy, Grafana, and log/metric correlation; **166 tests** total (M7/M8 baseline was 139)
+- **Unit test verified checks:**
+  - Valid JSON output (one object per line)
+  - Required fields: `timestamp`, `level`, `service`, `logger`, `message`
+  - Correct `service` value from `SERVICE_NAME` / settings
+  - `LOG_LEVEL` filtering behavior
+  - Logger name and message preservation
+  - Exception fields (`exc_type`, `exc_message`, `stack`) where applicable
+  - Uvicorn access log HTTP fields (`method`, `path`, `status_code`)
+  - Consistent schema across user-service, order-service, and payment-service
+- **Manual kind E2E verified checks:**
+  - Loki Deployment Ready; `GET /ready` returns `ready`
+  - Alloy DaemonSet Ready; collects logs from user-service, order-service, payment-service only
+  - Direct Loki LogQL queries return structured JSON logs for all three services
+  - Loki labels: `namespace`, `service`, `container`, `level` (low cardinality)
+  - Grafana Loki datasource (`uid: loki`, `http://loki:3100`) healthy
+  - **KRP Service Logs** dashboard (`krp-service-logs`) loads; service and level filters work
+  - **KRP Service Health** M7 dashboard remains functional
+  - Log/metric correlation via shared `service` label and overlapping time window (order-service traffic)
+  - CD workflow unchanged — no Loki/Alloy smoke checks added
+
 ### Failure Simulation Tests (Planned — Milestone 12)
 
 - **Scope:** Network failures, latency injection, dependency failures
 - **Purpose:** Verify observability captures failure symptoms
 - **Status:** Planned
 
-### Observability Verification — Logging and Tracing (Planned — Milestones 9–10)
+### Observability Verification — Tracing (Planned — Milestone 10)
 
-- **Scope:** Logs in Loki, traces in OpenTelemetry
+- **Scope:** Traces in OpenTelemetry
 - **Purpose:** Confirm instrumentation is correct
 - **Status:** Planned
 
@@ -161,6 +186,9 @@ A task is not complete merely because the application starts. Every change must 
 | Test File | Coverage |
 |-----------|----------|
 | `tests/unit/test_metrics.py` | User Service `/metrics` endpoint, content type, metric names, route template labels |
+| `tests/unit/test_logging.py` | User Service structured JSON logging schema and Uvicorn log configuration |
+| `tests/unit/order_service/test_order_logging.py` | Order Service structured JSON logging schema |
+| `tests/unit/payment_service/test_payment_logging.py` | Payment Service structured JSON logging schema |
 | `tests/unit/order_service/test_order_metrics.py` | Order Service metrics instrumentation |
 | `tests/unit/payment_service/test_payment_metrics.py` | Payment Service metrics instrumentation |
 | `tests/unit/test_health.py` | `GET /health` status code, response body, schema shape |
@@ -194,16 +222,18 @@ python -m uv run pytest tests/e2e -v -m e2e
 
 ```
 tests/
-├── unit/                          # Unit tests (101 passing)
-│   ├── order_service/             # Order Service unit tests (37 passing)
-│   └── payment_service/           # Payment Service unit tests (34 passing)
+├── unit/                          # Unit tests (128 passing)
+│   ├── order_service/             # Order Service unit tests
+│   └── payment_service/           # Payment Service unit tests
 ├── integration/                   # PostgreSQL + API tests (36 passing)
 │   ├── order_service/             # Order Service integration tests (14 passing)
 │   └── payment_service/           # Payment Service integration tests (12 passing)
 └── e2e/                           # End-to-end cross-service tests (2 passing)
 ```
 
-**Verified totals:** 101 unit + 36 integration + 2 E2E = **139 tests passing**.
+**Current totals:** 128 unit + 36 integration + 2 E2E = **166 tests passing**.
+
+**Historical baselines (unchanged):** M2/M3/M4/M6 — 124 tests; M7/M8 — 139 tests (101 unit).
 
 ## Quality Gates
 

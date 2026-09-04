@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 8 — Alerting (complete). Milestone 9 — Logging is next.
+> **Current Milestone:** Milestone 9 — Logging (complete). Milestone 10 — Distributed Tracing is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -421,6 +421,48 @@ kubectl rollout status deployment/prometheus -n krp --timeout=180s
 
 Alertmanager uses non-persistent `emptyDir` storage (acceptable for local kind). CD workflow unchanged — no Alertmanager smoke checks were added in M8.
 
+## Logging Workflow (Milestone 9)
+
+Structured JSON logging, Loki, and Grafana Alloy are deployed as part of the `helm/krp/` chart when `loki.enabled` and `alloy.enabled` are `true` (default).
+
+| Component | Image | Service | Port |
+|-----------|-------|---------|------|
+| Loki | `grafana/loki:3.4.2` | `loki` | 3100 |
+| Grafana Alloy | `grafana/alloy:v1.9.2` | (DaemonSet — no ClusterIP required for collection) | — |
+
+Application services write structured JSON logs to stdout. Alloy discovers application pods in namespace `krp` (user-service, order-service, payment-service only), extracts the `level` field from JSON log lines, and ships logs to Loki at `http://loki:3100/loki/api/v1/push`. Grafana provisions a Loki datasource (`uid: loki`, not default) and the **KRP Service Logs** dashboard (`krp-service-logs`).
+
+### Local verification
+
+```bash
+kubectl wait --for=condition=available deployment/loki -n krp --timeout=180s
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=alloy -n krp --timeout=180s
+kubectl port-forward -n krp svc/loki 3100:3100
+curl http://localhost:3100/ready
+
+kubectl port-forward -n krp svc/grafana 3000:3000
+curl http://localhost:3000/api/health
+# Explore → Loki: {namespace="krp", service="order-service"}
+# Dashboard: KRP Service Logs (UID krp-service-logs)
+```
+
+Generate traffic against the services, then query Loki directly:
+
+```bash
+curl -G "http://localhost:3100/loki/api/v1/query_range" \
+  --data-urlencode 'query={namespace="krp",service="order-service"}' \
+  --data-urlencode 'limit=5'
+```
+
+### Log/metric correlation (manual)
+
+1. Generate traffic to `order-service` (e.g. `POST /orders` or `GET /orders`).
+2. In Grafana → **KRP Service Health**: confirm request-rate metrics for `service="order-service"`.
+3. In Grafana → **KRP Service Logs** or Explore: filter `{namespace="krp", service="order-service"}` over the same time window.
+4. Confirm matching `service` identity and overlapping timestamps (not one-to-one event correlation).
+
+Loki and Alloy use non-persistent `emptyDir` storage (acceptable for local kind). CD workflow unchanged — no Loki/Alloy smoke checks were added in M9.
+
 ## CI/CD Workflow
 
 GitHub Actions automates build, test, and deployment validation. Workflows live under `.github/workflows/`.
@@ -439,7 +481,7 @@ Runs on `ubuntu-latest` with:
 1. **Checkout** and Python 3.10 setup
 2. **uv** — `uv sync --dev --frozen`
 3. **Ruff** — `uv run ruff check services tests`
-4. **pytest** — `uv run pytest tests/ -v` (full 139-test suite)
+4. **pytest** — `uv run pytest tests/ -v` (full 166-test suite)
 5. **PostgreSQL 16** — GitHub Actions service container (`app_user` / `change_me` / `k8s_reliability` on port 5432)
 6. **Docker builds** — `krp-user-service:ci`, `krp-order-service:ci`, `krp-payment-service:ci` (validation only; no push)
 7. **Helm** — `helm lint helm/krp`; `helm template krp helm/krp` (output discarded to avoid logging Secret values)
