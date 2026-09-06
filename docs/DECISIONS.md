@@ -548,3 +548,289 @@ Milestone 9 requires structured application logs (FR-022), central aggregation i
 **Status:** Accepted (implemented — Milestone 9)
 
 **Verification:** Structured logging unit tests (27); `helm lint` / `helm template`; manual kind E2E — Loki Ready, Alloy DaemonSet Ready, logs from all three services in Loki, Grafana Loki datasource healthy, **KRP Service Logs** dashboard functional, log/metric correlation via shared `service` label.
+
+---
+
+## ADR-023 — Distributed Tracing with OpenTelemetry, Collector, and Grafana Tempo on kind
+
+**Date:** 2026-09-06
+
+**Decision:**
+
+Milestone 10 will implement distributed tracing with the OpenTelemetry SDK in all three application services, export traces via OTLP to a dedicated OpenTelemetry Collector, store traces in Grafana Tempo, and visualize them in Grafana. Cross-service correlation will use W3C Trace Context propagation across the existing Order Service → Payment Service synchronous `httpx` call. Grafana Alloy remains dedicated to log collection (ADR-022); it will not be extended for traces.
+
+### Scope (M10 includes)
+
+- OpenTelemetry SDK instrumentation in `user-service`, `order-service`, and `payment-service`
+- Mandatory instrumentors: FastAPI (inbound HTTP), `httpx` (outbound HTTP on Order → Payment)
+- W3C Trace Context propagation for cross-service requests
+- OTLP trace export from applications to OpenTelemetry Collector
+- OpenTelemetry Collector Deployment (1 replica, ClusterIP) forwarding traces to Tempo
+- Grafana Tempo Deployment (1 replica, ClusterIP) with non-persistent `emptyDir` storage
+- Grafana Tempo datasource (`uid: tempo`) and lightweight trace visualization (Grafana Explore / Tempo trace view is primary)
+- Cross-service trace verification via `POST /orders` (Order Service → Payment Service)
+- Per-service latency breakdown visible in trace spans
+- Optional `trace_id` / `span_id` fields in M9 structured JSON logs (JSON body only — not Loki labels)
+- Helm deployment via `helm/krp/` (`krp-0.5.0`)
+- Documentation updates at M10 closeout
+
+### Scope (M10 excludes)
+
+- OpenTelemetry **logging** instrumentation or replacement of M9 structured JSON logging (ADR-022)
+- Extending Grafana Alloy for trace collection or export
+- Jaeger, Zipkin, or other non-Tempo trace backends
+- Production-grade persistent trace storage or external/cloud trace backends
+- SLO / error-budget tracing or alerting (Milestone 11)
+- Incident simulation, runbooks, AI features (Milestones 12–17)
+- Unrelated Prometheus, Alertmanager, Loki, or Alloy changes
+- Changes to `k8s/` reference manifests
+- Mandatory CI/CD workflow changes (M8/M9 precedent)
+- Prometheus Operator, ServiceMonitor, kube-state-metrics, node-exporter, PostgreSQL exporter
+- Automatic trace sampling complexity beyond a simple default (e.g. `always_on` for kind learning)
+
+### Trace backend: Grafana Tempo
+
+**Grafana Tempo** (`grafana/tempo:2.7.2`) is the trace storage and query backend.
+
+**Rationale:** Tempo is Grafana’s native distributed tracing backend and integrates directly with Grafana `11.4.0` (ADR-019) via the built-in Tempo datasource and Explore trace view. The project already deploys Grafana, Loki, and Alloy from the Grafana observability stack (M7–M9). Tempo completes the Grafana “metrics + logs + traces” triad without introducing a separate visualization platform. Tempo accepts OTLP ingestion and supports the local kind learning model with a single-binary deployment and filesystem/`emptyDir` storage.
+
+**Alternatives considered:**
+
+| Alternative | Why rejected |
+|-------------|--------------|
+| **Jaeger** | Not in the approved technology table (`PROJECT_MASTER_SPECIFICATION.md` §5). Adds a separate UI/ecosystem; Grafana would still be the primary investigation surface. |
+| **Zipkin** | Same as Jaeger — not in approved stack; weaker Grafana integration. |
+| **Direct app → Tempo (no collector)** | Rejected — central collector simplifies endpoint configuration, batching, and future pipeline changes; aligns with roadmap task “Deploy trace collector”. |
+| **Extend Grafana Alloy for traces** | Rejected — Alloy is the M9 log shipper to Loki (ADR-022). Mixing log and trace pipelines in one agent increases configuration complexity and couples unrelated concerns. Traces use a separate OpenTelemetry Collector. |
+| **Cloud-managed tracing (e.g. vendor SaaS)** | Violates NFR-016 (local/no-cloud operation). |
+
+### OpenTelemetry Collector topology
+
+- **Image:** `otel/opentelemetry-collector-contrib:0.120.0`
+- **Workload:** `Deployment`, **1 replica** (not DaemonSet)
+- **Service:** ClusterIP exposing OTLP ingress for application exporters
+- **Rationale for Deployment (not DaemonSet):** All three application services push traces via OTLP to a cluster DNS endpoint. On a single-node kind cluster there is no requirement to collect host-level or node-local telemetry. A single-replica Deployment matches the Loki/Prometheus monolithic pattern (ADR-019, ADR-022) and minimizes resource use.
+- **Pipeline:** `otlp` receiver → `batch` processor → `otlp` exporter → Tempo
+
+**Why a separate collector instead of Alloy:**
+
+- ADR-022 assigns Alloy exclusively to Kubernetes log collection → Loki.
+- OpenTelemetry Collector is the standard, vendor-neutral component for OTLP ingestion and export.
+- Separation keeps log (Alloy/Loki) and trace (Collector/Tempo) pipelines independently testable and configurable.
+- No Alloy configuration changes in M10.
+
+### OTLP transport
+
+| Hop | Protocol | Endpoint (in-cluster) |
+|-----|----------|------------------------|
+| Application → Collector | **OTLP gRPC** | `http://otel-collector:4317` |
+| Collector → Tempo | **OTLP gRPC** | `http://tempo:4317` |
+| Grafana → Tempo (query) | **HTTP** | `http://tempo:3200` |
+
+**Rationale:** OTLP gRPC on port `4317` matches the commented placeholder in `.env.example` (`OTEL_EXPORTER_OTLP_ENDPOINT`). gRPC is the default OTLP transport for OpenTelemetry Python exporters and Tempo’s OTLP receiver. Grafana queries Tempo via HTTP on port `3200` (Tempo query frontend).
+
+**Application environment (planned):**
+
+- `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317`
+- `OTEL_EXPORTER_OTLP_PROTOCOL=grpc` (or implicit default)
+- `OTEL_SERVICE_NAME` derived from existing `SERVICE_NAME` / `Settings.service_name`
+
+### Service naming convention
+
+OpenTelemetry `service.name` **must exactly match** the existing M7 metric label and M9 log `service` field:
+
+| Service | `SERVICE_NAME` / `service.name` |
+|---------|----------------------------------|
+| User Service | `user-service` |
+| Order Service | `order-service` |
+| Payment Service | `payment-service` |
+
+**Source of truth:** `Settings.service_name` (Helm ConfigMaps already set `SERVICE_NAME` per service). Resource attributes should not introduce alternate names (e.g. `order_service`).
+
+This preserves correlation across Prometheus metrics (`service` label), Loki logs (`service` label from pod `app`), and Tempo traces (`service.name`).
+
+### Instrumentation scope
+
+**Mandatory (M10):**
+
+| Component | Instrumentation | Purpose |
+|-----------|-----------------|---------|
+| OpenTelemetry SDK | `TracerProvider`, `BatchSpanProcessor`, OTLP exporter | Core tracing |
+| FastAPI | `opentelemetry-instrumentation-fastapi` | Inbound HTTP server spans |
+| httpx | `opentelemetry-instrumentation-httpx` | Outbound HTTP client spans; **required for FR-025** on Order → Payment |
+| W3C Trace Context | Automatic via OTel propagators | `traceparent` / `tracestate` headers on Order → Payment `POST /payments` |
+
+**Recommended (M10):**
+
+| Component | Instrumentation | Purpose |
+|-----------|-----------------|---------|
+| SQLAlchemy | `opentelemetry-instrumentation-sqlalchemy` | Database query spans (`SELECT`, `INSERT`, etc.) for latency visibility inside each service |
+
+**Explicitly excluded (M10):**
+
+| Component | Reason |
+|-----------|--------|
+| OpenTelemetry logging instrumentation | Would conflict with or duplicate M9 structured JSON logging (ADR-022). Stdlib `logging` + `JsonFormatter` remain authoritative for logs. |
+| Uvicorn separate auto-instrumentation | FastAPI instrumentation covers ASGI/HTTP server spans; avoids duplicate server spans. |
+| Prometheus middleware changes | M7 metrics middleware (`PrometheusMiddleware`) remains unchanged unless a concrete double-counting conflict is discovered during implementation. |
+
+**Wiring location (implementation plan — not part of Phase 0):** `create_app()` in each `main.py` (alongside `setup_logging` / `setup_metrics`); `PaymentServiceClient` benefits from global `httpx` instrumentation when using `httpx.Client`.
+
+### Context propagation
+
+- **Standard:** W3C Trace Context (`traceparent`, `tracestate`)
+- **Inbound:** FastAPI instrumentation extracts context from incoming HTTP headers.
+- **Outbound:** httpx instrumentation injects context on Order Service → Payment Service requests (`services/order_service/app/clients/payment.py`).
+- **Cross-service requirement (FR-025):** Order Service and Payment Service spans from a single `POST /orders` request must share the same `trace_id`; Payment Service span must be a child of the Order Service outbound HTTP span.
+
+### Trace / log correlation strategy
+
+**Primary correlation anchors (existing):**
+
+- `service` / `service.name` — shared across metrics (M7), logs (M9), traces (M10)
+- Overlapping timestamps during request activity
+
+**Optional M10 enhancement (recommended):**
+
+Extend the M9 `JsonFormatter` (`services/*/app/logging.py`) to include `trace_id` and `span_id` in the JSON log body **when a valid OpenTelemetry span is active** (read from `trace.get_current_span().get_span_context()`). This enables manual Loki → trace pivot in Grafana (log line `trace_id` → Tempo lookup) without adopting OpenTelemetry logging.
+
+**Rules:**
+
+- `trace_id` and `span_id` are **JSON fields only** — never Loki stream labels (ADR-022 cardinality rules).
+- Alloy `loki.process` must not promote `trace_id` or `span_id` to labels.
+- Correlation is **assistive**, not guaranteed one-to-one with metrics (same precedent as M9 log/metric correlation).
+
+### Loki label cardinality (unchanged from ADR-022)
+
+**Authoritative Loki labels:** `namespace`, `service`, `container`, `level`
+
+**Not Loki labels:** `trace_id`, `span_id`, `request_id`, `user_id`, `order_id`, `payment_id`, `path`, `method`, `status_code`, `pod`
+
+### Tempo deployment
+
+- **Image:** `grafana/tempo:2.7.2`
+- **Mode:** Single-binary monolithic (all-in-one target) — smallest deployment for kind
+- **Workload:** `Deployment`, **1 replica**
+- **Service:** ClusterIP — port **3200** (query/HTTP), port **4317** (OTLP gRPC ingest)
+- **Authentication:** None (local kind only; consistent with Loki `auth_enabled: false`)
+- **Storage:** Non-persistent `emptyDir` at `/var/tempo` — consistent with ADR-019
+- **Retention:** `72h` block retention (aligned with Loki M9 retention for kind learning); trace data lost on pod restart
+- **Probes:** HTTP health on query port (`/ready` or `/status` per Tempo 2.7 defaults)
+- **Resources (requests/limits):** `100m/256Mi` → `500m/512Mi` (conservative; tune during implementation)
+
+Grafana `11.4.0` will not be upgraded in M10.
+
+### Grafana integration
+
+- **Datasource:** Tempo at `http://tempo:3200`, **uid:** `tempo`, `access: proxy`, `editable: false`
+- **Default datasource:** Prometheus remains default (`isDefault: true` on Prometheus only) — M7 **KRP Service Health** and M9 **KRP Service Logs** dashboards unchanged
+- **Provisioning:** Extend `grafana-datasources` ConfigMap (same pattern as Loki in M9)
+- **Visualization:** Grafana **Explore** with Tempo datasource is the **primary** trace investigation interface
+- **Optional:** Lightweight provisioned dashboard (e.g. **KRP Service Traces**, uid `krp-service-traces`) with links or simple trace search — complements, does not replace, Explore
+- **Trace ↔ metrics:** Grafana built-in Tempo ↔ Prometheus correlation (service graphs / exemplars not required in M10)
+
+### Cross-service verification scenario (M10 E2E)
+
+**Trigger:** `POST /orders` to Order Service (in-cluster or port-forward).
+
+**Expected trace hierarchy:**
+
+```
+[Client] HTTP POST /orders
+  └── [order-service] FastAPI span
+        ├── [order-service] SQLAlchemy span(s) — order insert (if SQLAlchemy instrumentation enabled)
+        └── [order-service] HTTP client POST /payments
+              └── [payment-service] FastAPI span
+                    └── [payment-service] SQLAlchemy span(s) — payment insert (if enabled)
+```
+
+**Verification steps (manual, kind cluster `krp`):**
+
+1. Confirm Tempo pod Ready; OpenTelemetry Collector pod Ready.
+2. Execute `POST /orders` (creates order + payment via existing business flow).
+3. In Grafana Explore → Tempo: locate trace by service `order-service` or recent trace search.
+4. Confirm single `trace_id` spans Order Service and Payment Service.
+5. Confirm parent/child relationship: Payment Service span nested under Order Service outbound HTTP span.
+6. Confirm per-span durations visible (latency breakdown).
+7. If `trace_id` logging implemented: optional Loki search for matching `trace_id` in JSON body.
+8. Confirm M7/M9 dashboards and datasources remain functional.
+
+### Helm chart design (M10 — design only; not implemented in Phase 0)
+
+- **Chart version:** `krp-0.5.0` (follows M9 `0.4.0` milestone bump pattern)
+- **New `values.yaml` blocks:** `tempo:` and `otelCollector:` with `enabled`, `image`, `replicas`, `service.ports`, `resources`, `probes`, `retention`
+- **New templates:** `tempo-configmap.yaml`, `tempo-deployment.yaml`, `tempo-service.yaml`, `otel-collector-configmap.yaml`, `otel-collector-deployment.yaml`, `otel-collector-service.yaml`
+- **Modified templates:** `grafana-datasources-configmap.yaml` (Tempo datasource), optionally `grafana-dashboards-configmap.yaml` and `grafana-deployment.yaml`, `_helpers.tpl` (image helpers), application ConfigMaps (OTEL env vars)
+- **Conditional rendering:** `{{- if .Values.tempo.enabled }}` / `{{- if .Values.otelCollector.enabled }}` (default `true` when M10 ships)
+- **Unchanged:** Alloy templates, Loki templates, Prometheus alert rules, `k8s/` reference manifests
+
+### Testing strategy
+
+**Automated (CI):**
+
+- Unit tests: OTel setup/configuration; `service.name` matches `SERVICE_NAME`; optional `trace_id`/`span_id` in `JsonFormatter` when span active; httpx propagation behavior (mock/header inspection where practical)
+- Helm: existing `helm lint` and `helm template`; verify `tempo.enabled=false` and `otelCollector.enabled=false` render paths
+- Full pytest suite must remain passing (166+ tests baseline; new M10 unit tests expected)
+
+**Manual E2E (kind cluster `krp`):**
+
+- Tempo Ready; OpenTelemetry Collector Ready
+- All three services emit traces (e.g. `GET /health`, `GET /orders`, `GET /payments`)
+- `POST /orders` produces cross-service trace (FR-025)
+- SQLAlchemy spans visible if instrumentation enabled
+- Grafana Tempo datasource healthy (`uid: tempo`)
+- Per-service latency breakdown and trace hierarchy visible in Grafana Explore
+- Optional `trace_id` correlation with Loki logs if implemented
+- Cleanup: no stray test resources
+
+**Not in M10 automated suite:** Tempo ingestion E2E, Collector health, Grafana Tempo datasource health (manual kind verification; same pattern as M8 alerts and M9 Loki).
+
+### CI/CD
+
+No changes to `.github/workflows/ci.yml` or `.github/workflows/cd.yml` in M10 unless an authoritative requirement emerges during implementation. CI already runs `helm lint`, `helm template`, and the full pytest suite; new Helm templates and Python dependencies are picked up automatically. CD does not require Tempo/Collector smoke checks (M8 Alertmanager and M9 Loki precedents). Optional future CD extension is out of M10 scope.
+
+### Resource budget (single-node kind — conservative estimates)
+
+| Component | CPU req / limit | Memory req / limit |
+|-----------|-----------------|---------------------|
+| Tempo | 100m / 500m | 256Mi / 512Mi |
+| OTel Collector | 50m / 200m | 128Mi / 256Mi |
+| Prometheus (existing) | 100m / 500m | 256Mi / 512Mi |
+| Grafana (existing) | 100m / 500m | 128Mi / 256Mi |
+| Alertmanager (existing) | 50m / 200m | 64Mi / 128Mi |
+| Loki (existing) | 100m / 500m | 256Mi / 512Mi |
+| Alloy (existing) | 50m / 200m | 128Mi / 256Mi |
+| PostgreSQL (existing) | 100m / 500m | 256Mi / 512Mi |
+| Three app services (existing) | 150m / 750m | 384Mi / 768Mi |
+| **M10 incremental** | **~150m / ~700m** | **~384Mi / ~768Mi** |
+
+Combined stack remains feasible on a typical kind single-node allocation (~4 CPU / 8Gi) but is heavier than M8; monitor pod restarts and OOM during implementation.
+
+### Risks
+
+| Risk | Mitigation |
+|------|------------|
+| Tempo not in approved-stack table | Document as Grafana-native trace backend required for FR-024/FR-025 visualization; parallels M9 Alloy rationale |
+| kind memory pressure | Conservative requests/limits; 72h retention; `emptyDir`; single replicas |
+| Double instrumentation (OTel + Prometheus middleware) | FastAPI OTel spans and Prometheus counters serve different signals; verify no duplicate span explosion on `/metrics` (exclude if needed) |
+| httpx client lifecycle | `PaymentServiceClient` creates short-lived `httpx.Client`; ensure instrumentation applies to per-request and injected clients |
+| Log format regression | Do not adopt OTel logging; extend `JsonFormatter` only for optional `trace_id`/`span_id` |
+| High-cardinality Loki labels | Strict ADR-022 label rules; never label `trace_id` |
+| Trace loss on Tempo restart | Accepted for kind (ADR-019 pattern) |
+| User-service traces are single-service only | FR-025 verified via Order → Payment path; user-service still emits traces for completeness |
+
+### Python dependencies (planned — not added in Phase 0)
+
+New packages in root `pyproject.toml` (versions pinned during implementation):
+
+- `opentelemetry-api`, `opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-grpc`
+- `opentelemetry-instrumentation-fastapi`, `opentelemetry-instrumentation-httpx`
+- `opentelemetry-instrumentation-sqlalchemy` (if recommended instrumentation adopted)
+
+**Reason:**
+
+Milestone 10 requires distributed traces via OpenTelemetry (FR-024) and cross-service correlation (FR-025) on a local kind cluster. Grafana Tempo is the natural trace backend for the existing Grafana-centric observability stack. A dedicated OpenTelemetry Collector keeps trace ingestion separate from M9 log collection (Alloy/Loki). W3C Trace Context over the existing synchronous Order → Payment `httpx` path satisfies the only cross-service communication boundary in the repository. Non-persistent Tempo storage matches the established kind learning pattern (ADR-019). Service naming alignment preserves metric/log/trace correlation without introducing production infrastructure.
+
+**Status:** Accepted (design — implementation not started)
+
+**Verification:** Pending M10 implementation and manual kind E2E.
