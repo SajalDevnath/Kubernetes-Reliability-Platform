@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     payment_service_url: str = "http://127.0.0.1:8003"
     payment_service_timeout_seconds: float = Field(default=5.0, gt=0)
 
+    otel_traces_enabled: bool = True
+    otel_exporter_otlp_endpoint: str = "http://otel-collector:4317"
+
     def get_database_url(self) -> str:
         """Return the SQLAlchemy database URL from env override or components."""
         if self.database_url:

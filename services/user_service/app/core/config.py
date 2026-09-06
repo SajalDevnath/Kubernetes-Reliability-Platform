@@ -28,6 +28,9 @@ class Settings(BaseSettings):
 
     database_url: str | None = Field(default=None, validation_alias="DATABASE_URL")
 
+    otel_traces_enabled: bool = True
+    otel_exporter_otlp_endpoint: str = "http://otel-collector:4317"
+
     def get_database_url(self) -> str:
         """Return the SQLAlchemy database URL from env override or components."""
         if self.database_url:

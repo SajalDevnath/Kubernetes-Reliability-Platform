@@ -8,6 +8,7 @@ from app.db.database import Base, engine
 from app.logging import build_log_config, setup_logging
 from app.metrics import setup_metrics
 from app.models.payment import Payment  # noqa: F401 — register ORM model metadata
+from app.tracing import instrument_app, setup_tracing
 
 
 @asynccontextmanager
@@ -21,6 +22,12 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     settings = get_settings()
     setup_logging(settings.service_name, settings.log_level)
+    setup_tracing(
+        settings.service_name,
+        enabled=settings.otel_traces_enabled,
+        endpoint=settings.otel_exporter_otlp_endpoint,
+        engine=engine,
+    )
 
     application = FastAPI(
         title="Payment Service",
@@ -31,6 +38,7 @@ def create_app() -> FastAPI:
     )
     application.include_router(api_router)
     setup_metrics(application, get_settings().service_name)
+    instrument_app(application, enabled=settings.otel_traces_enabled)
     return application
 
 

@@ -6,6 +6,8 @@ import traceback
 from datetime import datetime, timezone
 from typing import Any
 
+from opentelemetry import trace
+
 _ACCESS_LOG_PATTERN = re.compile(r'^(.+?) - "(\w+) ([^"]+) HTTP/[\d.]+" (\d+)$')
 
 _OPTIONAL_FIELDS = (
@@ -14,7 +16,19 @@ _OPTIONAL_FIELDS = (
     "status_code",
     "duration_ms",
     "request_id",
+    "trace_id",
+    "span_id",
 )
+
+
+def _active_trace_fields() -> dict[str, str]:
+    span_context = trace.get_current_span().get_span_context()
+    if not span_context.is_valid:
+        return {}
+    return {
+        "trace_id": format(span_context.trace_id, "032x"),
+        "span_id": format(span_context.span_id, "016x"),
+    }
 
 
 class JsonFormatter(logging.Formatter):
@@ -46,6 +60,10 @@ class JsonFormatter(logging.Formatter):
         for field in _OPTIONAL_FIELDS:
             value = getattr(record, field, None)
             if value is not None and field not in payload:
+                payload[field] = value
+
+        for field, value in _active_trace_fields().items():
+            if field not in payload:
                 payload[field] = value
 
         if record.exc_info:

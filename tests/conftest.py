@@ -1,7 +1,11 @@
+import os
 import sys
 from pathlib import Path
 
 import pytest
+
+# Disable OTLP export during tests unless a test explicitly enables tracing.
+os.environ.setdefault("OTEL_TRACES_ENABLED", "false")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 USER_SERVICE_ROOT = PROJECT_ROOT / "services" / "user_service"
