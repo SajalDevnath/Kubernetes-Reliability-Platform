@@ -1,0 +1,42 @@
+{{- if .Values.otelCollector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: otel-collector
+    {{- include "krp.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:{{ .Values.otelCollector.service.otlpGrpcPort }}
+
+    processors:
+      batch:
+
+    exporters:
+      otlp:
+        endpoint: {{ .Values.otelCollector.tempo.endpoint }}
+        tls:
+          insecure: true
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:{{ .Values.otelCollector.service.healthPort }}
+
+    service:
+      extensions:
+        - health_check
+      pipelines:
+        traces:
+          receivers:
+            - otlp
+          processors:
+            - batch
+          exporters:
+            - otlp
+{{- end }}

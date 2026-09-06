@@ -1,0 +1,37 @@
+{{- if .Values.tempo.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-config
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: tempo
+    {{- include "krp.labels" . | nindent 4 }}
+data:
+  tempo.yaml: |
+    server:
+      http_listen_port: {{ .Values.tempo.service.queryPort }}
+      log_level: info
+
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:{{ .Values.tempo.service.otlpGrpcPort }}
+
+    ingester:
+      max_block_duration: 5m
+
+    compactor:
+      compaction:
+        block_retention: {{ .Values.tempo.retentionPeriod }}
+
+    storage:
+      trace:
+        backend: local
+        wal:
+          path: /var/tempo/wal
+        local:
+          path: /var/tempo/blocks
+{{- end }}

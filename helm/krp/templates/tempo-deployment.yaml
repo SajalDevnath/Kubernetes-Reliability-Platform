@@ -1,0 +1,62 @@
+{{- if .Values.tempo.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: tempo
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.tempo.replicas }}
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+    spec:
+      containers:
+        - name: tempo
+          image: {{ include "krp.tempo.image" . }}
+          imagePullPolicy: {{ .Values.tempo.image.pullPolicy }}
+          args:
+            - -config.file=/etc/tempo/tempo.yaml
+            - -target=all
+          ports:
+            - containerPort: {{ .Values.tempo.service.queryPort }}
+              name: http
+            - containerPort: {{ .Values.tempo.service.otlpGrpcPort }}
+              name: otlp-grpc
+          volumeMounts:
+            - name: tempo-config
+              mountPath: /etc/tempo
+              readOnly: true
+            - name: tempo-data
+              mountPath: /var/tempo
+          resources:
+            {{- toYaml .Values.tempo.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: {{ .Values.tempo.service.queryPort }}
+            initialDelaySeconds: {{ .Values.tempo.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.tempo.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.tempo.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.tempo.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: {{ .Values.tempo.service.queryPort }}
+            initialDelaySeconds: {{ .Values.tempo.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.tempo.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.tempo.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.tempo.probes.failureThreshold }}
+      volumes:
+        - name: tempo-config
+          configMap:
+            name: tempo-config
+        - name: tempo-data
+          emptyDir: {}
+{{- end }}

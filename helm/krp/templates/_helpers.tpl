@@ -83,6 +83,20 @@ Alloy image reference.
 {{- end }}
 
 {{/*
+Tempo image reference.
+*/}}
+{{- define "krp.tempo.image" -}}
+{{- printf "%s:%s" .Values.tempo.image.repository .Values.tempo.image.tag }}
+{{- end }}
+
+{{/*
+OpenTelemetry Collector image reference.
+*/}}
+{{- define "krp.otelCollector.image" -}}
+{{- printf "%s:%s" .Values.otelCollector.image.repository .Values.otelCollector.image.tag }}
+{{- end }}
+
+{{/*
 Regex matching application pods collected by Alloy.
 */}}
 {{- define "krp.alloy.collectAppsRegex" -}}

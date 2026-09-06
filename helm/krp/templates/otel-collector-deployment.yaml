@@ -1,0 +1,57 @@
+{{- if .Values.otelCollector.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: otel-collector
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.otelCollector.replicas }}
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: {{ include "krp.otelCollector.image" . }}
+          imagePullPolicy: {{ .Values.otelCollector.image.pullPolicy }}
+          args:
+            - --config=/etc/otelcol/config.yaml
+          ports:
+            - containerPort: {{ .Values.otelCollector.service.otlpGrpcPort }}
+              name: otlp-grpc
+            - containerPort: {{ .Values.otelCollector.service.healthPort }}
+              name: health
+          volumeMounts:
+            - name: otel-collector-config
+              mountPath: /etc/otelcol
+              readOnly: true
+          resources:
+            {{- toYaml .Values.otelCollector.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.otelCollector.service.healthPort }}
+            initialDelaySeconds: {{ .Values.otelCollector.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.otelCollector.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.otelCollector.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.otelCollector.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.otelCollector.service.healthPort }}
+            initialDelaySeconds: {{ .Values.otelCollector.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.otelCollector.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.otelCollector.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.otelCollector.probes.failureThreshold }}
+      volumes:
+        - name: otel-collector-config
+          configMap:
+            name: otel-collector-config
+{{- end }}

@@ -246,3 +246,54 @@ alloy:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 5
+
+tempo:
+  enabled: true
+  image:
+    repository: grafana/tempo
+    tag: "2.7.2"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    queryPort: 3200
+    otlpGrpcPort: 4317
+  retentionPeriod: 72h
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+otelCollector:
+  enabled: true
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.120.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    otlpGrpcPort: 4317
+    healthPort: 13133
+  tempo:
+    endpoint: tempo:4317
+  tracing:
+    otlpEndpoint: http://otel-collector:4317
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  probes:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5

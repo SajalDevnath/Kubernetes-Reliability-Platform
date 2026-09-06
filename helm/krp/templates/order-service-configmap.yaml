@@ -17,3 +17,5 @@ data:
   PORT: {{ .Values.orderService.config.port | quote }}
   PAYMENT_SERVICE_URL: {{ .Values.orderService.config.paymentServiceUrl | quote }}
   PAYMENT_SERVICE_TIMEOUT_SECONDS: {{ .Values.orderService.config.paymentServiceTimeoutSeconds | quote }}
+  OTEL_TRACES_ENABLED: {{ .Values.otelCollector.enabled | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.otelCollector.tracing.otlpEndpoint | quote }}

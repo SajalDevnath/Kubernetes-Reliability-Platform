@@ -27,4 +27,13 @@ data:
         isDefault: false
         editable: false
 {{- end }}
+{{- if .Values.tempo.enabled }}
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo:{{ .Values.tempo.service.queryPort }}
+        isDefault: false
+        editable: false
+{{- end }}
 {{- end }}

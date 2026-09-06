@@ -15,3 +15,5 @@ data:
   SERVICE_NAME: {{ .Values.paymentService.config.serviceName | quote }}
   HOST: {{ .Values.paymentService.config.host | quote }}
   PORT: {{ .Values.paymentService.config.port | quote }}
+  OTEL_TRACES_ENABLED: {{ .Values.otelCollector.enabled | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.otelCollector.tracing.otlpEndpoint | quote }}
