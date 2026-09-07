@@ -755,7 +755,7 @@ Grafana `11.4.0` will not be upgraded in M10.
 7. If `trace_id` logging implemented: optional Loki search for matching `trace_id` in JSON body.
 8. Confirm M7/M9 dashboards and datasources remain functional.
 
-### Helm chart design (M10 — design only; not implemented in Phase 0)
+### Helm chart design (M10 — implemented)
 
 - **Chart version:** `krp-0.5.0` (follows M9 `0.4.0` milestone bump pattern)
 - **New `values.yaml` blocks:** `tempo:` and `otelCollector:` with `enabled`, `image`, `replicas`, `service.ports`, `resources`, `probes`, `retention`
@@ -770,7 +770,7 @@ Grafana `11.4.0` will not be upgraded in M10.
 
 - Unit tests: OTel setup/configuration; `service.name` matches `SERVICE_NAME`; optional `trace_id`/`span_id` in `JsonFormatter` when span active; httpx propagation behavior (mock/header inspection where practical)
 - Helm: existing `helm lint` and `helm template`; verify `tempo.enabled=false` and `otelCollector.enabled=false` render paths
-- Full pytest suite must remain passing (166+ tests baseline; new M10 unit tests expected)
+- Full pytest suite must remain passing (180 tests; 14 M10 tracing unit tests)
 
 **Manual E2E (kind cluster `krp`):**
 
@@ -819,9 +819,9 @@ Combined stack remains feasible on a typical kind single-node allocation (~4 CPU
 | Trace loss on Tempo restart | Accepted for kind (ADR-019 pattern) |
 | User-service traces are single-service only | FR-025 verified via Order → Payment path; user-service still emits traces for completeness |
 
-### Python dependencies (planned — not added in Phase 0)
+### Python dependencies (implemented)
 
-New packages in root `pyproject.toml` (versions pinned during implementation):
+Packages in root `pyproject.toml`:
 
 - `opentelemetry-api`, `opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-grpc`
 - `opentelemetry-instrumentation-fastapi`, `opentelemetry-instrumentation-httpx`
@@ -831,6 +831,6 @@ New packages in root `pyproject.toml` (versions pinned during implementation):
 
 Milestone 10 requires distributed traces via OpenTelemetry (FR-024) and cross-service correlation (FR-025) on a local kind cluster. Grafana Tempo is the natural trace backend for the existing Grafana-centric observability stack. A dedicated OpenTelemetry Collector keeps trace ingestion separate from M9 log collection (Alloy/Loki). W3C Trace Context over the existing synchronous Order → Payment `httpx` path satisfies the only cross-service communication boundary in the repository. Non-persistent Tempo storage matches the established kind learning pattern (ADR-019). Service naming alignment preserves metric/log/trace correlation without introducing production infrastructure.
 
-**Status:** Accepted (design — implementation not started)
+**Status:** Accepted — implemented (Milestone 10)
 
-**Verification:** Pending M10 implementation and manual kind E2E.
+**Verification:** Manual kind E2E on cluster `krp` completed — `POST /users` and `POST /orders` exercised; Order Service → Payment Service payment creation observed; cross-service trace with shared `trace_id` confirmed in Grafana Explore (Tempo datasource `uid: tempo`). Automated tracing unit tests (14) pass in CI; Tempo/Collector ingestion E2E not automated (per M8/M9 precedent).

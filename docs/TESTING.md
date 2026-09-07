@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 9 complete — structured logging unit tests (27); manual E2E logging verification on kind cluster `krp` (Loki, Alloy, Grafana datasource/dashboard, log/metric correlation). Application metrics tests (15 passing, included in 128 unit tests), Prometheus/Grafana local verification, CD monitoring smoke checks, and GitHub Actions CD end-to-end verification with monitoring checks **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`). **166 tests passing** (128 unit, 36 integration, 2 E2E; M7/M8 baseline was 139).
+> **Status:** Milestone 10 complete — distributed tracing unit tests (14); manual E2E tracing verification on kind cluster `krp` (OpenTelemetry Collector, Tempo, Grafana Tempo datasource, cross-service Order → Payment trace in Grafana Explore). Structured logging unit tests (27); manual E2E logging verification. Application metrics tests (15 passing, included in unit tests), Prometheus/Grafana local verification, CD monitoring smoke checks, and GitHub Actions CD end-to-end verification with monitoring checks **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`). **180 tests** (142 unit, 36 integration, 2 E2E; M9 baseline was 166).
 
 ## Philosophy
 
@@ -154,16 +154,31 @@ A task is not complete merely because the application starts. Every change must 
   - Log/metric correlation via shared `service` label and overlapping time window (order-service traffic)
   - CD workflow unchanged — no Loki/Alloy smoke checks added
 
+### Tracing Verification (Milestone 10 — complete)
+
+- **Scope:** OpenTelemetry SDK configuration, `service.name` alignment, optional `trace_id`/`span_id` log correlation, httpx W3C propagation (unit tests); Tempo and OpenTelemetry Collector readiness; cross-service trace visibility in Grafana Explore
+- **Location:** `tests/unit/test_tracing.py`, `tests/unit/order_service/test_order_tracing.py`, `tests/unit/payment_service/test_payment_tracing.py`; manual verification against `helm/krp/` on kind cluster `krp` (no automated Tempo/Collector E2E tests in `tests/`; CD workflow unchanged)
+- **Status:** Complete — 14 tracing unit tests (included in 142 unit tests); manual kind E2E verification for Collector, Tempo, Grafana Tempo datasource, and cross-service Order → Payment tracing; **180 tests** total (M9 baseline was 166)
+- **Unit test verified checks:**
+  - `service.name` resource matches `Settings.service_name`
+  - OTEL settings load from environment (`OTEL_TRACES_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT`)
+  - `trace_id` and `span_id` appear in JSON logs when an active span exists; absent when no span
+  - httpx `traceparent` injection (via `instrument_client` with mock transport)
+  - `create_app()` succeeds with tracing enabled and disabled
+- **Manual kind E2E verified checks:**
+  - Deployments and Services running in namespace `krp` (including `otel-collector`, `tempo`, application services)
+  - User Service: `POST /users` created a user successfully (port-forward workflow)
+  - Order Service: `POST /orders` created an order successfully (port-forward workflow)
+  - Order Service called Payment Service; payment created automatically for the new order (e.g. order `833` / payment `11` for `user_id` 4, amount `1499.99`)
+  - Grafana Tempo datasource (`uid: tempo`) healthy
+  - Grafana → Explore → Tempo: single trace spans Order Service and Payment Service for `POST /orders` traffic; per-span latency visible
+  - M7 **KRP Service Health** and M9 **KRP Service Logs** dashboards remain functional
+  - CD workflow unchanged — no Tempo/Collector smoke checks added
+
 ### Failure Simulation Tests (Planned — Milestone 12)
 
 - **Scope:** Network failures, latency injection, dependency failures
 - **Purpose:** Verify observability captures failure symptoms
-- **Status:** Planned
-
-### Observability Verification — Tracing (Planned — Milestone 10)
-
-- **Scope:** Traces in OpenTelemetry
-- **Purpose:** Confirm instrumentation is correct
 - **Status:** Planned
 
 ### AI Testing (Planned — Milestones 14–17)
@@ -191,6 +206,9 @@ A task is not complete merely because the application starts. Every change must 
 | `tests/unit/payment_service/test_payment_logging.py` | Payment Service structured JSON logging schema |
 | `tests/unit/order_service/test_order_metrics.py` | Order Service metrics instrumentation |
 | `tests/unit/payment_service/test_payment_metrics.py` | Payment Service metrics instrumentation |
+| `tests/unit/test_tracing.py` | User Service OpenTelemetry tracing configuration, log correlation, httpx propagation, `create_app` |
+| `tests/unit/order_service/test_order_tracing.py` | Order Service tracing configuration and Payment client propagation |
+| `tests/unit/payment_service/test_payment_tracing.py` | Payment Service tracing configuration |
 | `tests/unit/test_health.py` | `GET /health` status code, response body, schema shape |
 | `tests/unit/test_database_config.py` | PostgreSQL URL construction and settings defaults |
 | `tests/unit/test_database.py` | SQLAlchemy engine, session factory, `get_db`, declarative Base |
@@ -222,7 +240,7 @@ python -m uv run pytest tests/e2e -v -m e2e
 
 ```
 tests/
-├── unit/                          # Unit tests (128 passing)
+├── unit/                          # Unit tests (142 passing)
 │   ├── order_service/             # Order Service unit tests
 │   └── payment_service/           # Payment Service unit tests
 ├── integration/                   # PostgreSQL + API tests (36 passing)
@@ -231,9 +249,9 @@ tests/
 └── e2e/                           # End-to-end cross-service tests (2 passing)
 ```
 
-**Current totals:** 128 unit + 36 integration + 2 E2E = **166 tests passing**.
+**Current totals:** 142 unit + 36 integration + 2 E2E = **180 tests** (142 pass when integration/E2E skip without PostgreSQL).
 
-**Historical baselines (unchanged):** M2/M3/M4/M6 — 124 tests; M7/M8 — 139 tests (101 unit).
+**Historical baselines (unchanged):** M2/M3/M4/M6 — 124 tests; M7/M8 — 139 tests; M9 — 166 tests.
 
 ## Quality Gates
 

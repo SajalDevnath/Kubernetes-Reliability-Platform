@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 9 complete — structured JSON logging, Loki, Grafana Alloy, and Grafana **KRP Service Logs** dashboard implemented and verified via manual E2E on kind cluster `krp` (**166 tests passing**: 128 unit, including 27 M9 logging tests and 15 metrics tests; 36 integration; 2 E2E). Milestone 10 — Distributed Tracing is next. User, Order, and Payment Service CRUD; Order → Payment HTTP integration on order creation; E2E workflows; Docker Compose containerization; Kubernetes (kind) deployment; Helm chart packaging; GitHub Actions CI/CD; Metrics and Monitoring (Prometheus/Grafana); and Alerting (Alertmanager) are implemented and verified.
+> **Status:** Milestone 10 complete — distributed tracing with OpenTelemetry in all three services, OpenTelemetry Collector and Grafana Tempo deployed via `helm/krp/` (`krp-0.5.0`), Grafana Tempo datasource (`uid: tempo`), and cross-service trace correlation verified manually on kind cluster `krp` (**180 tests**: 142 unit, including 14 M10 tracing tests; 36 integration; 2 E2E). Milestones 0–9 (application CRUD, Order → Payment integration, Docker Compose, Kubernetes, Helm, CI/CD, Prometheus/Grafana, Alertmanager, Loki/Alloy logging) are implemented and verified.
 
 ## Functional Requirements
 
@@ -71,8 +71,8 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-024 | Services shall emit distributed traces via OpenTelemetry | Planned |
-| FR-025 | Traces shall be correlated across service boundaries | Planned |
+| FR-024 | Services shall emit distributed traces via OpenTelemetry | Implemented (OpenTelemetry SDK in all three services; OTLP gRPC export to Collector; Tempo storage via `helm/krp/`) |
+| FR-025 | Traces shall be correlated across service boundaries | Implemented (W3C Trace Context on Order → Payment `httpx` call; cross-service trace verified manually via `POST /orders` on kind) |
 
 ### Alerting
 

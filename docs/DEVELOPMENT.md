@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 9 — Logging (complete). Milestone 10 — Distributed Tracing is next.
+> **Current Milestone:** Milestone 10 — Distributed Tracing (complete). Milestone 11 — SRE Practices is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -463,6 +463,49 @@ curl -G "http://localhost:3100/loki/api/v1/query_range" \
 
 Loki and Alloy use non-persistent `emptyDir` storage (acceptable for local kind). CD workflow unchanged — no Loki/Alloy smoke checks were added in M9.
 
+## Tracing Workflow (Milestone 10)
+
+OpenTelemetry tracing, the OpenTelemetry Collector, and Grafana Tempo are deployed as part of the `helm/krp/` chart when `otelCollector.enabled` and `tempo.enabled` are `true` (default).
+
+| Component | Image | Service | Port |
+|-----------|-------|---------|------|
+| OpenTelemetry Collector | `otel/opentelemetry-collector-contrib:0.120.0` | `otel-collector` | 4317 (OTLP gRPC) |
+| Grafana Tempo | `grafana/tempo:2.7.2` | `tempo` | 3200 (query), 4317 (OTLP gRPC ingest) |
+
+Application services export traces via OTLP gRPC to `http://otel-collector:4317`. The Collector forwards traces to Tempo. Grafana provisions a Tempo datasource (`uid: tempo`, not default) for Explore-based trace investigation. Grafana Alloy remains logs-only (ADR-023).
+
+### Application environment variables
+
+| Variable | Purpose | Default (Helm) |
+|----------|---------|----------------|
+| `OTEL_TRACES_ENABLED` | Enable/disable tracing export | `true` (when Collector enabled) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP gRPC collector endpoint | `http://otel-collector:4317` |
+| `SERVICE_NAME` | OpenTelemetry `service.name` source of truth | per-service (`user-service`, etc.) |
+
+Local `uv` development without a Collector should set `OTEL_TRACES_ENABLED=false` to avoid background export errors.
+
+### Local verification
+
+```bash
+kubectl wait --for=condition=available deployment/otel-collector -n krp --timeout=180s
+kubectl wait --for=condition=available deployment/tempo -n krp --timeout=180s
+kubectl port-forward -n krp svc/grafana 3000:3000
+curl http://localhost:3000/api/health
+# Explore → Tempo (uid: tempo)
+```
+
+Generate cross-service traffic via port-forward:
+
+```bash
+kubectl port-forward -n krp svc/user-service 8001:8001
+kubectl port-forward -n krp svc/order-service 8002:8002
+# POST /users, then POST /orders (Order Service calls Payment Service internally)
+```
+
+In Grafana Explore → Tempo, locate traces for `order-service` and confirm Payment Service spans share the same `trace_id` as the Order Service request.
+
+Tempo and the Collector use non-persistent `emptyDir` storage (acceptable for local kind). CD workflow unchanged — no Tempo/Collector smoke checks were added in M10.
+
 ## CI/CD Workflow
 
 GitHub Actions automates build, test, and deployment validation. Workflows live under `.github/workflows/`.
@@ -481,7 +524,7 @@ Runs on `ubuntu-latest` with:
 1. **Checkout** and Python 3.10 setup
 2. **uv** — `uv sync --dev --frozen`
 3. **Ruff** — `uv run ruff check services tests`
-4. **pytest** — `uv run pytest tests/ -v` (full 166-test suite)
+4. **pytest** — `uv run pytest tests/ -v` (full 180-test suite)
 5. **PostgreSQL 16** — GitHub Actions service container (`app_user` / `change_me` / `k8s_reliability` on port 5432)
 6. **Docker builds** — `krp-user-service:ci`, `krp-order-service:ci`, `krp-payment-service:ci` (validation only; no push)
 7. **Helm** — `helm lint helm/krp`; `helm template krp helm/krp` (output discarded to avoid logging Secret values)

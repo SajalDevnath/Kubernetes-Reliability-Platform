@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–9 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation), Alerting (Alertmanager, Prometheus alert rules), and Centralized Logging (structured JSON logs, Loki, Grafana Alloy, Grafana log dashboard) are implemented and verified.
+> **Milestones 0–10 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation), Alerting (Alertmanager, Prometheus alert rules), Centralized Logging (structured JSON logs, Loki, Grafana Alloy, Grafana log dashboard), and Distributed Tracing (OpenTelemetry, Collector, Tempo, Grafana Explore) are implemented and verified.
 
 ## Quick Start
 
@@ -49,7 +49,7 @@ Deploy to the local kind cluster using the Helm chart in `helm/krp/`. See [helm/
 | **CI** | `.github/workflows/ci.yml` | `pull_request` |
 | **CD** | `.github/workflows/cd.yml` | `push` to `main` |
 
-**CI** runs Ruff lint, the full 166-test pytest suite (PostgreSQL 16 service container), Docker builds for all three services, and Helm lint/template validation.
+**CI** runs Ruff lint, the full 180-test pytest suite (PostgreSQL 16 service container), Docker builds for all three services, and Helm lint/template validation.
 
 **CD** builds images, creates an **ephemeral** kind cluster on the GitHub-hosted runner, loads `krp-*-service:ci` images, deploys `helm/krp/` into namespace `krp`, waits for all workloads (including Prometheus and Grafana), runs in-cluster HTTP and monitoring smoke tests, and deletes the cluster. CD does not deploy to a developer's local kind cluster and is not a production deployment.
 
@@ -81,7 +81,7 @@ The business logic is intentionally simple. The focus is on reliability engineer
 | Visualization | Grafana (implemented — M7) |
 | Alerting | Alertmanager (implemented — M8) |
 | Logging | Loki, Grafana Alloy (implemented — M9) |
-| Tracing | OpenTelemetry |
+| Tracing | OpenTelemetry, OpenTelemetry Collector, Grafana Tempo (implemented — M10) |
 | AI | LLM API, tool calling, RAG, human-in-the-loop remediation |
 
 ## High-Level Architecture
@@ -110,9 +110,10 @@ Three microservices with simple business logic, designed to create realistic ope
 | 7 | Metrics and Monitoring | COMPLETE |
 | 8 | Alerting | COMPLETE |
 | 9 | Logging | COMPLETE |
-| 10–17 | See roadmap | NOT STARTED |
+| 10 | Distributed Tracing | COMPLETE |
+| 11–17 | See roadmap | NOT STARTED |
 
-**Tests:** 166 passing (128 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).
+**Tests:** 180 collected (142 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).
 
 ## Documentation
 

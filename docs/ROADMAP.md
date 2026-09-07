@@ -344,7 +344,23 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Traces are visible in the observability stack
 - Latency breakdown is available per service
 
-**Status:** NOT STARTED
+**Delivered (M10 close):**
+- [x] OpenTelemetry SDK instrumentation in user-service, order-service, and payment-service (FastAPI, httpx, SQLAlchemy; W3C Trace Context; OTLP gRPC export)
+- [x] `service.name` aligned with `SERVICE_NAME` (`user-service`, `order-service`, `payment-service`)
+- [x] Optional `trace_id` / `span_id` in structured JSON log bodies (not Loki labels)
+- [x] OpenTelemetry Collector deployed via `helm/krp/` (`otel/opentelemetry-collector-contrib:0.120.0`, Service `otel-collector:4317`)
+- [x] Grafana Tempo deployed via `helm/krp/` (`grafana/tempo:2.7.2`, monolithic, `emptyDir` storage, 72h retention)
+- [x] OTLP pipeline: applications → Collector → Tempo
+- [x] Grafana Tempo datasource provisioned (`uid: tempo`, `http://tempo:3200`; Prometheus remains default)
+- [x] Application Helm ConfigMaps set `OTEL_TRACES_ENABLED` and `OTEL_EXPORTER_OTLP_ENDPOINT`
+- [x] Cross-service trace propagation verified manually on kind cluster `krp` (`POST /orders` → Order Service → Payment Service; shared `trace_id` in Grafana Explore)
+- [x] Helm chart version bumped to `krp-0.5.0` (from `krp-0.4.0` at M9 close)
+- [x] CD workflow unchanged — no Tempo/Collector smoke checks added
+- [x] **180 tests** (142 unit, including 14 M10 tracing tests; 36 integration; 2 E2E; M9 baseline was 166)
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 10 verified — OpenTelemetry tracing in all three application services, OpenTelemetry Collector and Grafana Tempo deployed via `helm/krp/` on kind cluster `krp`. Cross-service traces observed in Grafana Explore for Order → Payment (`POST /orders`). Grafana Alloy remains logs-only (ADR-023). Tempo and Collector use non-persistent `emptyDir` storage (acceptable for local kind). No CI/CD workflow changes.
 
 ---
 
@@ -500,7 +516,7 @@ Milestone 6  → CI/CD                       [COMPLETE]
 Milestone 7  → Metrics and Monitoring      [COMPLETE]
 Milestone 8  → Alerting                    [COMPLETE]
 Milestone 9  → Logging                     [COMPLETE]
-Milestone 10 → Distributed Tracing         [NOT STARTED]
+Milestone 10 → Distributed Tracing         [COMPLETE]
 Milestone 11 → SRE Practices               [NOT STARTED]
 Milestone 12 → Incident Simulation         [NOT STARTED]
 Milestone 13 → Runbooks                    [NOT STARTED]

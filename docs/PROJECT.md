@@ -1,6 +1,6 @@
 # Kubernetes Reliability Platform
 
-> **Current progress:** Milestones 0–8 complete. Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified (manual E2E on kind cluster `krp`). Application metrics, Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD).
+> **Current progress:** Milestones 0–10 complete. Distributed tracing with OpenTelemetry, OpenTelemetry Collector, and Grafana Tempo deployed via Helm and verified (manual E2E on kind cluster `krp`; cross-service Order → Payment traces in Grafana Explore). Structured JSON logging, Loki, Grafana Alloy, and Grafana **KRP Service Logs** dashboard deployed via Helm and verified. Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified. Application metrics, Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). Milestone 11 — SRE Practices is next.
 
 ## What This Project Is
 
@@ -32,6 +32,8 @@ Modern platform and SRE engineering requires practical experience across applica
 - GitHub Actions CI/CD (implemented — Milestone 6)
 - Application metrics and Prometheus/Grafana monitoring (implemented and verified — Milestone 7)
 - Alertmanager alerting with Prometheus rules and severity-based routing (implemented and verified — Milestone 8)
+- Centralized logging with structured JSON logs, Loki, Grafana Alloy, and Grafana log dashboard (implemented and verified — Milestone 9)
+- Distributed tracing with OpenTelemetry, OpenTelemetry Collector, and Grafana Tempo (implemented and verified — Milestone 10)
 - SRE practices and incident simulation
 - AI-assisted operations (final phase)
 
@@ -51,7 +53,7 @@ When complete, the platform will demonstrate:
 2. Automated CI/CD pipelines (GitHub Actions — CI on pull requests; CD to ephemeral kind on `main`)
 3. Prometheus metrics collection, Grafana dashboards, and Alertmanager alerting (Milestones 7–8 — implemented)
 4. Centralized logging with Loki and Grafana Alloy (Milestone 9 — implemented)
-5. Distributed tracing with OpenTelemetry
+5. Distributed tracing with OpenTelemetry (Milestone 10 — implemented)
 6. SRE practices including SLOs and error budgets
 7. Incident simulation and runbook-driven response
 8. AI-assisted root cause analysis with human-in-the-loop remediation

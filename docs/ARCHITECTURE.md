@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 9 complete — structured JSON logging, Loki, Grafana Alloy, and Grafana **KRP Service Logs** dashboard deployed via Helm and verified (manual E2E on kind cluster `krp`). Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified. Application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 10 — Distributed Tracing is next.
+> **Status:** Milestone 10 complete — distributed tracing with OpenTelemetry, OpenTelemetry Collector, and Grafana Tempo deployed via Helm and verified (manual E2E on kind cluster `krp`; cross-service Order → Payment traces in Grafana Explore). Structured JSON logging, Loki, Grafana Alloy, and Grafana **KRP Service Logs** dashboard deployed via Helm and verified. Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified. Application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 11 — SRE Practices is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -86,7 +86,7 @@ User Service (FastAPI)          Client
 
 ## Helm (Milestone 5 — implemented)
 
-- Umbrella chart `helm/krp/` (`krp-0.3.0`) packages postgres, user-service, payment-service, order-service, prometheus, grafana, and alertmanager
+- Umbrella chart `helm/krp/` (`krp-0.5.0`) packages postgres, user-service, payment-service, order-service, prometheus, grafana, alertmanager, loki, alloy, tempo, and otel-collector
 - Parameterized via `values.yaml` (baseline defaults) and `values-local.yaml` (non-sensitive local kind overrides)
 - `postgres.storage.existingClaim` — when set, reuses an existing PVC instead of creating `postgres-data` (M4 → M5 data preservation)
 - Deploy and manage releases with `helm upgrade --install`, `helm upgrade`, `helm history`, and `helm rollback`
@@ -98,7 +98,7 @@ User Service (FastAPI)          Client
 
 - **CI workflow:** `.github/workflows/ci.yml` — triggers on `pull_request`; `permissions: contents: read`
 - **CD workflow:** `.github/workflows/cd.yml` — triggers on `push` to `main`; `permissions: contents: read`
-- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (166 tests) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template`
+- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (180 tests) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template`
 - **CD pipeline:** Docker Buildx builds, kind v0.33.0 ephemeral cluster on the GitHub-hosted runner, `kind load docker-image`, Helm deploy of `helm/krp/` into namespace `krp` using `values.yaml` with `--set images.*.tag=ci`, deployment readiness waits (postgres, user-service, payment-service, order-service, prometheus, grafana), in-cluster HTTP and monitoring smoke tests, automatic cluster cleanup (`if: always()`)
 - **Not production deployment:** CD uses a disposable ephemeral kind cluster on the runner; no container registry, no cloud Kubernetes, no deployment to a developer's local kind cluster
 - **Credential handling:** CI/CD credential handling reviewed and documented; no GitHub Secrets or dedicated secrets-management mechanism; PostgreSQL password remains local-development placeholder (`change_me`)
@@ -150,16 +150,46 @@ Application services → structured JSON stdout → Kubernetes pod logs → Graf
 - **Log/metric correlation:** Shared `service` label between Prometheus metrics and Loki logs; temporal overlap during request activity (not one-to-one event correlation)
 - **Status:** Implemented — 27 logging unit tests; manual kind E2E verification for Loki, Alloy, Grafana datasource/dashboard, and log/metric correlation
 
+## Distributed Tracing (Milestone 10 — implemented)
+
+Application services instrument requests with the OpenTelemetry SDK and export traces via OTLP gRPC to the OpenTelemetry Collector. The Collector forwards traces to Grafana Tempo. Grafana queries Tempo over HTTP for trace visualization.
+
+```
+Application services
+        |
+        | OTLP gRPC (OpenTelemetry SDK)
+        v
+OpenTelemetry Collector (otel-collector:4317)
+        |
+        | OTLP gRPC
+        v
+Grafana Tempo (tempo:4317 ingest, tempo:3200 query)
+        |
+        v
+Grafana Explore (Tempo datasource, uid: tempo)
+```
+
+- **Instrumentation:** FastAPI (inbound HTTP), httpx (outbound HTTP), SQLAlchemy (database queries); W3C Trace Context propagation
+- **OpenTelemetry Collector:** `otel/opentelemetry-collector-contrib:0.120.0`; Deployment; ClusterIP Service `otel-collector:4317`; pipeline `otlp` → `batch` → `otlp` → Tempo
+- **Tempo:** `grafana/tempo:2.7.2`; monolithic `-target=all`; ClusterIP ports 3200 (query) and 4317 (OTLP gRPC); non-persistent `emptyDir` storage; 72h retention
+- **Service naming:** OpenTelemetry `service.name` matches `SERVICE_NAME` and M7/M9 `service` label (`user-service`, `order-service`, `payment-service`)
+- **Cross-service propagation:** Order Service → Payment Service via `httpx` on `POST /orders`; W3C `traceparent` headers; shared `trace_id` across services
+- **Log correlation:** Optional `trace_id` and `span_id` in JSON log body when a span is active (not Loki labels)
+- **Grafana Alloy:** Unchanged — logs only (ADR-023)
+- **Status:** Implemented — 14 tracing unit tests; manual kind E2E verification for cross-service Order → Payment traces in Grafana Explore
+
 ## Observability
 
 | Component | Purpose | Status |
 |-----------|---------|--------|
 | Prometheus | Metrics collection and PromQL queries | Implemented (M7 — `helm/krp/`, static Service-DNS scraping) |
-| Grafana | Dashboards and visualization | Implemented (M7/M9 — **KRP Service Health** and **KRP Service Logs** dashboards) |
+| Grafana | Dashboards and visualization | Implemented (M7/M9 — **KRP Service Health** and **KRP Service Logs** dashboards; M10 Tempo Explore) |
 | Alertmanager | Alert routing and notification | Implemented (M8 — local/null receivers; severity-based routing) |
 | Loki | Centralized log aggregation | Implemented (M9 — `helm/krp/`, Grafana Alloy collection) |
 | Grafana Alloy | Log collection and shipping to Loki | Implemented (M9 — DaemonSet in namespace `krp`) |
-| OpenTelemetry | Distributed tracing | Planned (M10) |
+| OpenTelemetry Collector | OTLP trace ingestion and forwarding | Implemented (M10 — `helm/krp/`, Service `otel-collector`) |
+| Grafana Tempo | Trace storage and query backend | Implemented (M10 — `helm/krp/`, datasource `uid: tempo`) |
+| OpenTelemetry SDK | Application distributed tracing | Implemented (M10 — all three services) |
 
 ## SRE Layer (Planned — Milestones 11–13)
 
