@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 10 complete — distributed tracing unit tests (14); manual E2E tracing verification on kind cluster `krp` (OpenTelemetry Collector, Tempo, Grafana Tempo datasource, cross-service Order → Payment trace in Grafana Explore). Structured logging unit tests (27); manual E2E logging verification. Application metrics tests (15 passing, included in unit tests), Prometheus/Grafana local verification, CD monitoring smoke checks, and GitHub Actions CD end-to-end verification with monitoring checks **PASSED** (commit `34f919b`, `feat: add metrics and monitoring`). **180 tests** (142 unit, 36 integration, 2 E2E; M9 baseline was 166).
+> **Status:** Milestone 11 complete — manual E2E SRE verification on kind cluster `krp` (Prometheus recording rules, SLO alerts, **KRP SRE** dashboard, M7–M10 regression). Distributed tracing unit tests (14); structured logging unit tests (27); application metrics tests (15). **180 tests** (142 unit, 36 integration, 2 E2E).
 
 ## Philosophy
 
@@ -174,6 +174,22 @@ A task is not complete merely because the application starts. Every change must 
   - Grafana → Explore → Tempo: single trace spans Order Service and Payment Service for `POST /orders` traffic; per-span latency visible
   - M7 **KRP Service Health** and M9 **KRP Service Logs** dashboards remain functional
   - CD workflow unchanged — no Tempo/Collector smoke checks added
+
+### SRE Verification (Milestone 11 — complete)
+
+- **Scope:** Prometheus SLI/SLO/error-budget recording rules; SRE alert rules; **KRP SRE** Grafana dashboard; SLO alert firing and resolution; M7–M10 regression
+- **Location:** Manual verification against `helm/krp/` on kind cluster `krp` (no automated SLO/Alertmanager E2E tests in `tests/`; CD workflow unchanged)
+- **Status:** Complete — manual kind E2E verification for recording rules, healthy-state SLI/SLO metrics, SLO alert paths, dashboard, and regression; **180 tests** unchanged (M11 added no automated tests)
+- **Manual kind E2E verified checks:**
+  - Helm deploy `krp-0.6.0` succeeded; Prometheus restarted after rules ConfigMap change
+  - All three application scrape targets UP
+  - All 9 M11 recording rules loaded with `health=ok` and no evaluation errors
+  - Healthy traffic (`POST /users`, `POST /orders`, `GET /payments`): availability ≈ 1.0, SLO target 0.99, error budget consumed 0, remaining 1, P95 below 0.5s, 5xx ratio 0
+  - All 5 alert rules loaded (`KRPServiceTargetDown`, `KRPHigh5xxErrorRate`, `KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`, `KRPHighP95Latency`); M11 alerts inactive under healthy conditions
+  - Controlled 5xx fault injection on `user-service`: `KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` fired → Alertmanager receipt → resolved after service recovery; Grafana **KRP SRE** showed degradation then recovery (availability 100%, error budget remaining 100%, COMPLIANT)
+  - **`KRPHighP95Latency`:** rule loaded and inactive under healthy traffic; deliberate firing path **not demonstrated** on kind (documented per ADR-024 step 13 — optional; not reproducible within M11 scope without out-of-scope application or infrastructure changes)
+  - M7 **KRP Service Health**, M9 **KRP Service Logs**, and M10 Tempo cross-service traces remain functional; M8 `KRPServiceTargetDown` re-tested (scale `user-service` to 0 and restore)
+  - CD workflow unchanged — no SLO/Alertmanager smoke checks added
 
 ### Failure Simulation Tests (Planned — Milestone 12)
 

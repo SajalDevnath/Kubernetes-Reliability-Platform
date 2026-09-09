@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 9 — Logging (complete)
+> **Last updated:** Milestone 11 — SRE Practices (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -380,7 +380,21 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Error budgets are tracked and visualized
 - SRE documentation is complete
 
-**Status:** NOT STARTED
+**Delivered (M11 close):**
+- [x] Prometheus recording rules for SLI, SLO, and error-budget tracking (`krp-sre-slos` group in `prometheus-rules` ConfigMap) — 9 recording rules per ADR-024
+- [x] SLO targets: 99.0% request availability, P95 latency ≤ 500ms, 6-hour rolling window (ADR-024)
+- [x] Prometheus alert rules: `KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`, `KRPHighP95Latency` (M11); existing M8 alerts unchanged (`KRPServiceTargetDown`, `KRPHigh5xxErrorRate`)
+- [x] Provisioned Grafana **KRP SRE** dashboard (`uid: krp-sre`, tags `krp`/`m11`, 12 panels, `$service` variable, Prometheus datasource)
+- [x] Manual kind E2E on cluster `krp`: Helm deploy (`krp-0.6.0`), Prometheus restart after rules change, recording rules loaded, healthy-state SLI/SLO/error-budget metrics, controlled 5xx fault injection (`KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` fire and resolve via Alertmanager; Grafana degradation and recovery)
+- [x] `KRPHighP95Latency` rule loaded and inactive under healthy traffic; deliberate firing path **not demonstrated** on kind (documented per ADR-024 step 13 — optional; not reproducible within M11 scope without out-of-scope application or infrastructure changes)
+- [x] M7/M8/M9/M10 regression verification after M11 (Service Health, Service Logs, M8 `KRPServiceTargetDown` re-tested, Tempo cross-service traces)
+- [x] Helm chart version bumped to `krp-0.6.0` (from `krp-0.5.0` at M10 close)
+- [x] CD workflow unchanged — no SLO/Alertmanager smoke checks added
+- [x] **180 tests** unchanged (M11 added no automated tests)
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 11 verified — SLIs, SLOs, error budgets, and SRE alerting deployed via `helm/krp/` on kind cluster `krp`. Prometheus recording rules and three M11 alert rules loaded; **KRP SRE** dashboard provisioned. Availability SLO alerts (`KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`) manually verified for firing, Alertmanager receipt, and resolution after controlled user-service 5xx fault injection. `KRPHighP95Latency` rule loaded but deliberate firing not demonstrated (ADR-024 step 13 optional). M7–M10 observability paths remain functional. Prometheus rules ConfigMap changes require manual `kubectl rollout restart deployment/prometheus -n krp` after Helm upgrade. No application code changes.
 
 ---
 
@@ -517,7 +531,7 @@ Milestone 7  → Metrics and Monitoring      [COMPLETE]
 Milestone 8  → Alerting                    [COMPLETE]
 Milestone 9  → Logging                     [COMPLETE]
 Milestone 10 → Distributed Tracing         [COMPLETE]
-Milestone 11 → SRE Practices               [NOT STARTED]
+Milestone 11 → SRE Practices               [COMPLETE]
 Milestone 12 → Incident Simulation         [NOT STARTED]
 Milestone 13 → Runbooks                    [NOT STARTED]
 Milestone 14 → AI Incident Analyzer        [NOT STARTED]

@@ -834,3 +834,429 @@ Milestone 10 requires distributed traces via OpenTelemetry (FR-024) and cross-se
 **Status:** Accepted — implemented (Milestone 10)
 
 **Verification:** Manual kind E2E on cluster `krp` completed — `POST /users` and `POST /orders` exercised; Order Service → Payment Service payment creation observed; cross-service trace with shared `trace_id` confirmed in Grafana Explore (Tempo datasource `uid: tempo`). Automated tracing unit tests (14) pass in CI; Tempo/Collector ingestion E2E not automated (per M8/M9 precedent).
+
+---
+
+## ADR-024 — SRE SLIs, SLOs, Error Budgets, and Alerting Architecture
+
+**Date:** 2026-09-08
+
+**Decision:**
+
+Milestone 11 will define and implement SRE practices using **existing M7 Prometheus HTTP metrics** as the sole SLI source. SLIs, SLO targets, error-budget calculations, SLO-violation alerts, and a provisioned Grafana SRE dashboard will be delivered via **Prometheus recording rules**, **Prometheus alert rules**, and **embedded Grafana dashboard JSON** in the existing `helm/krp/` chart. No application code changes, no dedicated SLO backend, and no external SLO tooling will be introduced.
+
+### Context
+
+**Why Milestone 11 needs this decision:**
+
+Milestone 11 (`docs/ROADMAP.md`) requires SLIs, SLOs, error-budget tracking, SRE Grafana dashboards, and SRE documentation. Requirements FR-028 (define SLIs/SLOs), FR-029 (track/visualize error budgets), and the SLO-violation portion of FR-027 (alerts for SLO violations) are **Planned** and assigned to Milestone 11. ADR-021 explicitly deferred P95 latency alerts, SLO alerts, and error-budget alerts from Milestone 8 to Milestone 11. No ADR previously defined SLI semantics, SLO targets, error-budget math, or dashboard/alert design.
+
+**Verified existing infrastructure (Milestones 7–10):**
+
+| Layer | Verified state |
+|-------|----------------|
+| **Application metrics (M7, ADR-017)** | All three services expose `http_requests_total` (Counter; labels: `service`, `method`, `handler`, `status`) and `http_request_duration_seconds` (Histogram; labels: `service`, `method`, `handler`) via identical `PrometheusMiddleware` in `services/*/app/metrics.py`. `/metrics` is excluded from request metrics. `status` values are numeric strings (e.g. `200`, `404`, `500`). |
+| **Prometheus (M7, ADR-018)** | Static Service-DNS scrape of `user-service:8001`, `order-service:8002`, `payment-service:8003` at `/metrics`; scrape interval **15s**; rules loaded from ConfigMap `prometheus-rules` at `/etc/prometheus/rules/*.yml`; non-persistent `emptyDir` TSDB (ADR-019). |
+| **Grafana (M7/M9)** | Provisioned Prometheus datasource (`uid: prometheus`); **KRP Service Health** dashboard (`uid: krp-services`) with availability (`up`), request rate, 5xx rate, P95 latency panels; **KRP Service Logs** dashboard (`uid: krp-service-logs`). Dashboards embedded in `helm/krp/templates/grafana-dashboards-configmap.yaml`. |
+| **Alertmanager (M8, ADR-021)** | `prom/alertmanager:v0.27.0`; severity routing (`critical`, `warning`, `default`); local/null receivers only; failure-condition alerts `KRPServiceTargetDown` and `KRPHigh5xxErrorRate` in `prometheus-rules-configmap.yaml`. |
+| **Logging / tracing (M9/M10)** | Loki, Alloy, Tempo, OpenTelemetry Collector — available for investigation but **not** SLI sources in M11. |
+
+**Constraints relevant to SLO design:**
+
+- Local **kind** cluster only (NFR-016); no cloud SLO backend.
+- Prometheus TSDB on **non-persistent `emptyDir`** — pod restart **destroys all historical metrics** (ADR-019).
+- Low traffic during learning and verification; high statistical variance on short windows.
+- No Prometheus Operator, ServiceMonitor, or external SLO tooling without explicit approval.
+- Helm (`helm/krp/`, current chart `0.5.0`) is the delivery mechanism; `k8s/` reference manifests are not modified.
+- **Order-service probe limitation (verified):** `user-service` and `payment-service` probes use `GET /health`; `order-service` probes use `GET /orders` (no `/health` endpoint, ADR-020). Probe traffic is recorded on the same metric labels as business traffic for `order-service` and **cannot be excluded** with existing labels.
+
+### Scope (M11 includes)
+
+- SLI definitions and SLO targets for all three application services
+- Prometheus **recording rules** for SLI, SLO comparison, and error-budget time series
+- Prometheus **alert rules** for SLO violation, error-budget exhaustion, and P95 latency (deferred from M8)
+- Provisioned Grafana **KRP SRE** dashboard (`uid: krp-sre`)
+- Completion of FR-027 (SLO-violation alerting), FR-028, FR-029
+- Helm chart version bump to `krp-0.6.0` at implementation
+- Documentation updates at M11 closeout
+
+### Scope (M11 excludes)
+
+- Application code or metrics instrumentation changes (including adding `/health` to order-service)
+- Incident simulation (Milestone 12), runbooks (Milestone 13), AI features (Milestones 14–17)
+- External SLO tooling (Sloth, Pyrra, cloud SLO products)
+- Multi-window burn-rate alerting (Google SRE production pattern)
+- Prometheus Operator, ServiceMonitor, kube-state-metrics, node-exporter
+- External alert notification integrations (Slack, email, PagerDuty)
+- Changes to `k8s/` reference manifests
+- Mandatory CI/CD workflow changes (M8/M9/M10 precedent)
+- Automated SLO/Alertmanager E2E tests in CI (manual kind verification per M8/M10 precedent)
+- Unrelated changes to Loki, Alloy, Tempo, Collector, or existing M7/M8 dashboards
+
+### A. SLI types
+
+Milestone 11 adopts **two SLIs per service**, derived from existing Prometheus metrics:
+
+| SLI | Signal | Source metric | Role |
+|-----|--------|---------------|------|
+| **1. Request availability** | Ratio of HTTP requests that are **not server errors** | `http_requests_total` | **Primary SLO SLI** — drives error-budget calculation and availability SLO alerts |
+| **2. P95 request latency** | 95th percentile of HTTP request duration | `http_request_duration_seconds` (histogram) | **Secondary SLO SLI** — latency objective and P95 alert |
+
+**5xx error rate is not a separate SLO.** It is the arithmetic complement of request availability when success is defined as non-5xx (see §B). It will appear as a **diagnostic panel** on the SRE dashboard and remains the basis for the existing **failure-condition** alert `KRPHigh5xxErrorRate` (ADR-021), which is conceptually separate from SLO violation.
+
+**Relationship between signals:**
+
+```
+request_availability = 1 - (5xx_requests / total_requests)
+5xx_error_rate       = 1 - request_availability
+```
+
+Scrape-target availability (`up{job=...}`) remains on **KRP Service Health** for operational monitoring but is **not** the M11 SLO availability SLI. The SLO measures **request-level success**, not Prometheus scrape health.
+
+### B. Request success semantics
+
+**Decision:** A request is **successful** for the availability SLI if its `status` label is **not a 5xx** HTTP status code.
+
+PromQL success filter (consistent with existing M7 dashboard and M8 alerts):
+
+```
+status!~"5.."
+```
+
+**4xx responses are treated as successful** for availability SLO purposes.
+
+**Reasoning:**
+
+- Aligns with existing repository semantics: M7 **5xx Error Rate** panel and M8 `KRPHigh5xxErrorRate` both use `status=~"5.."` for server errors only.
+- 4xx responses (e.g. `404` not found, `409` conflict, `422` validation) reflect client or business-rule outcomes, not service unavailability.
+- `status` values are numeric strings (`str(response.status_code)` in middleware); `5..` regex matches `500`–`599`.
+
+**Caveat:** Unhandled exceptions recorded as `status="500"` correctly count as failures.
+
+### C. Probe traffic strategy
+
+**Verified probe behavior:**
+
+| Service | Probe endpoint | Recorded metric labels (typical) | Excludable from SLI? |
+|---------|----------------|----------------------------------|----------------------|
+| `user-service` | `GET /health` | `handler="/health"`, `method="GET"`, `status="200"` | **Yes** — `handler!="/health"` |
+| `payment-service` | `GET /health` | `handler="/health"`, `method="GET"`, `status="200"` | **Yes** — `handler!="/health"` |
+| `order-service` | `GET /orders` | `handler="/orders"`, `method="GET"`, `status="200"` | **No** — indistinguishable from business `GET /orders` |
+
+Probe period: `periodSeconds: 10` for both liveness and readiness on all three services (`helm/krp/values.yaml`).
+
+**Decision:** **Asymmetric probe handling without application changes.**
+
+1. **`user-service` and `payment-service`:** SLI recording rules and alerts **exclude** `handler="/health"` from numerators and denominators.
+2. **`order-service`:** SLI recording rules and alerts **include all HTTP traffic** on all handlers. Probe traffic **cannot be excluded** and is an accepted measurement limitation for M11.
+3. **All services:** `/metrics` is already excluded by middleware and does not appear in SLI data.
+
+**Documented limitations:**
+
+- `order-service` availability and latency SLIs are **biased toward success** by periodic probe `GET /orders` traffic (typically `200`), especially during low business traffic.
+- FastAPI `/docs`, `/redoc`, and `/openapi.json` traffic is **included** in SLIs for all services (not excluded in M11).
+- This design does **not** claim clean probe exclusion for `order-service`.
+
+### D. SLO targets
+
+Targets are chosen for a **local kind learning environment** with low traffic and non-persistent metrics — not production multi-nines.
+
+| Service | SLI | SLO target | Meaning |
+|---------|-----|------------|---------|
+| `user-service` | Request availability | **99.0%** | ≥ 99% of measured requests (per §C filters) are non-5xx over the measurement window |
+| `order-service` | Request availability | **99.0%** | Same; includes unavoidable probe traffic |
+| `payment-service` | Request availability | **99.0%** | Same; excludes `/health` probe traffic |
+| `user-service` | P95 latency | **≤ 500ms** (0.5s) | 95th percentile request duration ≤ 0.5 seconds over the measurement window |
+| `order-service` | P95 latency | **≤ 500ms** (0.5s) | Same; includes probe latency on `GET /orders` |
+| `payment-service` | P95 latency | **≤ 500ms** (0.5s) | Same; excludes `/health` probe traffic |
+
+**Reasoning:**
+
+- **99.0%** (not 99.9% or 99.99%) leaves a **1% error budget** that is observable on kind with manual failure injection, without requiring production traffic volumes.
+- **500ms P95** aligns conceptually with NFR-002 (API response within 500ms under normal local conditions) while using an SLI that is already visualized on **KRP Service Health**.
+- Uniform targets across services simplify the learning model; per-service differences are in probe handling (§C), not target percentages.
+
+### E. Measurement window
+
+**Decision:** Use a **6-hour rolling window** for all SLI, SLO compliance, and error-budget calculations.
+
+PromQL expressions will use `[6h]` range vectors on `rate()` / `increase()`-based ratios (exact recording rules defined at implementation).
+
+**Why not a 30-day rolling window:**
+
+- Prometheus TSDB uses **non-persistent `emptyDir`** (ADR-019). A pod restart **wipes all history**, making a 30-day window meaningless on kind.
+- Learning and manual verification sessions are short; practitioners need feedback within a single sitting.
+- Low traffic on kind produces sparse data over long windows; a 6-hour window balances stability and responsiveness for demo workloads.
+
+**Implication:** SLOs are **session-oriented learning SLOs**, not production contractual SLOs. Documentation must state that error-budget history does not survive Prometheus restarts.
+
+### F. Error budget calculation
+
+Error budgets apply to the **availability SLO only** (not P95 latency). P95 uses threshold-based SLO compliance and alerting (§H).
+
+**Definitions (per service, over the 6-hour rolling window):**
+
+Let:
+
+- `T` = total request count in window (after probe filters in §C)
+- `S` = successful (non-5xx) request count in window
+- `SLI_avail` = `S / T` (request availability ratio, 0–1)
+- `SLO_target` = `0.99`
+- `E_allowed` = `1 - SLO_target` = **`0.01`** (1% of requests may be 5xx)
+
+**Error budget consumed (ratio, 0 = none used, 1 = fully exhausted, >1 = over budget):**
+
+```
+error_budget_consumed = (1 - SLI_avail) / E_allowed
+                      = (1 - SLI_avail) / 0.01
+```
+
+**Error budget remaining (ratio, clamped at 0):**
+
+```
+error_budget_remaining = max(0, 1 - error_budget_consumed)
+```
+
+**Equivalent form using 5xx share:**
+
+```
+5xx_ratio = 1 - SLI_avail
+error_budget_remaining = max(0, 1 - (5xx_ratio / 0.01))
+```
+
+**Prometheus representation (planned recording rules, conceptual):**
+
+| Recorded metric | Type | Labels | Purpose |
+|-----------------|------|--------|---------|
+| `krp:sli:availability:ratio` | gauge | `service` | Current `SLI_avail` over 6h window |
+| `krp:slo:availability:target` | gauge | `service` | Constant `0.99` |
+| `krp:slo:availability:error_budget:remaining` | gauge | `service` | `error_budget_remaining` (0–1) |
+| `krp:slo:availability:error_budget:consumed` | gauge | `service` | `error_budget_consumed` |
+
+**Grafana visualization:**
+
+- **Stat / gauge panel:** error budget remaining as percentage (`error_budget_remaining * 100`)
+- **Time series:** `SLI_avail` vs horizontal line at `0.99`
+- **Stat panel:** budget consumed percentage with threshold coloring (green > 25% remaining, yellow 10–25%, red < 10%)
+
+**P95 latency SLO compliance (no error-budget series):**
+
+- Record `krp:sli:latency:p95:seconds` per service.
+- Dashboard shows P95 vs **0.5s** target line.
+- Alert fires when P95 > 0.5s (§H); no separate latency error-budget metric in M11.
+
+### G. Recording rules
+
+**Decision:** Use Prometheus **recording rules** in the existing `prometheus-rules` ConfigMap (new rule group alongside `krp-service-health` alerts).
+
+**Naming convention:** `krp:<domain>:<metric>[:<window>]` — lowercase, colon-separated, consistent with Prometheus recording-rule style.
+
+**Planned recording-rule categories (implementation phase):**
+
+| Category | Planned metric name(s) | Labels | Purpose |
+|----------|------------------------|--------|---------|
+| Request volume | `krp:http_requests:rate5m` | `service` | Request rate for dashboard context |
+| Availability SLI | `krp:sli:availability:ratio` | `service` | 6h non-5xx success ratio (with §C probe filters) |
+| 5xx diagnostic | `krp:sli:errors:5xx:ratio` | `service` | `1 - availability` for dashboard display |
+| Latency SLI | `krp:sli:latency:p95:seconds` | `service` | 6h P95 from histogram |
+| SLO target | `krp:slo:availability:target` | `service` | Constant `0.99` |
+| Error budget | `krp:slo:availability:error_budget:remaining` | `service` | Remaining budget (0–1) |
+| Error budget | `krp:slo:availability:error_budget:consumed` | `service` | Consumed budget (≥0) |
+| SLO compliance | `krp:slo:availability:compliant` | `service` | `1` if `SLI_avail >= 0.99`, else `0` |
+| Latency compliance | `krp:slo:latency:p95:compliant` | `service` | `1` if P95 ≤ 0.5, else `0` |
+
+Recording rules will be evaluated at Prometheus `evaluation_interval` (**15s**, same as scrape interval per `prometheus-configmap.yaml`).
+
+**Probe filter implementation (recording rules):**
+
+- `user-service`, `payment-service`: `http_requests_total{service="...", handler!="/health"}`
+- `order-service`: `http_requests_total{service="order-service"}` (no handler exclusion)
+
+### H. Alerting strategy
+
+New alerts integrate with existing Alertmanager routing (ADR-021): `severity: critical` → `critical` receiver; `severity: warning` → `warning` receiver. All new M11 alerts use **`severity: warning`** unless noted. Existing failure-condition alerts are **unchanged**.
+
+| Alert name | Type | Conceptual condition | `for` | Severity | Relationship to existing alerts |
+|------------|------|---------------------|-------|----------|--------------------------------|
+| **`KRPSLOAvailabilityViolation`** | SLO violation | `krp:sli:availability:ratio < 0.99` (6h SLI below target) | `10m` | `warning` | Fires on **SLO miss**, not catastrophe. `KRPHigh5xxErrorRate` fires at **>50%** 5xx — failure condition, not SLO. |
+| **`KRPSLOErrorBudgetExhausted`** | Error budget | `krp:slo:availability:error_budget:remaining == 0` (budget fully consumed) | `5m` | `warning` | Subset/escalation of sustained SLO miss; indicates no remaining 1% budget. |
+| **`KRPHighP95Latency`** | Latency (deferred from M8) | `krp:sli:latency:p95:seconds > 0.5` | `5m` | `warning` | Independent of 5xx rate. Deferred per ADR-021. |
+
+**Explicit non-goals for M11 alerting:**
+
+- No multi-window burn-rate alerts (e.g. 1h/6h/3d windows with burn factors).
+- No `critical` severity for SLO alerts (reserve `critical` for `KRPServiceTargetDown`).
+- No changes to `KRPServiceTargetDown` or `KRPHigh5xxErrorRate` expressions or severities.
+
+**FR-027 completion:** `KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` satisfy the **SLO-violation** portion of FR-027. `KRPServiceTargetDown` and `KRPHigh5xxErrorRate` continue to satisfy the **failure-condition** portion.
+
+### I. Grafana dashboard design
+
+**New provisioned dashboard:**
+
+| Property | Value |
+|----------|-------|
+| **UID** | `krp-sre` |
+| **Title** | `KRP SRE` |
+| **Datasource** | Prometheus (`uid: prometheus`) |
+| **Tags** | `krp`, `m11` |
+| **Editable** | `false` (consistent with existing dashboards) |
+| **Refresh** | `30s` |
+| **Default time range** | `now-6h` to `now` (aligned with SLO window) |
+
+**Per-service filtering:**
+
+- Template variable `$service` — **custom** static list: `user-service`, `order-service`, `payment-service` (same pattern as **KRP Service Logs** dashboard, not Prometheus-query-driven).
+
+**Primary panels (planned):**
+
+| Panel | Type | Content |
+|-------|------|---------|
+| Availability SLI vs SLO | Time series | `krp:sli:availability:ratio` with threshold line at `0.99` |
+| Error budget remaining | Gauge / stat | `krp:slo:availability:error_budget:remaining` as % |
+| Error budget consumed | Gauge / stat | `krp:slo:availability:error_budget:consumed` as % |
+| 5xx error rate (diagnostic) | Time series | `krp:sli:errors:5xx:ratio` |
+| P95 latency vs SLO | Time series | `krp:sli:latency:p95:seconds` with threshold line at `0.5` |
+| SLO compliance status | Stat | `krp:slo:availability:compliant` and `krp:slo:latency:p95:compliant` |
+| Request rate (context) | Time series | `krp:http_requests:rate5m` |
+
+**Difference from KRP Service Health (`uid: krp-services`):**
+
+| KRP Service Health (M7) | KRP SRE (M11) |
+|-------------------------|---------------|
+| Operational health: scrape `up`, raw rates, raw 5xx %, raw P95 | SLO-oriented: SLI vs target, error budget, compliance |
+| No SLO targets or budgets | Explicit 99% / 500ms targets |
+| No `$service` variable; all services on one chart | Per-service focus via `$service` variable |
+| `[5m]` rate windows | 6h SLI/SLO windows for budget semantics |
+
+Both dashboards complement each other; M11 does not replace M7.
+
+**Helm delivery (implementation phase):**
+
+- Add `krp-sre.json` key to `helm/krp/templates/grafana-dashboards-configmap.yaml`
+- Add volume `items` entry in `helm/krp/templates/grafana-deployment.yaml` (same pattern as `krp-service-logs.json`)
+
+### J. Helm implementation plan
+
+**Files to modify at implementation (not in this design phase):**
+
+| File | Change |
+|------|--------|
+| `helm/krp/templates/prometheus-rules-configmap.yaml` | Add recording-rule group `krp-sre-slos`; add alert rules `KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`, `KRPHighP95Latency` in a new or existing alert group |
+| `helm/krp/templates/grafana-dashboards-configmap.yaml` | Add `krp-sre.json` dashboard |
+| `helm/krp/templates/grafana-deployment.yaml` | Mount `krp-sre.json` in dashboards volume |
+| `helm/krp/Chart.yaml` | Version `0.5.0` → `0.6.0` |
+| `helm/krp/README.md` | SRE dashboard and SLO verification steps |
+
+**Files not modified (M11):**
+
+- `services/*/app/metrics.py`, `main.py` — no instrumentation changes
+- `k8s/` — reference manifests unchanged
+- `alertmanager-configmap.yaml` — existing routing sufficient
+- `.github/workflows/ci.yml`, `cd.yml` — no mandatory CD smoke checks (M8–M10 precedent)
+- Existing `krp-service-health.json`, `krp-service-logs.json` — unchanged
+
+**Operational note (carried from ADR-021):** After Helm upgrade changing Prometheus rules ConfigMap, run `kubectl rollout restart deployment/prometheus -n krp` (no checksum annotation on Deployment).
+
+### Alternatives considered
+
+#### Alternative A — Direct PromQL in Grafana only
+
+Compute SLI, SLO, and error-budget panels with inline PromQL in dashboard JSON.
+
+| Pros | Cons |
+|------|------|
+| No recording rules | Cannot drive Prometheus alerts from the same definitions |
+| Simpler initial YAML | Duplicated complex PromQL across panels; harder to test |
+| | FR-027 SLO alerts still need PromQL in alert rules anyway |
+
+**Rejected as sole approach.** Grafana-only calculations cannot satisfy FR-027 SLO-violation alerting. Dashboard may reference recording rules for consistency.
+
+#### Alternative B — Prometheus recording rules + Grafana dashboard (chosen)
+
+| Pros | Cons |
+|------|------|
+| Single source of truth for SLI/SLO/budget | More YAML in rules ConfigMap |
+| Alerts and dashboards share recorded metrics | Requires Prometheus restart after rule changes |
+| Fits existing `prometheus-rules` pattern | |
+| No new infrastructure | |
+
+**Accepted.** Matches M7/M8 architecture and repository audit recommendation.
+
+#### Alternative C — External SLO tooling (Sloth, Pyrra, etc.)
+
+| Pros | Cons |
+|------|------|
+| Production-grade SLO DSL | Not in approved technology stack |
+| | Additional Deployment and dependencies |
+| | Over-engineered for kind learning |
+
+**Rejected.** Violates project constraint: no additional technologies without explicit approval.
+
+#### Alternative D — Production multi-window burn-rate alerting
+
+Google SRE-style alerts with multiple windows (e.g. 1h, 6h, 3d) and burn-rate factors.
+
+| Pros | Cons |
+|------|------|
+| Industry best practice at scale | High complexity for a learning project |
+| | Meaningless long windows with emptyDir TSDB |
+| | Low traffic on kind produces noisy burn rates |
+| | ADR-021 deferred simple alerts, not production burn rates |
+
+**Rejected for M11.** Simple threshold alerts on recorded 6h SLI and error-budget metrics are sufficient for FR-027/FR-029 on kind.
+
+### Consequences
+
+#### Positive
+
+- No new infrastructure components — reuses Prometheus, Alertmanager, Grafana
+- SLIs derived from **existing** M7 metrics; no application changes
+- Measurable, PromQL-defined SLOs and error budgets per service
+- Completes deferred M8 alerting (P95, SLO) without altering failure-condition alerts
+- Recording rules provide one definition for dashboards and alerts
+- Fits Helm-centric deployment model and M7–M10 patterns
+
+#### Tradeoffs / limitations
+
+- **6-hour SLO window**, not production 30-day — intentional for kind
+- **Prometheus emptyDir** — all SLO history lost on pod restart
+- **Low traffic** — SLI ratios volatile with little request volume during verification
+- **order-service probe contamination** — cannot exclude `GET /orders` probe traffic; SLIs biased toward success
+- **user/payment `/health` exclusion** — imperfect if business traffic uses `/health`, but acceptable
+- **Histogram default buckets** — not configured in repository; P95 is approximate
+- **4xx counted as success** — availability SLO ignores client-error rate
+- **No external notifications** — alerts route to null receivers (ADR-021)
+- **Simplified alerting** — no burn-rate multi-window policies
+- **FastAPI docs traffic** included in SLIs
+- **Division by zero** — recording rules must guard `T = 0` (implementation detail)
+
+### Implementation and verification plan
+
+**Implementation sequence (future milestone work):**
+
+1. Add recording rules to `helm/krp/templates/prometheus-rules-configmap.yaml` (`krp-sre-slos` group).
+2. Add alert rules (`KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`, `KRPHighP95Latency`).
+3. Add `krp-sre.json` to `helm/krp/templates/grafana-dashboards-configmap.yaml`.
+4. Update `helm/krp/templates/grafana-deployment.yaml` to mount new dashboard.
+5. Bump `helm/krp/Chart.yaml` to `0.6.0`.
+6. Run `helm lint helm/krp` and `helm template krp helm/krp`.
+7. Run `pytest tests/` (ensure no regressions).
+8. Deploy/upgraded chart on kind cluster `krp`.
+9. `kubectl rollout restart deployment/prometheus -n krp` after rules change.
+10. Generate traffic (`POST /users`, `POST /orders`); verify recording rules in Prometheus UI (`/graph` or `/api/v1/query`).
+11. Verify **KRP SRE** dashboard panels show SLI, targets, and error budget.
+12. Induce controlled 5xx traffic (e.g. scale `payment-service` to 0 + sustained `POST /orders`) — verify `KRPSLOAvailabilityViolation` / budget alerts fire and resolve (distinct from `KRPHigh5xxErrorRate` threshold).
+13. Verify `KRPHighP95Latency` alert path if reproducible on kind (optional; document if not reproducible).
+14. Confirm existing M7/M8/M9/M10 dashboards and alerts remain functional.
+15. Update Milestone 11 documentation (ROADMAP, REQUIREMENTS, ARCHITECTURE, DEVELOPMENT, TESTING, README, helm README) at closeout.
+
+**Verification:** Manual kind E2E on cluster `krp` completed (2026-09-08) — implementation steps 1–12 and 14 of the plan above. Helm chart `krp-0.6.0` deployed; Prometheus restarted after rules ConfigMap change; all 9 recording rules loaded with `health=ok`; healthy-state SLI/SLO/error-budget metrics verified for all three services; `KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` manually verified for firing, Alertmanager receipt, and resolution after controlled user-service 5xx fault injection; **KRP SRE** dashboard provisioned and verified for healthy, degraded, and recovered states; M7/M8/M9/M10 regression verified. **Step 13 (`KRPHighP95Latency` firing):** rule loaded and inactive under healthy traffic; deliberate firing path **not demonstrated** on kind — documented as not reproducible within M11 scope without out-of-scope application or infrastructure changes (ADR-024 step 13 optional). **180 tests** unchanged; CD workflow unchanged.
+
+**Reason:**
+
+Milestone 11 requires defined SLIs, SLOs, and error budgets (FR-028, FR-029) and SLO-violation alerting (FR-027) on a local kind cluster without new infrastructure. Existing M7 HTTP metrics provide sufficient signals. Prometheus recording rules centralize SLI/SLO/budget math for Grafana and Alertmanager. A 6-hour rolling window and 99%/500ms targets are appropriate for non-persistent Prometheus on kind. Asymmetric probe handling documents the verified order-service limitation without application changes. Failure-condition alerts from M8 remain separate from SLO alerts.
+
+**Status:** Accepted — implemented (Milestone 11)
+
+**Verification:** Manual kind E2E on cluster `krp` completed — see verification summary above.

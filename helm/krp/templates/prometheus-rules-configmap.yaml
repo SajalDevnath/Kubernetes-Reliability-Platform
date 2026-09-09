@@ -10,6 +10,95 @@ metadata:
 data:
   krp_alerts.yml: |
     groups:
+      - name: krp-sre-slos
+        rules:
+          - record: krp:http_requests:rate5m
+            expr: |
+              sum by (service) (
+                rate(http_requests_total{service=~"user-service|payment-service", handler!="/health"}[5m])
+              )
+              or
+              sum by (service) (
+                rate(http_requests_total{service="order-service"}[5m])
+              )
+
+          - record: krp:sli:availability:ratio
+            expr: |
+              (
+                (
+                  sum by (service) (
+                    increase(http_requests_total{service=~"user-service|payment-service", status!~"5..", handler!="/health"}[6h])
+                  )
+                  or
+                  sum by (service) (
+                    increase(http_requests_total{service="order-service", status!~"5.."}[6h])
+                  )
+                )
+                /
+                (
+                  sum by (service) (
+                    increase(http_requests_total{service=~"user-service|payment-service", handler!="/health"}[6h])
+                  )
+                  or
+                  sum by (service) (
+                    increase(http_requests_total{service="order-service"}[6h])
+                  )
+                )
+              )
+              and
+              (
+                (
+                  sum by (service) (
+                    increase(http_requests_total{service=~"user-service|payment-service", handler!="/health"}[6h])
+                  )
+                  or
+                  sum by (service) (
+                    increase(http_requests_total{service="order-service"}[6h])
+                  )
+                ) > 0
+              )
+
+          - record: krp:sli:errors:5xx:ratio
+            expr: |
+              1 - krp:sli:availability:ratio
+
+          - record: krp:sli:latency:p95:seconds
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (service, le) (
+                  increase(http_request_duration_seconds_bucket{service=~"user-service|payment-service", handler!="/health"}[6h])
+                )
+                or
+                sum by (service, le) (
+                  increase(http_request_duration_seconds_bucket{service="order-service"}[6h])
+                )
+              )
+              and on (service) (krp:sli:availability:ratio)
+
+          - record: krp:slo:availability:target
+            expr: |
+              label_replace(vector(0.99), "service", "user-service", "", "")
+              or label_replace(vector(0.99), "service", "order-service", "", "")
+              or label_replace(vector(0.99), "service", "payment-service", "", "")
+
+          - record: krp:slo:availability:error_budget:consumed
+            expr: |
+              (1 - krp:sli:availability:ratio) / 0.01
+
+          - record: krp:slo:availability:error_budget:remaining
+            expr: |
+              clamp_min(1 - krp:slo:availability:error_budget:consumed, 0)
+
+          - record: krp:slo:availability:compliant
+            expr: |
+              (krp:sli:availability:ratio >= bool 0.99)
+
+          - record: krp:slo:latency:p95:compliant
+            expr: |
+              (krp:sli:latency:p95:seconds <= bool 0.5)
+              and on (service) (krp:sli:latency:p95:seconds)
+
       - name: krp-service-health
         rules:
           - alert: KRPServiceTargetDown
@@ -38,4 +127,33 @@ data:
             annotations:
               summary: High 5xx error rate for {{ "{{" }} $labels.service {{ "}}" }}
               description: More than 50% of requests to {{ "{{" }} $labels.service {{ "}}" }} returned 5xx over the last 5 minutes.
+
+      - name: krp-sre-alerts
+        rules:
+          - alert: KRPSLOAvailabilityViolation
+            expr: krp:sli:availability:ratio < 0.99
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: Availability SLO violation for {{ "{{" }} $labels.service {{ "}}" }}
+              description: Request availability SLI is below the 99.0% SLO target over the 6-hour rolling window for {{ "{{" }} $labels.service {{ "}}" }}.
+
+          - alert: KRPSLOErrorBudgetExhausted
+            expr: krp:slo:availability:error_budget:remaining == 0
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: Availability error budget exhausted for {{ "{{" }} $labels.service {{ "}}" }}
+              description: The 1% availability error budget is fully consumed for {{ "{{" }} $labels.service {{ "}}" }} over the 6-hour rolling window.
+
+          - alert: KRPHighP95Latency
+            expr: krp:sli:latency:p95:seconds > 0.5
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: P95 latency SLO violation for {{ "{{" }} $labels.service {{ "}}" }}
+              description: P95 request latency exceeds the 500ms SLO target over the 6-hour rolling window for {{ "{{" }} $labels.service {{ "}}" }}.
 {{- end }}

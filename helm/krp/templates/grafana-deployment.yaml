@@ -85,6 +85,10 @@ spec:
               - key: krp-service-logs.json
                 path: krp-service-logs.json
 {{- end }}
+{{- if .Values.prometheus.enabled }}
+              - key: krp-sre.json
+                path: krp-sre.json
+{{- end }}
         - name: grafana-data
           emptyDir: {}
 {{- end }}

@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–10 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation), Alerting (Alertmanager, Prometheus alert rules), Centralized Logging (structured JSON logs, Loki, Grafana Alloy, Grafana log dashboard), and Distributed Tracing (OpenTelemetry, Collector, Tempo, Grafana Explore) are implemented and verified.
+> **Milestones 0–11 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation), Alerting (Alertmanager, Prometheus alert rules), Centralized Logging (structured JSON logs, Loki, Grafana Alloy, Grafana log dashboard), Distributed Tracing (OpenTelemetry, Collector, Tempo, Grafana Explore), and SRE Practices (SLIs, SLOs, error budgets, **KRP SRE** dashboard) are implemented and verified.
 
 ## Quick Start
 
@@ -82,6 +82,7 @@ The business logic is intentionally simple. The focus is on reliability engineer
 | Alerting | Alertmanager (implemented — M8) |
 | Logging | Loki, Grafana Alloy (implemented — M9) |
 | Tracing | OpenTelemetry, OpenTelemetry Collector, Grafana Tempo (implemented — M10) |
+| SRE | Prometheus SLI/SLO recording rules, error budgets, SRE alerting (implemented — M11) |
 | AI | LLM API, tool calling, RAG, human-in-the-loop remediation |
 
 ## High-Level Architecture
@@ -111,7 +112,8 @@ Three microservices with simple business logic, designed to create realistic ope
 | 8 | Alerting | COMPLETE |
 | 9 | Logging | COMPLETE |
 | 10 | Distributed Tracing | COMPLETE |
-| 11–17 | See roadmap | NOT STARTED |
+| 11 | SRE Practices | COMPLETE |
+| 12–17 | See roadmap | NOT STARTED |
 
 **Tests:** 180 collected (142 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).
 

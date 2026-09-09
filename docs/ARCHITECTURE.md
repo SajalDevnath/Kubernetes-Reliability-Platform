@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 10 complete — distributed tracing with OpenTelemetry, OpenTelemetry Collector, and Grafana Tempo deployed via Helm and verified (manual E2E on kind cluster `krp`; cross-service Order → Payment traces in Grafana Explore). Structured JSON logging, Loki, Grafana Alloy, and Grafana **KRP Service Logs** dashboard deployed via Helm and verified. Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified. Application metrics (`prometheus-client`), Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). User, Order, and Payment Service CRUD, Order → Payment integration, E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, and GitHub Actions CI/CD verified. Milestone 11 — SRE Practices is next.
+> **Status:** Milestone 11 complete — SRE SLIs, SLOs, error budgets, Prometheus recording rules, SRE alert rules, and Grafana **KRP SRE** dashboard deployed via Helm and verified (manual E2E on kind cluster `krp`). Distributed tracing with OpenTelemetry, Collector, and Tempo verified. Structured JSON logging, Loki, Grafana Alloy, and **KRP Service Logs** dashboard verified. Alertmanager, Prometheus alert rules, and severity-based routing verified. Application metrics, Prometheus, and Grafana verified (local kind and GitHub Actions CD). Milestone 12 — Incident Simulation is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -86,7 +86,7 @@ User Service (FastAPI)          Client
 
 ## Helm (Milestone 5 — implemented)
 
-- Umbrella chart `helm/krp/` (`krp-0.5.0`) packages postgres, user-service, payment-service, order-service, prometheus, grafana, alertmanager, loki, alloy, tempo, and otel-collector
+- Umbrella chart `helm/krp/` (`krp-0.6.0`) packages postgres, user-service, payment-service, order-service, prometheus, grafana, alertmanager, loki, alloy, tempo, and otel-collector
 - Parameterized via `values.yaml` (baseline defaults) and `values-local.yaml` (non-sensitive local kind overrides)
 - `postgres.storage.existingClaim` — when set, reuses an existing PVC instead of creating `postgres-data` (M4 → M5 data preservation)
 - Deploy and manage releases with `helm upgrade --install`, `helm upgrade`, `helm history`, and `helm rollback`
@@ -123,13 +123,16 @@ All three services expose Prometheus-compatible `GET /metrics` via `prometheus-c
 - Image: `prom/alertmanager:v0.27.0`; single replica; ClusterIP Service on port 9093; non-persistent `emptyDir` storage at `/alertmanager`
 - Prometheus forwards alerts to `alertmanager:9093` via `alerting.alertmanagers` in the Prometheus ConfigMap
 - Prometheus alert rules in ConfigMap `prometheus-rules` (`krp_alerts.yml`), mounted at `/etc/prometheus/rules`
-- Alert rules:
+- Alert rules (failure-condition — M8):
   - **`KRPServiceTargetDown`** — `up{job=~"user-service|order-service|payment-service"} == 0`, `severity: critical`, `for: 1m`
   - **`KRPHigh5xxErrorRate`** — 5xx request ratio `> 0.50` per `service`, `severity: warning`, `for: 2m`
+- Alert rules (SRE — M11, see SRE Practices section):
+  - **`KRPSLOAvailabilityViolation`** — `krp:sli:availability:ratio < 0.99`, `severity: warning`, `for: 10m`
+  - **`KRPSLOErrorBudgetExhausted`** — `krp:slo:availability:error_budget:remaining == 0`, `severity: warning`, `for: 5m`
+  - **`KRPHighP95Latency`** — `krp:sli:latency:p95:seconds > 0.5`, `severity: warning`, `for: 5m`
 - Alertmanager routing: default receiver `default`; `group_by: [alertname, service, job]`; `group_wait: 30s`; `group_interval: 5m`; `repeat_interval: 12h`
 - Severity routing: `severity="critical"` → `critical` receiver; `severity="warning"` → `warning` receiver
 - Receivers (`default`, `critical`, `warning`) are local/null only — no external notification integrations
-- No P95 latency, SLO, or error-budget alert rules in M8 (deferred to Milestone 11)
 - Prometheus ConfigMap changes require manual `kubectl rollout restart deployment/prometheus -n krp` after Helm upgrade (no checksum annotation on Deployment)
 - CD workflow unchanged — no Alertmanager smoke checks added in M8
 - **Status:** Implemented — manual E2E verification on kind cluster `krp` for critical and warning alert paths (firing, Alertmanager receipt, receiver routing, resolution)
@@ -178,22 +181,44 @@ Grafana Explore (Tempo datasource, uid: tempo)
 - **Grafana Alloy:** Unchanged — logs only (ADR-023)
 - **Status:** Implemented — 14 tracing unit tests; manual kind E2E verification for cross-service Order → Payment traces in Grafana Explore
 
+## SRE Practices (Milestone 11 — implemented)
+
+SLIs, SLOs, and error budgets are derived from existing M7 HTTP metrics via Prometheus recording rules in ConfigMap `prometheus-rules` (`krp-sre-slos` group). No application code changes.
+
+```
+http_requests_total / http_request_duration_seconds_bucket (M7)
+        |
+        v
+Prometheus recording rules (krp:sli:*, krp:slo:*)
+        |
+        +--> Grafana **KRP SRE** dashboard (uid: krp-sre)
+        |
+        +--> Prometheus SRE alert rules → Alertmanager
+```
+
+- **SLIs:** Request availability (non-5xx ratio) and P95 request latency per service (ADR-024)
+- **SLO targets:** 99.0% availability, P95 ≤ 500ms, 6-hour rolling window
+- **Error budget:** Availability SLO only; `consumed = (1 - SLI) / 0.01`, `remaining = max(0, 1 - consumed)`
+- **Recording rules:** `krp:http_requests:rate5m`, `krp:sli:availability:ratio`, `krp:sli:errors:5xx:ratio`, `krp:sli:latency:p95:seconds`, `krp:slo:availability:target`, `krp:slo:availability:error_budget:consumed`, `krp:slo:availability:error_budget:remaining`, `krp:slo:availability:compliant`, `krp:slo:latency:p95:compliant`
+- **Probe handling:** `user-service` and `payment-service` exclude `handler="/health"` from SLIs; `order-service` includes all traffic (probe limitation — ADR-024)
+- **Grafana:** **KRP SRE** dashboard (`uid: krp-sre`, tags `krp`/`m11`, 12 panels, `$service` variable, Prometheus datasource, default range `now-6h`)
+- **Status:** Implemented — manual kind E2E verification for recording rules, SLO alerts (`KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted` firing and resolution), dashboard, and M7–M10 regression; `KRPHighP95Latency` loaded but deliberate firing not demonstrated (ADR-024 step 13)
+
 ## Observability
 
 | Component | Purpose | Status |
 |-----------|---------|--------|
-| Prometheus | Metrics collection and PromQL queries | Implemented (M7 — `helm/krp/`, static Service-DNS scraping) |
-| Grafana | Dashboards and visualization | Implemented (M7/M9 — **KRP Service Health** and **KRP Service Logs** dashboards; M10 Tempo Explore) |
-| Alertmanager | Alert routing and notification | Implemented (M8 — local/null receivers; severity-based routing) |
+| Prometheus | Metrics collection and PromQL queries | Implemented (M7 — `helm/krp/`, static Service-DNS scraping; M11 recording rules) |
+| Grafana | Dashboards and visualization | Implemented (M7/M9/M11 — **KRP Service Health**, **KRP Service Logs**, **KRP SRE**; M10 Tempo Explore) |
+| Alertmanager | Alert routing and notification | Implemented (M8/M11 — local/null receivers; severity-based routing) |
 | Loki | Centralized log aggregation | Implemented (M9 — `helm/krp/`, Grafana Alloy collection) |
 | Grafana Alloy | Log collection and shipping to Loki | Implemented (M9 — DaemonSet in namespace `krp`) |
 | OpenTelemetry Collector | OTLP trace ingestion and forwarding | Implemented (M10 — `helm/krp/`, Service `otel-collector`) |
 | Grafana Tempo | Trace storage and query backend | Implemented (M10 — `helm/krp/`, datasource `uid: tempo`) |
 | OpenTelemetry SDK | Application distributed tracing | Implemented (M10 — all three services) |
 
-## SRE Layer (Planned — Milestones 11–13)
+## Incident Response Layer (Planned — Milestones 12–13)
 
-- SLIs, SLOs, and error budgets
 - Incident simulation scenarios
 - Runbooks for common failure modes
 - **Status:** Planned

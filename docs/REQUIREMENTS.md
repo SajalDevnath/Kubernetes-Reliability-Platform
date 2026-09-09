@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 10 complete — distributed tracing with OpenTelemetry in all three services, OpenTelemetry Collector and Grafana Tempo deployed via `helm/krp/` (`krp-0.5.0`), Grafana Tempo datasource (`uid: tempo`), and cross-service trace correlation verified manually on kind cluster `krp` (**180 tests**: 142 unit, including 14 M10 tracing tests; 36 integration; 2 E2E). Milestones 0–9 (application CRUD, Order → Payment integration, Docker Compose, Kubernetes, Helm, CI/CD, Prometheus/Grafana, Alertmanager, Loki/Alloy logging) are implemented and verified.
+> **Status:** Milestone 11 complete — SRE SLIs, SLOs, error budgets, Prometheus recording rules, SRE alert rules, and Grafana **KRP SRE** dashboard deployed via `helm/krp/` (`krp-0.6.0`) and verified manually on kind cluster `krp`. Milestones 0–10 (through distributed tracing with OpenTelemetry, Collector, and Tempo) are implemented and verified. **180 tests** (142 unit, 36 integration, 2 E2E).
 
 ## Functional Requirements
 
@@ -44,7 +44,7 @@
 | FR-014 | Services shall be deployable to a local Kubernetes cluster (kind) | Implemented (`k8s/` manifests, kind cluster `krp`) |
 | FR-015 | Deployments shall include liveness and readiness probes | Implemented (postgres `pg_isready`; user/payment `/health`; order `GET /orders`) |
 | FR-016 | Configuration shall use ConfigMaps and Secrets | Implemented (ConfigMaps + `postgres-credentials` Secret) |
-| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.3.0`) |
+| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.6.0`) |
 
 ### CI/CD
 
@@ -79,14 +79,14 @@
 | ID | Requirement | Status |
 |----|-------------|--------|
 | FR-026 | Alertmanager shall route alerts based on defined rules | Implemented (Alertmanager deployed via `helm/krp/`; severity-based routing to `critical` and `warning` receivers; manually verified on kind) |
-| FR-027 | Alerts shall be triggered for SLO violations and failure conditions | Partially implemented (M8 — failure-condition alerts `KRPServiceTargetDown` and `KRPHigh5xxErrorRate` implemented and manually verified; SLO-violation alerting deferred to M11) |
+| FR-027 | Alerts shall be triggered for SLO violations and failure conditions | Implemented (M8 — `KRPServiceTargetDown` and `KRPHigh5xxErrorRate` manually verified; M11 — `KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` manually verified for firing and resolution on kind; `KRPHighP95Latency` rule implemented and loaded, inactive under healthy traffic — deliberate firing path not demonstrated on kind per ADR-024 step 13) |
 
 ### SRE
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-028 | The platform shall define SLIs and SLOs for key services | Planned |
-| FR-029 | Error budgets shall be tracked and visualized | Planned |
+| FR-028 | The platform shall define SLIs and SLOs for key services | Implemented (ADR-024; Prometheus recording rules for availability and P95 latency SLIs, 99%/500ms SLO targets, 6h window; manually verified on kind) |
+| FR-029 | Error budgets shall be tracked and visualized | Implemented (error-budget recording rules and **KRP SRE** Grafana dashboard; manually verified on kind including fault injection and recovery) |
 | FR-030 | Incident simulation scenarios shall be executable | Planned |
 | FR-031 | Runbooks shall document response procedures for common incidents | Planned |
 

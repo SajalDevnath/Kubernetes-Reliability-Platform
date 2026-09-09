@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 10 — Distributed Tracing (complete). Milestone 11 — SRE Practices is next.
+> **Current Milestone:** Milestone 11 — SRE Practices (complete). Milestone 12 — Incident Simulation is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -505,6 +505,54 @@ kubectl port-forward -n krp svc/order-service 8002:8002
 In Grafana Explore → Tempo, locate traces for `order-service` and confirm Payment Service spans share the same `trace_id` as the Order Service request.
 
 Tempo and the Collector use non-persistent `emptyDir` storage (acceptable for local kind). CD workflow unchanged — no Tempo/Collector smoke checks were added in M10.
+
+## SRE Workflow (Milestone 11)
+
+SLIs, SLOs, error budgets, and SRE alerting are delivered via Prometheus recording rules and alert rules in the `prometheus-rules` ConfigMap, plus the provisioned Grafana **KRP SRE** dashboard (`uid: krp-sre`). See ADR-024 for SLI semantics, SLO targets, and limitations.
+
+| Component | Details |
+|-----------|---------|
+| Recording rules | `krp-sre-slos` group — 9 rules (`krp:sli:*`, `krp:slo:*`, `krp:http_requests:rate5m`) |
+| SLO targets | 99.0% availability, P95 ≤ 500ms, 6-hour rolling window |
+| SRE alerts | `KRPSLOAvailabilityViolation` (`for: 10m`), `KRPSLOErrorBudgetExhausted` (`for: 5m`), `KRPHighP95Latency` (`for: 5m`) — all `severity: warning` |
+| Dashboard | **KRP SRE** — 12 panels, `$service` variable (`user-service`, `order-service`, `payment-service`), Prometheus datasource |
+
+### Prometheus rules rollout
+
+After a Helm upgrade that changes the Prometheus rules ConfigMap, restart Prometheus (no checksum annotation on the Deployment):
+
+```bash
+kubectl rollout restart deployment/prometheus -n krp
+kubectl rollout status deployment/prometheus -n krp --timeout=180s
+```
+
+### Access (port-forward)
+
+```bash
+kubectl port-forward -n krp svc/grafana 3000:3000
+kubectl port-forward -n krp svc/prometheus 9090:9090
+kubectl port-forward -n krp svc/alertmanager 9093:9093
+```
+
+- Grafana: **KRP SRE** dashboard (`uid: krp-sre`); login `admin` / `change_me` (local-development placeholder)
+- Prometheus rules: `http://127.0.0.1:9090/api/v1/rules`
+- Prometheus alerts: `http://127.0.0.1:9090/api/v1/alerts`
+- Alertmanager: `http://127.0.0.1:9093/api/v2/alerts`
+
+### Local verification
+
+After deploying the chart and generating application traffic (`POST /users`, `POST /orders`, `GET /payments`):
+
+1. Confirm all 9 M11 recording rules are loaded (`health=ok`) in Prometheus `/api/v1/rules`
+2. Confirm healthy-state SLI/SLO/error-budget values (availability ≈ 1.0, target 0.99, budget remaining 1)
+3. Confirm **KRP SRE** dashboard panels return data for each `$service` value
+4. Confirm M11 alerts are inactive under healthy conditions (`/api/v1/alerts` returns 0 active for SLO alerts)
+
+Controlled SLO alert verification (kind cluster `krp`): induce sustained 5xx responses on a service (e.g. temporary test endpoint during verification), confirm `KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` fire and appear in Alertmanager, then confirm resolution after recovery.
+
+**`KRPHighP95Latency`:** Rule is loaded and verified inactive under healthy traffic. Deliberate firing path was **not demonstrated** on kind — no latency-injection mechanism exists in the application, and ADR-024 excludes application changes for M11. Per ADR-024 step 13 (optional), documented as not reproducible within current M11 scope.
+
+CD workflow unchanged — no SLO/Alertmanager smoke checks were added in M11.
 
 ## CI/CD Workflow
 

@@ -1,6 +1,6 @@
 # Kubernetes Reliability Platform
 
-> **Current progress:** Milestones 0–10 complete. Distributed tracing with OpenTelemetry, OpenTelemetry Collector, and Grafana Tempo deployed via Helm and verified (manual E2E on kind cluster `krp`; cross-service Order → Payment traces in Grafana Explore). Structured JSON logging, Loki, Grafana Alloy, and Grafana **KRP Service Logs** dashboard deployed via Helm and verified. Alertmanager, Prometheus alert rules, and severity-based routing deployed via Helm and verified. Application metrics, Prometheus, and Grafana deployed via Helm and verified (local kind and GitHub Actions CD). Milestone 11 — SRE Practices is next.
+> **Current progress:** Milestones 0–11 complete. SRE SLIs, SLOs, error budgets, Prometheus recording rules, SRE alert rules, and Grafana **KRP SRE** dashboard deployed via Helm and verified (manual E2E on kind cluster `krp`). Distributed tracing with OpenTelemetry, Collector, and Tempo verified. Structured JSON logging, Loki, Grafana Alloy, and **KRP Service Logs** dashboard verified. Alertmanager, Prometheus alert rules, and severity-based routing verified. Application metrics, Prometheus, and Grafana verified (local kind and GitHub Actions CD). Milestone 12 — Incident Simulation is next.
 
 ## What This Project Is
 
@@ -34,7 +34,8 @@ Modern platform and SRE engineering requires practical experience across applica
 - Alertmanager alerting with Prometheus rules and severity-based routing (implemented and verified — Milestone 8)
 - Centralized logging with structured JSON logs, Loki, Grafana Alloy, and Grafana log dashboard (implemented and verified — Milestone 9)
 - Distributed tracing with OpenTelemetry, OpenTelemetry Collector, and Grafana Tempo (implemented and verified — Milestone 10)
-- SRE practices and incident simulation
+- SRE practices: SLIs, SLOs, error budgets, and SRE alerting (implemented and verified — Milestone 11)
+- Incident simulation
 - AI-assisted operations (final phase)
 
 **Out of scope:**
@@ -54,6 +55,6 @@ When complete, the platform will demonstrate:
 3. Prometheus metrics collection, Grafana dashboards, and Alertmanager alerting (Milestones 7–8 — implemented)
 4. Centralized logging with Loki and Grafana Alloy (Milestone 9 — implemented)
 5. Distributed tracing with OpenTelemetry (Milestone 10 — implemented)
-6. SRE practices including SLOs and error budgets
+6. SRE practices including SLIs, SLOs, and error budgets (Milestone 11 — implemented)
 7. Incident simulation and runbook-driven response
 8. AI-assisted root cause analysis with human-in-the-loop remediation

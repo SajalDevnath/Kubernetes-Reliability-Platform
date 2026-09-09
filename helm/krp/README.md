@@ -1,8 +1,8 @@
 # krp Helm Chart
 
-Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`, plus Prometheus and Grafana (Milestone 7), Alertmanager with Prometheus alert rules (Milestone 8), Loki with Grafana Alloy log collection (Milestone 9), and distributed tracing with OpenTelemetry Collector and Grafana Tempo (Milestone 10).
+Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`, plus Prometheus and Grafana (Milestone 7), Alertmanager with Prometheus alert rules (Milestone 8), Loki with Grafana Alloy log collection (Milestone 9), distributed tracing with OpenTelemetry Collector and Grafana Tempo (Milestone 10), and SRE SLIs, SLOs, error budgets, and alerting (Milestone 11).
 
-**Chart version:** `0.5.0` (M10 — OpenTelemetry Collector and Grafana Tempo; M9 was `0.4.0`, M8 was `0.3.0`, M7 was `0.2.0`, M5 was `0.1.0`)
+**Chart version:** `0.6.0` (M11 — SRE recording rules, SRE alerts, **KRP SRE** dashboard; M10 was `0.5.0`, M9 was `0.4.0`, M8 was `0.3.0`, M7 was `0.2.0`, M5 was `0.1.0`)
 
 > **Warning:** Default credentials in `values.yaml` are local-development placeholders only (`postgres.database.password: change_me`, `grafana.adminPassword: change_me`). **Do not use these credentials in production.**
 
@@ -11,7 +11,7 @@ Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kin
 | Path | Purpose |
 |------|---------|
 | `k8s/` | Raw Kubernetes reference implementation (Milestone 4). **Not deleted or replaced.** |
-| `helm/krp/` | Parameterized Helm packaging of the deployment including Prometheus, Grafana (Milestones 5 and 7), Alertmanager with alert rules (Milestone 8), Loki with Grafana Alloy (Milestone 9), and OpenTelemetry Collector with Grafana Tempo (Milestone 10). |
+| `helm/krp/` | Parameterized Helm packaging of the deployment including Prometheus, Grafana (Milestones 5 and 7), Alertmanager with alert rules (Milestone 8), Loki with Grafana Alloy (Milestone 9), OpenTelemetry Collector with Grafana Tempo (Milestone 10), and SRE SLI/SLO/error-budget rules and **KRP SRE** dashboard (Milestone 11). |
 
 Both produce equivalent resources when using default values. Use `k8s/` for direct `kubectl apply` workflows; use this chart for `helm install` / `helm upgrade` workflows.
 
@@ -168,6 +168,7 @@ curl http://localhost:3000/api/health
 # Login: admin / change_me (local-development placeholder)
 # Dashboard: KRP Service Health (UID krp-services)
 # Dashboard: KRP Service Logs (UID krp-service-logs)
+# Dashboard: KRP SRE (UID krp-sre)
 ```
 
 ### Logging verification
@@ -207,6 +208,27 @@ Generate cross-service traffic (port-forward user-service and order-service), th
 In Grafana Explore → Tempo, confirm traces for `order-service` include Payment Service spans with the same `trace_id`. Application ConfigMaps set `OTEL_TRACES_ENABLED` and `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317`.
 
 Grafana provisions Prometheus (default), Loki, and Tempo datasources. Primary trace investigation uses Explore (no provisioned trace dashboard in M10).
+
+### SRE verification (Milestone 11)
+
+```bash
+kubectl rollout restart deployment/prometheus -n krp
+kubectl rollout status deployment/prometheus -n krp --timeout=180s
+
+kubectl port-forward -n krp svc/grafana 3000:3000
+kubectl port-forward -n krp svc/prometheus 9090:9090
+kubectl port-forward -n krp svc/alertmanager 9093:9093
+```
+
+Generate application traffic (`POST /users`, `POST /orders`, `GET /payments`), then verify:
+
+- Prometheus `/api/v1/rules` — all 9 M11 recording rules loaded (`krp:sli:*`, `krp:slo:*`, `krp:http_requests:rate5m`)
+- Prometheus `/api/v1/alerts` — M11 SLO alerts inactive under healthy conditions
+- Grafana **KRP SRE** dashboard (`uid: krp-sre`) — SLI, SLO target, error budget, and compliance panels per `$service`
+
+Controlled SLO alert verification: induce sustained 5xx responses, confirm `KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` fire and resolve via Alertmanager.
+
+**`KRPHighP95Latency`:** Rule loaded (`krp:sli:latency:p95:seconds > 0.5`, `for: 5m`, `severity: warning`). Verified inactive under healthy traffic. Deliberate firing path **not demonstrated** on kind — documented per ADR-024 step 13 (optional; not reproducible within M11 scope without out-of-scope application or infrastructure changes).
 
 ### Alerting verification
 
@@ -259,14 +281,32 @@ kubectl delete pvc postgres-data -n krp
 
 Order Service calls Payment Service at `http://payment-service:8003` (in-cluster DNS). Prometheus scrapes application metrics at `user-service:8001/metrics`, `order-service:8002/metrics`, and `payment-service:8003/metrics` via static Service DNS (15s interval). Grafana connects to Prometheus at `http://prometheus:9090` (default datasource), Loki at `http://loki:3100`, and Tempo at `http://tempo:3200`. Application services export traces via OTLP gRPC to `http://otel-collector:4317`. Prometheus forwards alerts to Alertmanager at `alertmanager:9093`. Grafana Alloy collects application pod logs and ships them to Loki.
 
-### Prometheus alert rules (Milestone 8)
+### Prometheus alert rules
+
+**Failure-condition alerts (Milestone 8):**
 
 | Alert | Severity | `for` | Condition |
 |-------|----------|-------|-----------|
 | `KRPServiceTargetDown` | `critical` | `1m` | `up{job=~"user-service\|order-service\|payment-service"} == 0` |
 | `KRPHigh5xxErrorRate` | `warning` | `2m` | 5xx request ratio `> 0.50` per `service` |
 
-Rules are defined in ConfigMap `prometheus-rules` (`krp_alerts.yml`) and mounted at `/etc/prometheus/rules`.
+**SRE alerts (Milestone 11):**
+
+| Alert | Severity | `for` | Condition |
+|-------|----------|-------|-----------|
+| `KRPSLOAvailabilityViolation` | `warning` | `10m` | `krp:sli:availability:ratio < 0.99` |
+| `KRPSLOErrorBudgetExhausted` | `warning` | `5m` | `krp:slo:availability:error_budget:remaining == 0` |
+| `KRPHighP95Latency` | `warning` | `5m` | `krp:sli:latency:p95:seconds > 0.5` |
+
+Rules are defined in ConfigMap `prometheus-rules` (`krp_alerts.yml`) and mounted at `/etc/prometheus/rules`. Recording rules for SLI/SLO/error budgets are in the `krp-sre-slos` group in the same ConfigMap.
+
+### Grafana dashboards
+
+| Dashboard | UID | Milestone |
+|-----------|-----|-----------|
+| KRP Service Health | `krp-services` | M7 |
+| KRP Service Logs | `krp-service-logs` | M9 |
+| KRP SRE | `krp-sre` | M11 |
 
 ### Alertmanager routing
 
