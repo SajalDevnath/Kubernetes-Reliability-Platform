@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 11 — SRE Practices (complete). Milestone 12 — Incident Simulation is next.
+> **Current Milestone:** Milestone 12 — Incident Simulation (complete). Milestone 13 — Runbooks is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -553,6 +553,101 @@ Controlled SLO alert verification (kind cluster `krp`): induce sustained 5xx res
 **`KRPHighP95Latency`:** Rule is loaded and verified inactive under healthy traffic. Deliberate firing path was **not demonstrated** on kind — no latency-injection mechanism exists in the application, and ADR-024 excludes application changes for M11. Per ADR-024 step 13 (optional), documented as not reproducible within current M11 scope.
 
 CD workflow unchanged — no SLO/Alertmanager smoke checks were added in M11.
+
+## Incident Simulation Workflow (Milestone 12)
+
+Reproducible kubectl-based failure scenarios for incident practice are delivered as Bash scripts under `scripts/incidents/`. See ADR-025 and the scenario catalog in [`scripts/incidents/README.md`](../scripts/incidents/README.md).
+
+| Script | Scenario |
+|--------|----------|
+| `payment-dependency-failure.sh` | Scale `payment-service` to 0 |
+| `postgres-dependency-failure.sh` | Scale `postgres` to 0 (PVC `postgres-data` preserved) |
+| `pod-crash.sh <service>` | Delete one application pod (`user-service`, `order-service`, or `payment-service`) |
+
+**Terminology:** These are **incident simulation procedures** — not operational runbooks (Milestone 13, FR-031).
+
+**Prerequisites:** kind cluster `krp`, namespace `krp`, Helm release deployed, observability stack running.
+
+```bash
+# Example — PostgreSQL dependency failure
+bash scripts/incidents/postgres-dependency-failure.sh
+# Observe failure via Prometheus/Grafana/Alertmanager (see PostgreSQL Monitoring Workflow below)
+# Recover manually using the commands printed by the script
+kubectl scale deployment/postgres --replicas=1 -n krp
+```
+
+Scale-based scripts do **not** auto-recover. Observe the failure before restoring workloads. Never delete the PostgreSQL PVC.
+
+Network-partition and artificial-latency scenarios are deferred per ADR-025.
+
+## PostgreSQL Monitoring Workflow (Milestone 12)
+
+PostgreSQL metrics are collected by `postgres-exporter` and scraped by Prometheus (ADR-026). Deployed via `helm/krp/` when `postgresExporter.enabled` is `true` (default).
+
+| Component | Details |
+|-----------|---------|
+| Exporter image | `quay.io/prometheuscommunity/postgres-exporter:v0.16.0` |
+| Service | `postgres-exporter:9187` |
+| Scrape job | `postgres-exporter` |
+| Credentials | `postgres-credentials` Secret (`DATA_SOURCE_USER`, `DATA_SOURCE_PASS`) |
+| Dashboard | **KRP PostgreSQL** (`uid: krp-postgres`) |
+| Alerts | `KRPPostgresExporterDown`, `KRPPostgresDown` |
+
+### Prometheus rules rollout
+
+After a Helm upgrade that changes Prometheus rules or scrape configuration:
+
+```bash
+kubectl rollout restart deployment/prometheus -n krp
+kubectl rollout status deployment/prometheus -n krp --timeout=180s
+```
+
+After dashboard ConfigMap changes, restart Grafana:
+
+```bash
+kubectl rollout restart deployment/grafana -n krp
+kubectl rollout status deployment/grafana -n krp --timeout=180s
+```
+
+### Access (port-forward)
+
+```bash
+kubectl port-forward -n krp svc/prometheus 9090:9090
+kubectl port-forward -n krp svc/grafana 3000:3000
+kubectl port-forward -n krp svc/alertmanager 9093:9093
+```
+
+### Verification signals
+
+| Signal | Meaning |
+|--------|---------|
+| `pg_up` | `1` — exporter can connect to PostgreSQL; `0` — database unreachable |
+| `up{job="postgres-exporter"}` | `1` — Prometheus can scrape the exporter; `0` — exporter target down |
+| `KRPPostgresDown` | Fires when exporter is up but `pg_up == 0` (~1m `for`) |
+| `KRPPostgresExporterDown` | Fires when `up{job="postgres-exporter"} == 0` (~1m `for`) |
+
+Prometheus queries:
+
+```bash
+curl http://127.0.0.1:9090/api/v1/query?query=pg_up
+curl http://127.0.0.1:9090/api/v1/query?query=up{job="postgres-exporter"}
+curl http://127.0.0.1:9090/api/v1/rules
+curl http://127.0.0.1:9090/api/v1/alerts
+```
+
+Grafana: open **KRP PostgreSQL** dashboard (`uid: krp-postgres`). Alertmanager: `http://127.0.0.1:9093/api/v2/alerts`.
+
+### PostgreSQL outage and recovery (manual E2E — verified on kind)
+
+1. Confirm healthy baseline: `pg_up == 1`, `KRPPostgresDown` inactive, dashboard shows **UP**
+2. Run `bash scripts/incidents/postgres-dependency-failure.sh` (or `kubectl scale deployment/postgres --replicas=0 -n krp`)
+3. Confirm postgres-exporter pod still running; `up{job="postgres-exporter"} == 1`; `pg_up == 0`
+4. Confirm `KRPPostgresDown` fires (~1m) and appears in Alertmanager
+5. Confirm **KRP PostgreSQL** dashboard shows outage; generate API traffic and observe order-service database connection errors in logs
+6. Restore: `kubectl scale deployment/postgres --replicas=1 -n krp`; wait for rollout
+7. Confirm `pg_up == 1`, alert resolved, dashboard recovery, order-service operational
+
+CD workflow unchanged — no postgres-exporter smoke checks were added in M12.
 
 ## CI/CD Workflow
 

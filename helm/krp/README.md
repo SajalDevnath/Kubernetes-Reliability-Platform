@@ -1,8 +1,8 @@
 # krp Helm Chart
 
-Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`, plus Prometheus and Grafana (Milestone 7), Alertmanager with Prometheus alert rules (Milestone 8), Loki with Grafana Alloy log collection (Milestone 9), distributed tracing with OpenTelemetry Collector and Grafana Tempo (Milestone 10), and SRE SLIs, SLOs, error budgets, and alerting (Milestone 11).
+Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kind](https://kind.sigs.k8s.io/) cluster. This chart packages the same topology as the Milestone 4 plain Kubernetes manifests under `k8s/`, plus Prometheus and Grafana (Milestone 7), Alertmanager with Prometheus alert rules (Milestone 8), Loki with Grafana Alloy log collection (Milestone 9), distributed tracing with OpenTelemetry Collector and Grafana Tempo (Milestone 10), SRE SLIs, SLOs, error budgets, and alerting (Milestone 11), PostgreSQL monitoring via postgres-exporter (Milestone 12), and incident simulation support (Milestone 12 scripts in `scripts/incidents/`).
 
-**Chart version:** `0.6.0` (M11 — SRE recording rules, SRE alerts, **KRP SRE** dashboard; M10 was `0.5.0`, M9 was `0.4.0`, M8 was `0.3.0`, M7 was `0.2.0`, M5 was `0.1.0`)
+**Chart version:** `0.7.0` (M12 — postgres-exporter, PostgreSQL alerts, **KRP PostgreSQL** dashboard; M11 was `0.6.0`, M10 was `0.5.0`, M9 was `0.4.0`, M8 was `0.3.0`, M7 was `0.2.0`, M5 was `0.1.0`)
 
 > **Warning:** Default credentials in `values.yaml` are local-development placeholders only (`postgres.database.password: change_me`, `grafana.adminPassword: change_me`). **Do not use these credentials in production.**
 
@@ -11,7 +11,7 @@ Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kin
 | Path | Purpose |
 |------|---------|
 | `k8s/` | Raw Kubernetes reference implementation (Milestone 4). **Not deleted or replaced.** |
-| `helm/krp/` | Parameterized Helm packaging of the deployment including Prometheus, Grafana (Milestones 5 and 7), Alertmanager with alert rules (Milestone 8), Loki with Grafana Alloy (Milestone 9), OpenTelemetry Collector with Grafana Tempo (Milestone 10), and SRE SLI/SLO/error-budget rules and **KRP SRE** dashboard (Milestone 11). |
+| `helm/krp/` | Parameterized Helm packaging of the deployment including Prometheus, Grafana (Milestones 5 and 7), Alertmanager with alert rules (Milestone 8), Loki with Grafana Alloy (Milestone 9), OpenTelemetry Collector with Grafana Tempo (Milestone 10), SRE SLI/SLO/error-budget rules and **KRP SRE** dashboard (Milestone 11), postgres-exporter and **KRP PostgreSQL** dashboard (Milestone 12). |
 
 Both produce equivalent resources when using default values. Use `k8s/` for direct `kubectl apply` workflows; use this chart for `helm install` / `helm upgrade` workflows.
 
@@ -57,7 +57,7 @@ kind load docker-image krp-order-service:local --name krp
 kind load docker-image krp-payment-service:local --name krp
 ```
 
-Application images default to `imagePullPolicy: Never` for local kind workflows. PostgreSQL uses the public `postgres:16` image. Prometheus (`prom/prometheus:v2.55.1`), Grafana (`grafana/grafana:11.4.0`), Alertmanager (`prom/alertmanager:v0.27.0`), Loki (`grafana/loki:3.4.2`), Grafana Alloy (`grafana/alloy:v1.9.2`), OpenTelemetry Collector (`otel/opentelemetry-collector-contrib:0.120.0`), and Grafana Tempo (`grafana/tempo:2.7.2`) use public images with `pullPolicy: IfNotPresent`.
+Application images default to `imagePullPolicy: Never` for local kind workflows. PostgreSQL uses the public `postgres:16` image. Prometheus (`prom/prometheus:v2.55.1`), Grafana (`grafana/grafana:11.4.0`), Alertmanager (`prom/alertmanager:v0.27.0`), postgres-exporter (`quay.io/prometheuscommunity/postgres-exporter:v0.16.0`), Loki (`grafana/loki:3.4.2`), Grafana Alloy (`grafana/alloy:v1.9.2`), OpenTelemetry Collector (`otel/opentelemetry-collector-contrib:0.120.0`), and Grafana Tempo (`grafana/tempo:2.7.2`) use public images with `pullPolicy: IfNotPresent`.
 
 ## Static validation (before install)
 
@@ -268,6 +268,7 @@ kubectl delete pvc postgres-data -n krp
 | Workload | Service | Port | Probe |
 |----------|---------|------|-------|
 | postgres | `postgres` | 5432 | `pg_isready` |
+| postgres-exporter | `postgres-exporter` | 9187 | `GET /metrics` |
 | user-service | `user-service` | 8001 | `GET /health` |
 | payment-service | `payment-service` | 8003 | `GET /health` |
 | order-service | `order-service` | 8002 | `GET /orders` |
@@ -279,7 +280,7 @@ kubectl delete pvc postgres-data -n krp
 | tempo | `tempo` | 3200, 4317 | `GET /ready` (port 3200) |
 | alloy | (DaemonSet) | — | `GET /-/healthy`, `GET /-/ready` |
 
-Order Service calls Payment Service at `http://payment-service:8003` (in-cluster DNS). Prometheus scrapes application metrics at `user-service:8001/metrics`, `order-service:8002/metrics`, and `payment-service:8003/metrics` via static Service DNS (15s interval). Grafana connects to Prometheus at `http://prometheus:9090` (default datasource), Loki at `http://loki:3100`, and Tempo at `http://tempo:3200`. Application services export traces via OTLP gRPC to `http://otel-collector:4317`. Prometheus forwards alerts to Alertmanager at `alertmanager:9093`. Grafana Alloy collects application pod logs and ships them to Loki.
+Order Service calls Payment Service at `http://payment-service:8003` (in-cluster DNS). Prometheus scrapes application metrics at `user-service:8001/metrics`, `order-service:8002/metrics`, and `payment-service:8003/metrics`, and PostgreSQL metrics at `postgres-exporter:9187/metrics`, via static Service DNS (15s interval). Grafana connects to Prometheus at `http://prometheus:9090` (default datasource), Loki at `http://loki:3100`, and Tempo at `http://tempo:3200`. Application services export traces via OTLP gRPC to `http://otel-collector:4317`. Prometheus forwards alerts to Alertmanager at `alertmanager:9093`. Grafana Alloy collects application pod logs and ships them to Loki. postgres-exporter connects to `postgres:5432` using credentials from Secret `postgres-credentials`.
 
 ### Prometheus alert rules
 
@@ -298,7 +299,14 @@ Order Service calls Payment Service at `http://payment-service:8003` (in-cluster
 | `KRPSLOErrorBudgetExhausted` | `warning` | `5m` | `krp:slo:availability:error_budget:remaining == 0` |
 | `KRPHighP95Latency` | `warning` | `5m` | `krp:sli:latency:p95:seconds > 0.5` |
 
-Rules are defined in ConfigMap `prometheus-rules` (`krp_alerts.yml`) and mounted at `/etc/prometheus/rules`. Recording rules for SLI/SLO/error budgets are in the `krp-sre-slos` group in the same ConfigMap.
+**PostgreSQL alerts (Milestone 12):**
+
+| Alert | Severity | `for` | Condition |
+|-------|----------|-------|-----------|
+| `KRPPostgresExporterDown` | `critical` | `1m` | `up{job="postgres-exporter"} == 0` |
+| `KRPPostgresDown` | `critical` | `1m` | `up{job="postgres-exporter"} == 1 and pg_up == 0` |
+
+Rules are defined in ConfigMap `prometheus-rules` (`krp_alerts.yml`) and mounted at `/etc/prometheus/rules`. Recording rules for SLI/SLO/error budgets are in the `krp-sre-slos` group in the same ConfigMap. PostgreSQL alerts are in the `krp-postgres-health` group.
 
 ### Grafana dashboards
 
@@ -307,6 +315,45 @@ Rules are defined in ConfigMap `prometheus-rules` (`krp_alerts.yml`) and mounted
 | KRP Service Health | `krp-services` | M7 |
 | KRP Service Logs | `krp-service-logs` | M9 |
 | KRP SRE | `krp-sre` | M11 |
+| KRP PostgreSQL | `krp-postgres` | M12 |
+
+### PostgreSQL monitoring verification (Milestone 12)
+
+```bash
+kubectl wait --for=condition=available deployment/postgres-exporter -n krp --timeout=180s
+kubectl rollout restart deployment/prometheus -n krp
+kubectl rollout status deployment/prometheus -n krp --timeout=180s
+
+kubectl port-forward -n krp svc/prometheus 9090:9090
+kubectl port-forward -n krp svc/grafana 3000:3000
+kubectl port-forward -n krp svc/alertmanager 9093:9093
+```
+
+Verify healthy baseline:
+
+- `curl http://localhost:9090/api/v1/query?query=pg_up` — expect value `1`
+- `curl http://localhost:9090/api/v1/query?query=up{job="postgres-exporter"}` — expect value `1`
+- Grafana **KRP PostgreSQL** dashboard (`uid: krp-postgres`) — status panels show **UP**
+
+PostgreSQL outage simulation (scale postgres to 0; **do not delete PVC**):
+
+- Confirm `pg_up == 0` while `up{job="postgres-exporter"} == 1`
+- Confirm `KRPPostgresDown` fires (~1m) and appears in Alertmanager
+- Confirm dashboard reflects outage; restore postgres and confirm recovery
+
+See `docs/DEVELOPMENT.md` and `scripts/incidents/README.md` for full simulation procedures.
+
+### Incident simulation (Milestone 12)
+
+Executable kubectl-based incident simulation scripts live in `scripts/incidents/`:
+
+| Script | Scenario |
+|--------|----------|
+| `payment-dependency-failure.sh` | Payment service unavailable |
+| `postgres-dependency-failure.sh` | PostgreSQL unavailable |
+| `pod-crash.sh` | Application pod crash |
+
+See [`scripts/incidents/README.md`](../../scripts/incidents/README.md). These are simulation procedures, not operational runbooks (Milestone 13).
 
 ### Alertmanager routing
 

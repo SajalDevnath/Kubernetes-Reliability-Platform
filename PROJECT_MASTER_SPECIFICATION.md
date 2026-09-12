@@ -354,7 +354,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 9 — Logging (COMPLETE)
+**Current Milestone:** Milestone 12 — Incident Simulation (COMPLETE)
 
 **Status:**
 - Milestone 0 complete (engineering foundation, documentation, rules, roadmap)
@@ -369,6 +369,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 - Milestone 9 complete — structured JSON logging in all three services (ADR-022); Loki (`grafana/loki:3.4.2`) and Grafana Alloy (`grafana/alloy:v1.9.2`) deployed via `helm/krp/` (`krp-0.4.0`); Grafana Loki datasource (`uid: loki`) and **KRP Service Logs** dashboard (`krp-service-logs`); log/metric correlation via shared `service` label; **166 tests** (128 unit, including 27 M9 logging tests; 36 integration; 2 E2E); CD workflow unchanged (no Loki/Alloy smoke checks)
 - Milestone 10 complete — OpenTelemetry distributed tracing in all three services (ADR-023); OpenTelemetry Collector (`otel/opentelemetry-collector-contrib:0.120.0`) and Grafana Tempo (`grafana/tempo:2.7.2`) deployed via `helm/krp/` (`krp-0.5.0`); Grafana Tempo datasource (`uid: tempo`); cross-service Order → Payment trace correlation verified manually on kind cluster `krp`; **180 tests** (142 unit, including 14 M10 tracing tests; 36 integration; 2 E2E); CD workflow unchanged (no Tempo/Collector smoke checks)
 - Milestone 11 complete — SRE SLIs, SLOs, and error budgets (ADR-024); Prometheus recording rules and SRE alert rules (`KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`, `KRPHighP95Latency`); Grafana **KRP SRE** dashboard (`uid: krp-sre`); deployed via `helm/krp/` (`krp-0.6.0`); manual kind E2E verification for recording rules, availability SLO alert firing and resolution, and dashboard; `KRPHighP95Latency` loaded but deliberate firing not demonstrated (ADR-024 step 13); M7–M10 regression verified; **180 tests** unchanged; CD workflow unchanged
+- Milestone 12 complete — incident simulation scripts (`scripts/incidents/`, ADR-025); PostgreSQL monitoring via `postgres-exporter` (ADR-026); Prometheus scrape job `postgres-exporter`; alerts `KRPPostgresExporterDown` and `KRPPostgresDown`; Grafana **KRP PostgreSQL** dashboard (`uid: krp-postgres`); deployed via `helm/krp/` (`krp-0.7.0`); manual kind E2E verification for PostgreSQL dependency failure (postgres scaled to 0, `pg_up=0`, `KRPPostgresDown` firing and resolution, dashboard outage/recovery, order-service DB failure and recovery); payment dependency and pod-crash scripts implemented without documented manual E2E in M12 closeout; network/latency scenarios deferred; **180 tests** unchanged; CD workflow unchanged
 - Kubernetes manifests exist under `k8s/`; Helm chart exists under `helm/krp/`; CI/CD workflows exist under `.github/workflows/`
 
-**Next Milestone:** Milestone 12 — Incident Simulation
+**Next Milestone:** Milestone 13 — Runbooks

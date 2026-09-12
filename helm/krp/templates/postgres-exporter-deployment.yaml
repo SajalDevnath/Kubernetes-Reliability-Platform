@@ -1,0 +1,58 @@
+{{- if and .Values.prometheus.enabled .Values.postgresExporter.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-exporter
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: postgres-exporter
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.postgresExporter.replicas }}
+  selector:
+    matchLabels:
+      app: postgres-exporter
+  template:
+    metadata:
+      labels:
+        app: postgres-exporter
+    spec:
+      containers:
+        - name: postgres-exporter
+          image: {{ include "krp.postgresExporter.image" . }}
+          imagePullPolicy: {{ .Values.postgresExporter.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.postgresExporter.service.port }}
+              name: metrics
+          env:
+            - name: DATA_SOURCE_URI
+              value: {{ include "krp.postgresExporter.dataSourceUri" . | quote }}
+            - name: DATA_SOURCE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            - name: DATA_SOURCE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+          resources:
+            {{- toYaml .Values.postgresExporter.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: {{ .Values.postgresExporter.service.port }}
+            initialDelaySeconds: {{ .Values.postgresExporter.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.postgresExporter.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.postgresExporter.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.postgresExporter.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: {{ .Values.postgresExporter.service.port }}
+            initialDelaySeconds: {{ .Values.postgresExporter.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.postgresExporter.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.postgresExporter.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.postgresExporter.probes.failureThreshold }}
+{{- end }}

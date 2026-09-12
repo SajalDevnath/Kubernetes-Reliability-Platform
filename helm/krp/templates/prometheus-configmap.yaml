@@ -42,4 +42,11 @@ data:
         static_configs:
           - targets:
               - payment-service:{{ .Values.paymentService.service.port }}
+{{- if .Values.postgresExporter.enabled }}
+      - job_name: postgres-exporter
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+              - postgres-exporter:{{ .Values.postgresExporter.service.port }}
+{{- end }}
 {{- end }}

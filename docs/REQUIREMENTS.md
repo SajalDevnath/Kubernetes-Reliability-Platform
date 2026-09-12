@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 11 complete — SRE SLIs, SLOs, error budgets, Prometheus recording rules, SRE alert rules, and Grafana **KRP SRE** dashboard deployed via `helm/krp/` (`krp-0.6.0`) and verified manually on kind cluster `krp`. Milestones 0–10 (through distributed tracing with OpenTelemetry, Collector, and Tempo) are implemented and verified. **180 tests** (142 unit, 36 integration, 2 E2E).
+> **Status:** Milestone 12 complete — incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, `KRPPostgresExporterDown`, `KRPPostgresDown`, **KRP PostgreSQL** dashboard), and ADR-025/ADR-026 deployed via `helm/krp/` (`krp-0.7.0`) and verified manually on kind cluster `krp` (PostgreSQL dependency failure E2E). Milestones 0–11 are implemented and verified. **180 tests** (142 unit, 36 integration, 2 E2E).
 
 ## Functional Requirements
 
@@ -44,7 +44,7 @@
 | FR-014 | Services shall be deployable to a local Kubernetes cluster (kind) | Implemented (`k8s/` manifests, kind cluster `krp`) |
 | FR-015 | Deployments shall include liveness and readiness probes | Implemented (postgres `pg_isready`; user/payment `/health`; order `GET /orders`) |
 | FR-016 | Configuration shall use ConfigMaps and Secrets | Implemented (ConfigMaps + `postgres-credentials` Secret) |
-| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.6.0`) |
+| FR-017 | Services shall be packaged as Helm charts | Implemented (`helm/krp/`, chart `krp-0.7.0`) |
 
 ### CI/CD
 
@@ -58,7 +58,7 @@
 | ID | Requirement | Status |
 |----|-------------|--------|
 | FR-020 | Services shall expose Prometheus-compatible metrics | Implemented (`GET /metrics` on all three services; `prometheus-client`) |
-| FR-021 | Grafana dashboards shall visualize service health and performance | Implemented (**KRP Service Health** dashboard, UID `krp-services`; locally verified) |
+| FR-021 | Grafana dashboards shall visualize service health and performance | Implemented (**KRP Service Health** `krp-services`, **KRP Service Logs** `krp-service-logs`, **KRP SRE** `krp-sre`, **KRP PostgreSQL** `krp-postgres`; locally verified on kind) |
 
 ### Logging
 
@@ -79,7 +79,7 @@
 | ID | Requirement | Status |
 |----|-------------|--------|
 | FR-026 | Alertmanager shall route alerts based on defined rules | Implemented (Alertmanager deployed via `helm/krp/`; severity-based routing to `critical` and `warning` receivers; manually verified on kind) |
-| FR-027 | Alerts shall be triggered for SLO violations and failure conditions | Implemented (M8 — `KRPServiceTargetDown` and `KRPHigh5xxErrorRate` manually verified; M11 — `KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` manually verified for firing and resolution on kind; `KRPHighP95Latency` rule implemented and loaded, inactive under healthy traffic — deliberate firing path not demonstrated on kind per ADR-024 step 13) |
+| FR-027 | Alerts shall be triggered for SLO violations and failure conditions | Implemented (M8 — `KRPServiceTargetDown` and `KRPHigh5xxErrorRate` manually verified; M11 — `KRPSLOAvailabilityViolation` and `KRPSLOErrorBudgetExhausted` manually verified for firing and resolution on kind; `KRPHighP95Latency` rule implemented and loaded, inactive under healthy traffic — deliberate firing path not demonstrated on kind per ADR-024 step 13; M12 — `KRPPostgresExporterDown` and `KRPPostgresDown` implemented; `KRPPostgresDown` manually verified for firing and resolution during PostgreSQL dependency failure simulation on kind) |
 
 ### SRE
 
@@ -87,7 +87,7 @@
 |----|-------------|--------|
 | FR-028 | The platform shall define SLIs and SLOs for key services | Implemented (ADR-024; Prometheus recording rules for availability and P95 latency SLIs, 99%/500ms SLO targets, 6h window; manually verified on kind) |
 | FR-029 | Error budgets shall be tracked and visualized | Implemented (error-budget recording rules and **KRP SRE** Grafana dashboard; manually verified on kind including fault injection and recovery) |
-| FR-030 | Incident simulation scenarios shall be executable | Planned |
+| FR-030 | Incident simulation scenarios shall be executable | Implemented (M12 — `scripts/incidents/`; three kubectl-based scenarios per ADR-025; PostgreSQL dependency failure manually verified on kind) |
 | FR-031 | Runbooks shall document response procedures for common incidents | Planned |
 
 ### Incident Response
@@ -145,9 +145,9 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (128 unit + 36 integration + 2 E2E — 166 total) |
+| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (142 unit + 36 integration + 2 E2E — 180 total; see `docs/TESTING.md` for current breakdown) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
-| NFR-014 | Failure scenarios shall be testable and reproducible | Planned |
+| NFR-014 | Failure scenarios shall be testable and reproducible | Implemented (M12 — reproducible kubectl-based incident simulation scripts per ADR-025; PostgreSQL dependency failure manually verified on kind) |
 | NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally and via GitHub Actions CD (commit `34f919b`); CD monitoring smoke checks verified; M8 — manual alert firing and resolution verified on kind via Prometheus `/api/v1/alerts` and Alertmanager `/api/v2/alerts`; M9 — structured logging unit tests; Loki, Alloy, Grafana Loki datasource/dashboard, and log/metric correlation verified manually on kind) |
 
 ### Portability

@@ -156,4 +156,26 @@ data:
             annotations:
               summary: P95 latency SLO violation for {{ "{{" }} $labels.service {{ "}}" }}
               description: P95 request latency exceeds the 500ms SLO target over the 6-hour rolling window for {{ "{{" }} $labels.service {{ "}}" }}.
+
+{{- if .Values.postgresExporter.enabled }}
+      - name: krp-postgres-health
+        rules:
+          - alert: KRPPostgresExporterDown
+            expr: up{job="postgres-exporter"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: PostgreSQL exporter scrape target is down
+              description: Prometheus cannot scrape postgres-exporter at {{ "{{" }} $labels.instance {{ "}}" }}. PostgreSQL metrics are unavailable.
+
+          - alert: KRPPostgresDown
+            expr: up{job="postgres-exporter"} == 1 and pg_up == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: PostgreSQL database is unreachable
+              description: postgres-exporter is running but cannot connect to PostgreSQL (pg_up=0). The database at postgres:{{ .Values.postgres.service.port }} may be down or rejecting connections.
+{{- end }}
 {{- end }}

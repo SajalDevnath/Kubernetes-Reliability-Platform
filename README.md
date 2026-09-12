@@ -2,7 +2,7 @@
 
 A hands-on learning project that builds Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
 
-> **Milestones 0–11 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation), Alerting (Alertmanager, Prometheus alert rules), Centralized Logging (structured JSON logs, Loki, Grafana Alloy, Grafana log dashboard), Distributed Tracing (OpenTelemetry, Collector, Tempo, Grafana Explore), and SRE Practices (SLIs, SLOs, error budgets, **KRP SRE** dashboard) are implemented and verified.
+> **Milestones 0–12 complete.** User, Order, and Payment Service CRUD, Order → Payment HTTP integration (on order creation), E2E workflows, Docker Compose containerization, Kubernetes (kind) deployment, Helm chart packaging, GitHub Actions CI/CD, Metrics and Monitoring (Prometheus/Grafana, `/metrics` instrumentation), Alerting (Alertmanager, Prometheus alert rules), Centralized Logging (structured JSON logs, Loki, Grafana Alloy, Grafana log dashboard), Distributed Tracing (OpenTelemetry, Collector, Tempo, Grafana Explore), and SRE Practices (SLIs, SLOs, error budgets, **KRP SRE** dashboard) are implemented and verified. Milestone 12 delivers three incident simulation scenarios (`scripts/incidents/`) and PostgreSQL monitoring (`postgres-exporter`, **KRP PostgreSQL** dashboard); PostgreSQL dependency failure was manually verified end-to-end on kind — payment dependency and pod-crash scripts were not manually E2E verified in the M12 closeout.
 
 ## Quick Start
 
@@ -83,6 +83,8 @@ The business logic is intentionally simple. The focus is on reliability engineer
 | Logging | Loki, Grafana Alloy (implemented — M9) |
 | Tracing | OpenTelemetry, OpenTelemetry Collector, Grafana Tempo (implemented — M10) |
 | SRE | Prometheus SLI/SLO recording rules, error budgets, SRE alerting (implemented — M11) |
+| Incident simulation | kubectl-based failure scenarios (`scripts/incidents/`) (implemented — M12) |
+| PostgreSQL monitoring | postgres-exporter, PostgreSQL alerts, **KRP PostgreSQL** dashboard (implemented — M12) |
 | AI | LLM API, tool calling, RAG, human-in-the-loop remediation |
 
 ## High-Level Architecture
@@ -113,7 +115,8 @@ Three microservices with simple business logic, designed to create realistic ope
 | 9 | Logging | COMPLETE |
 | 10 | Distributed Tracing | COMPLETE |
 | 11 | SRE Practices | COMPLETE |
-| 12–17 | See roadmap | NOT STARTED |
+| 12 | Incident Simulation | COMPLETE |
+| 13–17 | See roadmap | NOT STARTED |
 
 **Tests:** 180 collected (142 unit, 36 integration, 2 E2E). CI runs the full suite on pull requests. See [docs/TESTING.md](docs/TESTING.md).
 
@@ -132,6 +135,7 @@ Three microservices with simple business logic, designed to create realistic ope
 | [Roadmap](docs/ROADMAP.md) | Complete milestone roadmap |
 | [Kubernetes Deployment](k8s/README.md) | kind cluster deployment guide (M4 reference manifests) |
 | [Helm Chart](helm/krp/README.md) | Helm deployment guide (M5 parameterized packaging) |
+| [Incident Simulation](scripts/incidents/README.md) | M12 scenario scripts and simulation procedures |
 
 ## Roadmap
 

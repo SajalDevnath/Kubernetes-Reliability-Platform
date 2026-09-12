@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 11 — SRE Practices (complete)
+> **Last updated:** Milestone 12 — Incident Simulation (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -413,7 +413,23 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Failures produce observable symptoms in metrics, logs, and traces
 - Simulation procedures are documented
 
-**Status:** NOT STARTED
+**Delivered (M12 close):**
+- [x] ADR-025 — Incident Simulation Scope and Approach (kubectl-based; network/latency deferred)
+- [x] Executable incident simulation scripts under `scripts/incidents/` — payment dependency failure, PostgreSQL dependency failure, application pod crash (ADR-025)
+- [x] Scenario catalog and simulation procedures in `scripts/incidents/README.md` (not M13 runbooks)
+- [x] PostgreSQL monitoring via `postgres-exporter` (`quay.io/prometheuscommunity/postgres-exporter:v0.16.0`); Prometheus scrape job `postgres-exporter:9187`; ADR-026
+- [x] PostgreSQL Prometheus alert rules: `KRPPostgresExporterDown`, `KRPPostgresDown` (`krp-postgres-health` group)
+- [x] Provisioned Grafana **KRP PostgreSQL** dashboard (`uid: krp-postgres`, tags `krp`/`postgres`)
+- [x] Manual kind E2E — **PostgreSQL dependency failure** verified: postgres scaled to 0 (PVC preserved); postgres-exporter running; `pg_up=0`; `up{job="postgres-exporter"}=1`; `KRPPostgresDown` fired → Alertmanager receipt → resolved after postgres restore; **KRP PostgreSQL** dashboard reflected outage and recovery; order-service database connection failures during outage and recovery after postgres restore
+- [x] Payment dependency failure and pod-crash scripts implemented and documented; **manual kind E2E not performed for those scenarios in M12 closeout**
+- [x] Network-partition and artificial-latency scenarios explicitly deferred (ADR-025)
+- [x] Helm chart version bumped to `krp-0.7.0` (from `krp-0.6.0` at M11 close)
+- [x] CD workflow unchanged — no incident-simulation or postgres-exporter smoke checks added
+- [x] **180 tests** unchanged (M12 added no automated tests)
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 12 verified — kubectl-based incident simulation scripts and PostgreSQL monitoring deployed via `helm/krp/` on kind cluster `krp`. PostgreSQL dependency failure manually verified end-to-end using postgres-exporter metrics (`pg_up`), `KRPPostgresDown`, Alertmanager, and **KRP PostgreSQL** dashboard. Simulation procedures are not operational runbooks (Milestone 13). Network/latency ROADMAP tasks deferred per ADR-025. Prometheus rules ConfigMap changes require manual `kubectl rollout restart deployment/prometheus -n krp` after Helm upgrade. Grafana restart may be required after dashboard ConfigMap changes.
 
 ---
 
@@ -532,7 +548,7 @@ Milestone 8  → Alerting                    [COMPLETE]
 Milestone 9  → Logging                     [COMPLETE]
 Milestone 10 → Distributed Tracing         [COMPLETE]
 Milestone 11 → SRE Practices               [COMPLETE]
-Milestone 12 → Incident Simulation         [NOT STARTED]
+Milestone 12 → Incident Simulation         [COMPLETE]
 Milestone 13 → Runbooks                    [NOT STARTED]
 Milestone 14 → AI Incident Analyzer        [NOT STARTED]
 Milestone 15 → AI Tool Calling             [NOT STARTED]

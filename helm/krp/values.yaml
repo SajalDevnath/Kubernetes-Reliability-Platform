@@ -47,6 +47,28 @@ postgres:
     timeoutSeconds: 5
     failureThreshold: 5
 
+postgresExporter:
+  enabled: true
+  image:
+    repository: quay.io/prometheuscommunity/postgres-exporter
+    tag: v0.16.0
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 9187
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  probes:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
 userService:
   replicas: 1
   service:

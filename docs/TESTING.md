@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 11 complete — manual E2E SRE verification on kind cluster `krp` (Prometheus recording rules, SLO alerts, **KRP SRE** dashboard, M7–M10 regression). Distributed tracing unit tests (14); structured logging unit tests (27); application metrics tests (15). **180 tests** (142 unit, 36 integration, 2 E2E).
+> **Status:** Milestone 12 complete — manual E2E incident simulation verification on kind cluster `krp` (PostgreSQL dependency failure; postgres-exporter metrics, `KRPPostgresDown`, Alertmanager, **KRP PostgreSQL** dashboard, order-service recovery). SRE, tracing, logging, and metrics test suites unchanged. **180 tests** (142 unit, 36 integration, 2 E2E).
 
 ## Philosophy
 
@@ -191,11 +191,24 @@ A task is not complete merely because the application starts. Every change must 
   - M7 **KRP Service Health**, M9 **KRP Service Logs**, and M10 Tempo cross-service traces remain functional; M8 `KRPServiceTargetDown` re-tested (scale `user-service` to 0 and restore)
   - CD workflow unchanged — no SLO/Alertmanager smoke checks added
 
-### Failure Simulation Tests (Planned — Milestone 12)
+### Incident Simulation Verification (Milestone 12 — complete)
 
-- **Scope:** Network failures, latency injection, dependency failures
-- **Purpose:** Verify observability captures failure symptoms
-- **Status:** Planned
+- **Scope:** Executable kubectl-based incident simulation scripts; PostgreSQL monitoring (`postgres-exporter`, PostgreSQL alerts, **KRP PostgreSQL** dashboard); observability during simulated failures
+- **Location:** `scripts/incidents/`; manual verification against `helm/krp/` on kind cluster `krp` (no automated incident-simulation tests in `tests/`; CD workflow unchanged)
+- **Status:** Complete — three executable scenarios delivered; PostgreSQL dependency failure manually verified end-to-end; payment dependency and pod-crash scripts implemented without documented manual E2E in M12 closeout
+- **Executable scenarios (implemented):**
+  - `scripts/incidents/payment-dependency-failure.sh` — payment-service scale to 0
+  - `scripts/incidents/postgres-dependency-failure.sh` — postgres scale to 0 (PVC preserved)
+  - `scripts/incidents/pod-crash.sh` — application pod deletion and Deployment self-healing
+- **Manual kind E2E verified — PostgreSQL dependency failure:**
+  - PostgreSQL scaled to 0; PVC `postgres-data` preserved
+  - postgres-exporter remained running; `up{job="postgres-exporter"} == 1`; `pg_up == 0`
+  - `KRPPostgresDown` fired → Alertmanager receipt → resolved after postgres restore
+  - **KRP PostgreSQL** dashboard (`uid: krp-postgres`) reflected outage and recovery
+  - order-service experienced database connection failures during outage; recovered after PostgreSQL restore
+- **Not verified in M12 closeout:** Payment dependency failure and pod-crash scenarios (scripts exist; manual E2E not documented)
+- **Deferred:** Network-partition and artificial-latency scenarios (ADR-025)
+- **180 tests** unchanged (M12 added no automated tests)
 
 ### AI Testing (Planned — Milestones 14–17)
 

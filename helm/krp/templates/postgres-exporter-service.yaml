@@ -1,0 +1,18 @@
+{{- if and .Values.prometheus.enabled .Values.postgresExporter.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-exporter
+  namespace: {{ include "krp.namespace" . }}
+  labels:
+    app: postgres-exporter
+    {{- include "krp.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres-exporter
+  ports:
+    - name: metrics
+      port: {{ .Values.postgresExporter.service.port }}
+      targetPort: {{ .Values.postgresExporter.service.port }}
+{{- end }}

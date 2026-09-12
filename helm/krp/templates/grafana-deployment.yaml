@@ -89,6 +89,10 @@ spec:
               - key: krp-sre.json
                 path: krp-sre.json
 {{- end }}
+{{- if and .Values.prometheus.enabled .Values.postgresExporter.enabled }}
+              - key: krp-postgres.json
+                path: krp-postgres.json
+{{- end }}
         - name: grafana-data
           emptyDir: {}
 {{- end }}

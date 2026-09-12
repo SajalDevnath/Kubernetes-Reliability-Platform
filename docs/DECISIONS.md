@@ -1260,3 +1260,287 @@ Milestone 11 requires defined SLIs, SLOs, and error budgets (FR-028, FR-029) and
 **Status:** Accepted — implemented (Milestone 11)
 
 **Verification:** Manual kind E2E on cluster `krp` completed — see verification summary above.
+
+---
+
+## ADR-025 — Incident Simulation Scope and Approach
+
+**Date:** 2026-09-12
+
+**Decision:**
+
+Milestone 12 will deliver **reproducible incident simulation scenarios** for incident practice using **lightweight, Kubernetes-native and kubectl-based failure simulation** on the existing **kind** cluster (`krp`). Simulations will reuse the **existing observability stack** (Prometheus, Alertmanager, Grafana, Loki/Alloy, Tempo/OpenTelemetry Collector) without introducing new chaos-engineering platforms, application fault-injection endpoints, or network-fault infrastructure. Executable scripts or configurations, manual kind-based E2E verification, and documentation updates will satisfy FR-030 and NFR-014. Operational runbooks remain **Milestone 13** (FR-031).
+
+### Context
+
+**Why Milestone 12 needs this decision:**
+
+Milestone 12 (`docs/ROADMAP.md`) requires reproducible failure scenarios for incident practice: define scenarios, create simulation scripts or configurations, verify observability captures failure symptoms, and document procedures. Requirements **FR-030** (incident simulation scenarios shall be executable) and **NFR-014** (failure scenarios shall be testable and reproducible) are **Planned** and assigned to Milestone 12. ADR-024 explicitly deferred incident simulation from Milestone 11 to Milestone 12. No ADR previously defined which failure types, mechanisms, or boundaries apply to M12.
+
+**Verified existing infrastructure (Milestones 7–11):**
+
+| Layer | Verified state |
+|-------|----------------|
+| **Application services** | `user-service` (8001), `order-service` (8002), `payment-service` (8003) on kind via `helm/krp/` (chart `0.6.0`). Shared PostgreSQL dependency. Order Service → Payment Service synchronous HTTP integration. **No committed application fault-injection endpoints.** |
+| **Metrics / alerts (M7/M8/M11)** | Prometheus scrapes all three services; 9 SRE recording rules and 5 alert rules (`KRPServiceTargetDown`, `KRPHigh5xxErrorRate`, `KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`, `KRPHighP95Latency`). Prometheus TSDB on non-persistent `emptyDir` (ADR-019). |
+| **Dashboards (M7/M9/M11)** | **KRP Service Health** (`krp-services`), **KRP Service Logs** (`krp-service-logs`), **KRP SRE** (`krp-sre`). |
+| **Logging (M9)** | Structured JSON stdout → Alloy → Loki; `service` and `level` labels. |
+| **Tracing (M10)** | OTLP → OpenTelemetry Collector → Tempo; cross-service traces on `POST /orders` path. |
+| **Alertmanager (M8)** | Local/null receivers only (ADR-021). |
+| **Prior manual failure demonstrations** | M8: `kubectl scale deployment/... --replicas=0` for `KRPServiceTargetDown` and `KRPHigh5xxErrorRate`. M11: controlled 5xx fault path for SLO alerts (temporary application endpoint used for verification, **not** retained in committed code). |
+
+**Repository audit findings (pre-M12):**
+
+- No `scripts/` directory exists.
+- No Chaos Mesh, Litmus, Toxiproxy, service mesh, or dedicated chaos-engineering tooling.
+- No NetworkPolicies used for fault injection.
+- ROADMAP major tasks mention network and latency scenarios, but the approved stack provides no minimal, reproducible mechanism for those without new infrastructure or application changes.
+
+### Scope (M12 includes)
+
+- **Lightweight, kubectl-based failure simulation** on the existing kind cluster
+- **Initial incident scenarios** (see §Initial incident scenarios)
+- **Simulation scripts or configurations** (e.g. shell scripts under `scripts/incidents/`) using approved mechanisms
+- **Verification** that failure symptoms are observable in **metrics, logs, and traces** via existing observability
+- **Documented simulation procedures** (recovery steps explicit in scripts and docs)
+- Completion of **FR-030** and **NFR-014**
+- Documentation updates at M12 closeout (ROADMAP, REQUIREMENTS, ARCHITECTURE, DEVELOPMENT, TESTING, README, helm README)
+
+### Scope (M12 excludes / deferred)
+
+**Explicitly out of scope for M12:**
+
+| Category | Excluded approach |
+|----------|-------------------|
+| **Chaos platforms** | Chaos Mesh, Litmus, or similar chaos-engineering platforms |
+| **Network fault tools** | Toxiproxy, service-mesh-based fault injection |
+| **Application changes** | New fault-injection HTTP endpoints or latency-injection code in services |
+| **Kubernetes network policy** | NetworkPolicies introduced solely for incident simulation |
+| **Network partition** | Scenarios requiring dedicated network-partition infrastructure |
+| **Artificial latency** | Latency injection requiring new infrastructure or application changes |
+| **Runbooks** | Operational runbooks (Milestone 13, FR-031) |
+| **AI features** | Milestones 14–17 |
+| **New observability stack** | Additional metrics, logging, or tracing backends |
+| **Mandatory CI/CD changes** | Automated failure-simulation tests in CI/CD unless later explicitly approved |
+| **Data destruction** | Intentional deletion of PostgreSQL PVCs or other persistent data |
+
+**Network and latency (ROADMAP mention, deferred):**
+
+`docs/ROADMAP.md` lists network and latency failure scenarios among Milestone 12 major tasks. The current approved repository infrastructure does **not** provide a minimal, reproducible mechanism for those simulations without introducing unapproved technology or modifying application code. **Therefore network-partition and artificial-latency scenarios are explicitly deferred** from M12 implementation. This decision may be revisited in a future milestone if additional fault-injection infrastructure is explicitly approved.
+
+### Initial incident scenarios
+
+Milestone 12 will implement and verify at least the following scenario types:
+
+| Scenario | Trigger (kubectl-based) | Primary affected component(s) |
+|----------|-------------------------|-------------------------------|
+| **Payment dependency failure** | Scale `payment-service` to 0 replicas | `order-service` (502/503/504 on `POST /orders`); `payment-service` target down |
+| **PostgreSQL dependency failure** | Scale `postgres` Deployment to 0 or delete postgres Pod (PVC preserved) | All three application services (database connection errors) |
+| **Application pod crash / restart** | `kubectl delete pod` on a selected application Pod | Chosen service (brief unavailability; Deployment recreates Pod) |
+
+Additional kubectl-scale scenarios (e.g. `user-service` unavailable) may be included if they satisfy completion criteria without expanding scope. Scenarios must collectively demonstrate symptoms in **metrics, logs, and traces** where applicable.
+
+### Simulation mechanisms
+
+Approved mechanisms for M12 incident simulation:
+
+| Mechanism | Use |
+|-----------|-----|
+| `kubectl scale deployment/<name> --replicas=0` | Dependency or service unavailable |
+| `kubectl scale deployment/<name> --replicas=1` | Recovery |
+| `kubectl delete pod` | Pod crash / forced restart simulation |
+| Controlled HTTP traffic generation | Exercise failure paths (`curl`, scripts); e.g. sustained `POST /orders` during payment outage |
+
+**Not approved for M12:** application-internal fault switches, chaos CRDs, network policy drops, traffic shaping sidecars, or latency-injection middleware.
+
+### Simulation requirements
+
+All M12 incident simulations must be:
+
+| Requirement | Meaning |
+|-------------|---------|
+| **Reproducible** | Same trigger steps produce the same failure class on a healthy cluster (NFR-014) |
+| **Reversible** | Explicit recovery steps restore the cluster to a working state |
+| **Safe for local learning** | Suitable for a developer-owned kind cluster without production blast radius |
+| **Recovery-documented** | Scripts and procedures state how to undo each simulation |
+| **Non-destructive to persistent data** | **Do not delete PostgreSQL PVCs** or intentionally destroy persistent volumes; postgres Pod deletion or scale-to-zero is acceptable when the PVC is left intact |
+
+### Observability expectations
+
+Incident simulations will be evaluated through the **existing** observability infrastructure:
+
+| Signal | Source | M12 use |
+|--------|--------|---------|
+| **Metrics** | Prometheus (`http_requests_total`, `up`, M11 recording rules) | Primary symptom detection; rates, availability, error budget |
+| **Dashboards** | Grafana (`krp-services`, `krp-sre`, `krp-service-logs`) | Visual degradation and recovery |
+| **Logs** | Loki via Alloy | ERROR/WARNING lines, connection failures, dependency errors |
+| **Traces** | Tempo via OpenTelemetry Collector | Cross-service failure on order → payment path where traffic is generated |
+| **Alerts** | Prometheus → Alertmanager | Use existing rules where timing permits |
+
+**Alert timing caveats:**
+
+- Alert firing depends on Prometheus **scrape interval** (15s) and each rule's **`for` duration** (e.g. `KRPServiceTargetDown` 1m, `KRPHigh5xxErrorRate` 2m, SLO alerts 5–10m).
+- **Transient failures** (e.g. brief Pod restart) are **not guaranteed** to trigger alerts; documentation must not claim they always will.
+- Verification must **distinguish** between theoretically expected alert behavior and behavior **actually demonstrated** during manual kind E2E testing (consistent with ADR-024 step 13 precedent for `KRPHighP95Latency`).
+
+### Milestone 13 boundary
+
+| Milestone | Responsibility |
+|-----------|----------------|
+| **M12** | Create **executable incident scenarios**, verify observability captures symptoms, document **simulation procedures** (how to trigger and recover) |
+| **M13** | **Operational runbooks** for common incidents (FR-031) — response playbooks, investigation steps, escalation context |
+
+M12 simulation scripts and procedures are **not** formal runbooks. This ADR does not define runbook content, structure, or ownership. M12 documentation should describe how to run and verify scenarios; M13 will translate incident practice into operational runbooks.
+
+### Verification approach
+
+**Primary verification:** **Manual kind-based E2E** on cluster `krp`, consistent with Milestones 8–11 precedent.
+
+| Aspect | M12 approach |
+|--------|--------------|
+| **Automated pytest** | Not required solely for M12 |
+| **CI/CD workflow changes** | Not required unless later explicitly approved |
+| **Per-scenario checklist** | Trigger → observe metrics, logs, traces → recover → confirm resolution |
+| **Regression** | Existing **180 tests** must continue to pass; no application or Helm template changes required for core scenarios |
+
+### Alternatives considered
+
+#### Alternative A — Dedicated chaos-engineering platform (Chaos Mesh, Litmus)
+
+| Pros | Cons |
+|------|------|
+| Rich network/latency/crash scenarios | Not in approved technology stack |
+| Industry-standard chaos tooling | Substantially expands project scope and learning surface |
+| | Additional cluster components and RBAC |
+| | Over-engineered for kind incident **practice** |
+
+**Rejected for M12.** The goal is reproducible incident practice on existing infrastructure, not a full chaos-engineering platform.
+
+#### Alternative B — Application fault-injection endpoints
+
+| Pros | Cons |
+|------|------|
+| Precise 5xx/latency control | Requires application code changes |
+| Reproducible SLO/latency demos | M11 used a temporary endpoint that was removed post-verification |
+| | Blurs application vs operations concerns |
+
+**Rejected for M12.** Kubernetes-native mechanisms already support multiple realistic failure scenarios without modifying service code.
+
+#### Alternative C — Toxiproxy or NetworkPolicy-based network faults
+
+| Pros | Cons |
+|------|------|
+| Network partition and latency simulation | New infrastructure or manifest types not in current stack |
+| | NetworkPolicies solely for simulation add complexity without prior precedent |
+
+**Deferred.** May be revisited if explicitly approved in a future milestone.
+
+### Consequences
+
+#### Positive
+
+- Reuses existing kind cluster, Helm deployment, and full observability stack (M7–M11)
+- No new technologies or application changes for core scenarios
+- kubectl-based approach is transparent, reversible, and appropriate for learning
+- Clear boundary with M13 runbooks and M14+ AI features
+- Satisfies FR-030 and NFR-014 with minimal scope expansion
+
+#### Tradeoffs / limitations
+
+- **No network-partition or latency scenarios** in M12 without future approval
+- **Alert firing not guaranteed** for short-lived failures
+- **SLO alerts** require sustained conditions (5–10m); quick demos rely on M8 failure alerts
+- **Prometheus emptyDir** — metric history lost on Prometheus pod restart mid-scenario
+- **Manual verification only** — no automated regression of incident scripts in CI unless later approved
+- **PostgreSQL scale-to-zero** affects all services simultaneously — realistic but broad blast radius on a small cluster
+
+### Implementation and verification plan
+
+**Implementation sequence (future milestone work):**
+
+1. Create `scripts/incidents/` with per-scenario scripts (trigger, traffic generation helpers, recovery).
+2. Add `scripts/incidents/README.md` with scenario catalog and observability checklist.
+3. Run manual kind E2E per scenario: verify symptoms in metrics, logs, and traces; recover; confirm resolution.
+4. Update Milestone 12 documentation (ROADMAP, REQUIREMENTS, ARCHITECTURE, DEVELOPMENT, TESTING, README, helm README) at closeout.
+5. Mark FR-030 and NFR-014 **Implemented** in `docs/REQUIREMENTS.md`.
+
+**Verification:** Manual kind E2E on cluster `krp` completed — **PostgreSQL dependency failure** scenario verified: postgres scaled to 0 (PVC preserved); postgres-exporter remained running; `pg_up=0`; `up{job="postgres-exporter"}=1`; `KRPPostgresDown` fired and resolved via Alertmanager; **KRP PostgreSQL** dashboard reflected outage and recovery; order-service database connection failures during outage and recovery after postgres restore. Payment dependency failure and pod-crash scripts implemented per ADR-025; **manual kind E2E not documented for those scenarios in M12 closeout**. Network/latency scenarios deferred. **180 tests** unchanged; CD workflow unchanged.
+
+**Reason:**
+
+The existing repository already provides sufficient **Kubernetes-native mechanisms** (`kubectl scale`, `kubectl delete pod`, controlled HTTP traffic) for multiple realistic failure scenarios on a three-service microservices stack with shared PostgreSQL. Introducing a chaos-engineering platform would substantially expand project scope beyond FR-030/NFR-014 and the learning objective of **incident practice**. M12 should build upon existing infrastructure and observability capabilities (metrics, logs, traces, dashboards, alerts) rather than new fault-injection technology. Deferring network and latency scenarios avoids unapproved dependencies while keeping the ROADMAP completion criteria achievable through dependency failures, database outages, and pod crash simulations.
+
+**Status:** Accepted — implemented (Milestone 12)
+
+**Verification:** Manual kind E2E on cluster `krp` completed — see verification summary above.
+
+---
+
+## ADR-026 — PostgreSQL Monitoring with postgres-exporter
+
+**Date:** 2026-09-12
+
+**Decision:**
+
+Milestone 12 will add PostgreSQL health and activity monitoring using **`prometheuscommunity/postgres-exporter`** (`quay.io/prometheuscommunity/postgres-exporter:v0.16.0`) deployed via `helm/krp/`. The exporter connects to the existing PostgreSQL Service (`postgres:5432`, database `k8s_reliability`) using credentials from the existing `postgres-credentials` Secret (`DATA_SOURCE_USER`, `DATA_SOURCE_PASS`, `DATA_SOURCE_URI` without embedded credentials). Prometheus will scrape `postgres-exporter:9187/metrics`. Two PostgreSQL-specific alert rules and a provisioned Grafana **KRP PostgreSQL** dashboard (`uid: krp-postgres`) will distinguish exporter scrape health from database connectivity.
+
+### Context
+
+Milestone 12 incident simulation requires observable PostgreSQL dependency failures. Application HTTP metrics and `KRPServiceTargetDown` do not detect database outages when application scrape targets remain up. The `postgres-exporter` exposes `pg_up`, refreshed on each scrape, indicating whether the exporter can connect to PostgreSQL.
+
+### Scope (M12 includes)
+
+- `postgres-exporter` Deployment and Service in `helm/krp/`
+- Prometheus scrape job `postgres-exporter`
+- Alert rules `KRPPostgresExporterDown` and `KRPPostgresDown` in `krp-postgres-health` group
+- Grafana **KRP PostgreSQL** dashboard (`uid: krp-postgres`)
+- Helm chart version bump to `krp-0.7.0`
+- Credentials via existing `postgres-credentials` Secret — no plaintext passwords in templates
+
+### Scope (M12 excludes)
+
+- Application code changes
+- PostgreSQL server configuration changes
+- New database users or RBAC beyond existing Secret
+- Runbooks (Milestone 13)
+- CD workflow changes or automated postgres-exporter smoke tests
+
+### Alert semantics
+
+| Alert | Expression | Meaning |
+|-------|------------|---------|
+| `KRPPostgresExporterDown` | `up{job="postgres-exporter"} == 0` | Prometheus cannot scrape postgres-exporter |
+| `KRPPostgresDown` | `up{job="postgres-exporter"} == 1 and pg_up == 0` | Exporter is reachable but cannot connect to PostgreSQL |
+
+Both alerts use `severity: critical` and `for: 1m`, consistent with `KRPServiceTargetDown`.
+
+### Key metrics
+
+- `pg_up` — database connectivity from exporter (primary failure signal)
+- `pg_stat_database_numbackends` — active connections
+- `pg_stat_database_xact_commit` / `pg_stat_database_xact_rollback` — transaction counters
+- `pg_database_size_bytes` — database size
+
+### Consequences
+
+#### Positive
+
+- Clear distinction between exporter failure and database failure
+- Reuses existing PostgreSQL Service and Secret
+- Supports PostgreSQL dependency failure incident simulation with dedicated dashboard and alerts
+- Fits existing Prometheus → Alertmanager → Grafana pattern
+
+#### Tradeoffs / limitations
+
+- `pg_up` reflects exporter connectivity only — not application-level query health
+- Exporter adds a cluster workload; single replica on kind
+- Prometheus/Alertmanager/Grafana use non-persistent storage (ADR-019)
+- `KRPPostgresExporterDown` not separately demonstrated in M12 E2E (postgres-exporter remained running during verified outage)
+
+**Reason:**
+
+PostgreSQL is a shared dependency for all application services. Dedicated database metrics and `pg_up` provide a direct, reproducible signal for database outage simulation that complements application HTTP metrics. The two-alert pattern avoids conflating exporter scrape failure with database unavailability.
+
+**Status:** Accepted — implemented (Milestone 12)
+
+**Verification:** Manual kind E2E on cluster `krp` during PostgreSQL dependency failure simulation — `pg_up` transitioned to 0 while `up{job="postgres-exporter"}` remained 1; `KRPPostgresDown` fired and resolved via Alertmanager; **KRP PostgreSQL** dashboard reflected outage and recovery.

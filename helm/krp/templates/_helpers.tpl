@@ -102,3 +102,17 @@ Regex matching application pods collected by Alloy.
 {{- define "krp.alloy.collectAppsRegex" -}}
 {{- .Values.alloy.collectApps | join "|" }}
 {{- end }}
+
+{{/*
+PostgreSQL exporter image reference.
+*/}}
+{{- define "krp.postgresExporter.image" -}}
+{{- printf "%s:%s" .Values.postgresExporter.image.repository .Values.postgresExporter.image.tag }}
+{{- end }}
+
+{{/*
+PostgreSQL exporter DATA_SOURCE_URI (credentials supplied via DATA_SOURCE_USER/PASS from Secret).
+*/}}
+{{- define "krp.postgresExporter.dataSourceUri" -}}
+{{- printf "postgres:%v/%v?sslmode=disable" .Values.postgres.service.port .Values.postgres.database.name }}
+{{- end }}

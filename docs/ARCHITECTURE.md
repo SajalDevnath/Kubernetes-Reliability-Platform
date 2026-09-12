@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 11 complete — SRE SLIs, SLOs, error budgets, Prometheus recording rules, SRE alert rules, and Grafana **KRP SRE** dashboard deployed via Helm and verified (manual E2E on kind cluster `krp`). Distributed tracing with OpenTelemetry, Collector, and Tempo verified. Structured JSON logging, Loki, Grafana Alloy, and **KRP Service Logs** dashboard verified. Alertmanager, Prometheus alert rules, and severity-based routing verified. Application metrics, Prometheus, and Grafana verified (local kind and GitHub Actions CD). Milestone 12 — Incident Simulation is next.
+> **Status:** Milestone 12 complete — incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, **KRP PostgreSQL** dashboard, PostgreSQL alert rules), and PostgreSQL dependency failure E2E verification on kind cluster `krp`. SRE SLIs, SLOs, error budgets, and **KRP SRE** dashboard verified. Distributed tracing, centralized logging, Alertmanager, and application metrics verified. Milestone 13 — Runbooks is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -86,7 +86,8 @@ User Service (FastAPI)          Client
 
 ## Helm (Milestone 5 — implemented)
 
-- Umbrella chart `helm/krp/` (`krp-0.6.0`) packages postgres, user-service, payment-service, order-service, prometheus, grafana, alertmanager, loki, alloy, tempo, and otel-collector
+- Umbrella chart `helm/krp/` (`krp-0.7.0`) packages postgres, postgres-exporter, user-service, payment-service, order-service, prometheus, grafana, alertmanager, loki, alloy, tempo, and otel-collector
+- M12 PostgreSQL monitoring: `postgres-exporter` Deployment/Service; Prometheus scrape of `postgres-exporter:9187`; `KRPPostgresExporterDown` and `KRPPostgresDown` alert rules; **KRP PostgreSQL** Grafana dashboard (see PostgreSQL Monitoring section)
 - Parameterized via `values.yaml` (baseline defaults) and `values-local.yaml` (non-sensitive local kind overrides)
 - `postgres.storage.existingClaim` — when set, reuses an existing PVC instead of creating `postgres-data` (M4 → M5 data preservation)
 - Deploy and manage releases with `helm upgrade --install`, `helm upgrade`, `helm history`, and `helm rollback`
@@ -130,6 +131,9 @@ All three services expose Prometheus-compatible `GET /metrics` via `prometheus-c
   - **`KRPSLOAvailabilityViolation`** — `krp:sli:availability:ratio < 0.99`, `severity: warning`, `for: 10m`
   - **`KRPSLOErrorBudgetExhausted`** — `krp:slo:availability:error_budget:remaining == 0`, `severity: warning`, `for: 5m`
   - **`KRPHighP95Latency`** — `krp:sli:latency:p95:seconds > 0.5`, `severity: warning`, `for: 5m`
+- Alert rules (PostgreSQL — M12, see PostgreSQL Monitoring section):
+  - **`KRPPostgresExporterDown`** — `up{job="postgres-exporter"} == 0`, `severity: critical`, `for: 1m`
+  - **`KRPPostgresDown`** — `up{job="postgres-exporter"} == 1 and pg_up == 0`, `severity: critical`, `for: 1m`
 - Alertmanager routing: default receiver `default`; `group_by: [alertname, service, job]`; `group_wait: 30s`; `group_interval: 5m`; `repeat_interval: 12h`
 - Severity routing: `severity="critical"` → `critical` receiver; `severity="warning"` → `warning` receiver
 - Receivers (`default`, `critical`, `warning`) are local/null only — no external notification integrations
@@ -204,24 +208,65 @@ Prometheus recording rules (krp:sli:*, krp:slo:*)
 - **Grafana:** **KRP SRE** dashboard (`uid: krp-sre`, tags `krp`/`m11`, 12 panels, `$service` variable, Prometheus datasource, default range `now-6h`)
 - **Status:** Implemented — manual kind E2E verification for recording rules, SLO alerts (`KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted` firing and resolution), dashboard, and M7–M10 regression; `KRPHighP95Latency` loaded but deliberate firing not demonstrated (ADR-024 step 13)
 
+## PostgreSQL Monitoring (Milestone 12 — implemented)
+
+PostgreSQL health and activity metrics are collected by `postgres-exporter` and scraped by Prometheus. Credentials are sourced from the existing `postgres-credentials` Secret via `DATA_SOURCE_USER` and `DATA_SOURCE_PASS`; connection target is `postgres:5432/k8s_reliability` (ADR-026).
+
+```
+PostgreSQL (postgres:5432)
+        |
+        v
+postgres-exporter (postgres-exporter:9187/metrics)
+        |
+        v
+Prometheus (job: postgres-exporter)
+        |
+        +--> Grafana **KRP PostgreSQL** dashboard (uid: krp-postgres)
+        |
+        +--> Prometheus alert rules → Alertmanager
+```
+
+- **Exporter:** `quay.io/prometheuscommunity/postgres-exporter:v0.16.0`; Deployment/Service `postgres-exporter`; enabled when `postgresExporter.enabled` and `prometheus.enabled` (default)
+- **Key metrics:** `pg_up` (database reachable from exporter), `pg_stat_database_numbackends`, `pg_stat_database_xact_commit`, `pg_database_size_bytes`, and other default postgres_exporter metrics
+- **Exporter vs database health:** `up{job="postgres-exporter"}` indicates Prometheus can scrape the exporter; `pg_up` indicates the exporter can connect to PostgreSQL — these can diverge (e.g. exporter running while postgres is scaled to 0)
+- **Alert rules (M12):**
+  - **`KRPPostgresExporterDown`** — `up{job="postgres-exporter"} == 0`, `severity: critical`, `for: 1m`
+  - **`KRPPostgresDown`** — `up{job="postgres-exporter"} == 1 and pg_up == 0`, `severity: critical`, `for: 1m`
+- **Grafana:** **KRP PostgreSQL** dashboard (`uid: krp-postgres`, tags `krp`/`postgres`) — status, connections, transaction rate, database size, availability timeline
+- **Status:** Implemented — manual kind E2E verification during PostgreSQL dependency failure simulation (`KRPPostgresDown` firing and resolution; dashboard outage and recovery)
+
+## Incident Simulation (Milestone 12 — implemented)
+
+Reproducible kubectl-based failure scenarios for incident practice (ADR-025). Executable scripts live under `scripts/incidents/` with a scenario catalog in `scripts/incidents/README.md`.
+
+| Scenario | Mechanism | Script |
+|----------|-----------|--------|
+| Payment dependency failure | Scale `payment-service` to 0 | `payment-dependency-failure.sh` |
+| PostgreSQL dependency failure | Scale `postgres` to 0 (PVC preserved) | `postgres-dependency-failure.sh` |
+| Application pod crash | Delete one application pod | `pod-crash.sh` |
+
+- **Verification:** PostgreSQL dependency failure manually verified on kind (metrics, alerts, Grafana, application recovery); payment dependency and pod-crash scripts implemented — manual kind E2E not documented for those scenarios in M12 closeout
+- **Deferred:** Network-partition and artificial-latency scenarios (ADR-025)
+- **Not included:** Operational runbooks (Milestone 13, FR-031)
+
 ## Observability
 
 | Component | Purpose | Status |
 |-----------|---------|--------|
-| Prometheus | Metrics collection and PromQL queries | Implemented (M7 — `helm/krp/`, static Service-DNS scraping; M11 recording rules) |
-| Grafana | Dashboards and visualization | Implemented (M7/M9/M11 — **KRP Service Health**, **KRP Service Logs**, **KRP SRE**; M10 Tempo Explore) |
-| Alertmanager | Alert routing and notification | Implemented (M8/M11 — local/null receivers; severity-based routing) |
+| Prometheus | Metrics collection and PromQL queries | Implemented (M7 — `helm/krp/`, static Service-DNS scraping; M11 recording rules; M12 postgres-exporter scrape) |
+| Grafana | Dashboards and visualization | Implemented (M7/M9/M11/M12 — **KRP Service Health**, **KRP Service Logs**, **KRP SRE**, **KRP PostgreSQL**; M10 Tempo Explore) |
+| postgres-exporter | PostgreSQL metrics for Prometheus | Implemented (M12 — `helm/krp/`, Service `postgres-exporter:9187`) |
+| Alertmanager | Alert routing and notification | Implemented (M8/M11/M12 — local/null receivers; severity-based routing) |
 | Loki | Centralized log aggregation | Implemented (M9 — `helm/krp/`, Grafana Alloy collection) |
 | Grafana Alloy | Log collection and shipping to Loki | Implemented (M9 — DaemonSet in namespace `krp`) |
 | OpenTelemetry Collector | OTLP trace ingestion and forwarding | Implemented (M10 — `helm/krp/`, Service `otel-collector`) |
 | Grafana Tempo | Trace storage and query backend | Implemented (M10 — `helm/krp/`, datasource `uid: tempo`) |
 | OpenTelemetry SDK | Application distributed tracing | Implemented (M10 — all three services) |
 
-## Incident Response Layer (Planned — Milestones 12–13)
+## Incident Response Layer
 
-- Incident simulation scenarios
-- Runbooks for common failure modes
-- **Status:** Planned
+- **Incident simulation scenarios (Milestone 12):** Implemented — `scripts/incidents/`; ADR-025
+- **Runbooks for common failure modes (Milestone 13):** Planned — FR-031
 
 ## AI Layer (Planned — Milestones 14–17)
 

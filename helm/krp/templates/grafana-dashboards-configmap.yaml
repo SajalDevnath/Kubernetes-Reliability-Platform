@@ -1708,4 +1708,8 @@ data:
       "version": 1
     }
 {{- end }}
+{{- if and .Values.prometheus.enabled .Values.postgresExporter.enabled }}
+  krp-postgres.json: |
+{{ .Files.Get "dashboards/krp-postgres.json" | indent 4 }}
+{{- end }}
 {{- end }}
