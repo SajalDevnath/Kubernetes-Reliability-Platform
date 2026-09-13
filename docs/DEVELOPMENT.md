@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 12 — Incident Simulation (complete). Milestone 13 — Runbooks is next.
+> **Current Milestone:** Milestone 13 — Runbooks (complete). Milestone 14 — AI Incident Analyzer is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -579,6 +579,27 @@ kubectl scale deployment/postgres --replicas=1 -n krp
 Scale-based scripts do **not** auto-recover. Observe the failure before restoring workloads. Never delete the PostgreSQL PVC.
 
 Network-partition and artificial-latency scenarios are deferred per ADR-025.
+
+## Operational Runbooks Workflow (Milestone 13)
+
+Operational runbooks for incident response live under `docs/runbooks/`. See ADR-027 and the runbook index in [`docs/runbooks/README.md`](../runbooks/README.md).
+
+| Runbook | Scenario |
+|---------|----------|
+| `payment-dependency-failure.md` | `payment-service` unavailable; order creation fails |
+| `postgres-dependency-failure.md` | Shared PostgreSQL unavailable |
+| `application-pod-crash.md` | Application pod crash; Deployment self-healing |
+
+**Terminology:** These are **operational runbooks** — not incident simulation procedures (Milestone 12, `scripts/incidents/`).
+
+**Validation:** Manual E2E runbook validation **completed** on kind cluster `krp` against all three M12 simulation scripts (pod-crash: `user-service` only). Results recorded in [`docs/TESTING.md`](TESTING.md). To re-run: the simulation script injects the failure; the runbook guides the operational response.
+
+```bash
+# Example — validate postgres runbook
+bash scripts/incidents/postgres-dependency-failure.sh
+# Follow docs/runbooks/postgres-dependency-failure.md for operational response
+# Recover per runbook Remediation section
+```
 
 ## PostgreSQL Monitoring Workflow (Milestone 12)
 

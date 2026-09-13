@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Milestone 12 complete — incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, **KRP PostgreSQL** dashboard, PostgreSQL alert rules), and PostgreSQL dependency failure E2E verification on kind cluster `krp`. SRE SLIs, SLOs, error budgets, and **KRP SRE** dashboard verified. Distributed tracing, centralized logging, Alertmanager, and application metrics verified. Milestone 13 — Runbooks is next.
+> **Status:** Milestone 13 complete — operational runbooks (`docs/runbooks/`, ADR-027) for payment dependency failure, PostgreSQL dependency failure, and application pod crash; manually validated on kind cluster `krp` (see `docs/TESTING.md`). Incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, **KRP PostgreSQL** dashboard, PostgreSQL alert rules). SRE SLIs, SLOs, error budgets, and **KRP SRE** dashboard verified. Distributed tracing, centralized logging, Alertmanager, and application metrics verified. Milestone 14 — AI Incident Analyzer is next.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
@@ -245,9 +245,9 @@ Reproducible kubectl-based failure scenarios for incident practice (ADR-025). Ex
 | PostgreSQL dependency failure | Scale `postgres` to 0 (PVC preserved) | `postgres-dependency-failure.sh` |
 | Application pod crash | Delete one application pod | `pod-crash.sh` |
 
-- **Verification:** PostgreSQL dependency failure manually verified on kind (metrics, alerts, Grafana, application recovery); payment dependency and pod-crash scripts implemented — manual kind E2E not documented for those scenarios in M12 closeout
+- **Verification:** PostgreSQL dependency failure manually verified on kind at M12 closeout (metrics, alerts, Grafana, application recovery); payment dependency and pod-crash not manually E2E verified at M12 closeout — subsequently validated during M13 operational runbook manual E2E on kind `krp` (see `docs/TESTING.md`)
 - **Deferred:** Network-partition and artificial-latency scenarios (ADR-025)
-- **Not included:** Operational runbooks (Milestone 13, FR-031)
+- **Not included:** Operational runbooks (delivered in Milestone 13 — see Incident Response Layer)
 
 ## Observability
 
@@ -266,7 +266,15 @@ Reproducible kubectl-based failure scenarios for incident practice (ADR-025). Ex
 ## Incident Response Layer
 
 - **Incident simulation scenarios (Milestone 12):** Implemented — `scripts/incidents/`; ADR-025
-- **Runbooks for common failure modes (Milestone 13):** Planned — FR-031
+- **Operational runbooks (Milestone 13):** Implemented — `docs/runbooks/`; FR-031; ADR-027
+
+| Runbook | Scenario | Primary alerts |
+|---------|----------|----------------|
+| `payment-dependency-failure.md` | `payment-service` unavailable | `KRPServiceTargetDown` (`job="payment-service"`) |
+| `postgres-dependency-failure.md` | Shared PostgreSQL unavailable | `KRPPostgresDown` |
+| `application-pod-crash.md` | Application pod crash / restart | `KRPServiceTargetDown` (if sustained; may not fire for brief restarts) |
+
+Alert-to-runbook mapping and escalation model: see [`docs/runbooks/README.md`](runbooks/README.md). Simulation procedures remain in [`scripts/incidents/README.md`](../scripts/incidents/README.md) — not operational runbooks.
 
 ## AI Layer (Planned — Milestones 14–17)
 

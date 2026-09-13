@@ -2,9 +2,11 @@
 
 Executable incident simulation scripts for the Kubernetes Reliability Platform local **kind** cluster. These scripts support **Milestone 12** incident practice: reproducible failure scenarios with observability verification.
 
-**Terminology:** These are **incident simulation procedures** and **scenario procedures** — not operational runbooks. Runbooks belong to **Milestone 13** (FR-031).
+**Terminology:** These are **incident simulation procedures** and **scenario procedures** — not operational runbooks.
 
-**Authority:** [ADR-025](../../docs/DECISIONS.md) — Incident Simulation Scope and Approach.
+**Operational runbooks (Milestone 13):** [`docs/runbooks/README.md`](../../docs/runbooks/README.md) — use runbooks to **respond** to incidents; use these scripts to **inject** failures for practice and runbook validation.
+
+**Authority:** [ADR-025](../../docs/DECISIONS.md) — Incident Simulation Scope and Approach | [ADR-027](../../docs/DECISIONS.md) — Operational Runbook Structure and Scope
 
 ---
 
@@ -97,7 +99,7 @@ Grafana dashboards: **KRP Service Health** (`krp-services`), **KRP Service Logs*
 | **Expected symptoms** | `up{job="payment-service"}=0`; order-service 5xx on `POST /orders`; payment dependency errors in logs/traces |
 | **Observability** | See [§6 Observability checklist](#6-observability-checklist) |
 | **Recovery** | `kubectl scale deployment/payment-service --replicas=<ORIGINAL> -n krp` (script prints original count) |
-| **E2E status** | Script implemented; manual kind E2E **not documented** in M12 closeout |
+| **E2E status** | M12 closeout: not documented. M13 runbook validation: **executed** on kind `krp` (see `docs/TESTING.md`) |
 
 ### B. PostgreSQL Dependency Failure
 
@@ -121,11 +123,11 @@ Grafana dashboards: **KRP Service Health** (`krp-services`), **KRP Service Logs*
 | **Trigger** | Delete one Running pod for the selected application service |
 | **Affected components** | Chosen service (`user-service`, `order-service`, or `payment-service`) |
 | **Command** | `bash scripts/incidents/pod-crash.sh <service-name>` |
-| **Example** | `bash scripts/incidents/pod-crash.sh payment-service` |
+| **Example** | `bash scripts/incidents/pod-crash.sh user-service` (script also supports `order-service`, `payment-service`) |
 | **Expected symptoms** | Brief pod unavailability; transient request errors; replacement pod becomes Ready |
 | **Observability** | See [§6 Observability checklist](#6-observability-checklist) |
 | **Recovery** | Automatic via Deployment controller; script verifies replacement pod Ready |
-| **E2E status** | Script implemented; manual kind E2E **not documented** in M12 closeout |
+| **E2E status** | M12 closeout: not documented. M13 runbook validation: **executed** with `user-service` only on kind `krp` (see `docs/TESTING.md`). `order-service` and `payment-service` not manually E2E validated in M13 |
 
 ---
 
@@ -190,11 +192,11 @@ Recovery is **Kubernetes self-healing**. The `pod-crash.sh` script deletes one p
 | Artificial latency | Deferred by ADR-025 — no approved mechanism in current stack |
 | No chaos framework | kubectl scale/delete only; not a production chaos platform |
 | PostgreSQL exporter vs DB | `up{job="postgres-exporter"}=1` does not guarantee PostgreSQL is healthy — check `pg_up` |
-| M12 E2E coverage | PostgreSQL dependency failure manually verified; payment and pod-crash scripts implemented without documented manual E2E |
+| M12 E2E coverage | M12 closeout: PostgreSQL dependency failure manually verified; payment and pod-crash not documented. M13 runbook validation: all three scenarios validated on kind `krp` (pod-crash: `user-service` only) — see `docs/TESTING.md` |
 | SLO alert timing | `KRPSLOAvailabilityViolation` / `KRPSLOErrorBudgetExhausted` require sustained failures (5–10m `for`) |
 | Short pod crashes | May not trigger `KRPServiceTargetDown` if unavailable < ~1m |
 | Prometheus/Tempo/Loki storage | `emptyDir` — observability history lost on pod restart (ADR-019) |
-| Not runbooks | M12 scenarios are simulation procedures; M13 delivers operational runbooks |
+| Not runbooks | M12 scenarios are simulation procedures; operational runbooks are in `docs/runbooks/` |
 | M11 P95 alert | `KRPHighP95Latency` not demonstrated as reproducible without latency injection |
 
 ---
@@ -208,3 +210,17 @@ Recovery is **Kubernetes self-healing**. The `pod-crash.sh` script deletes one p
 | `pod-crash.sh` | Delete one application pod | Yes (Deployment self-healing) |
 
 All scripts use `set -euo pipefail`, validate `kubectl` and namespace `krp`, and verify target resources exist before making changes.
+
+---
+
+## Operational Runbooks (Milestone 13)
+
+For operational incident **response** (investigation, escalation, recovery, verification), see:
+
+| Scenario | Simulation Script | Operational Runbook |
+|----------|-------------------|---------------------|
+| Payment dependency failure | `payment-dependency-failure.sh` | [`docs/runbooks/payment-dependency-failure.md`](../../docs/runbooks/payment-dependency-failure.md) |
+| PostgreSQL dependency failure | `postgres-dependency-failure.sh` | [`docs/runbooks/postgres-dependency-failure.md`](../../docs/runbooks/postgres-dependency-failure.md) |
+| Application pod crash | `pod-crash.sh <service>` | [`docs/runbooks/application-pod-crash.md`](../../docs/runbooks/application-pod-crash.md) |
+
+Index and alert mapping: [`docs/runbooks/README.md`](../../docs/runbooks/README.md)

@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 12 complete — incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, `KRPPostgresExporterDown`, `KRPPostgresDown`, **KRP PostgreSQL** dashboard), and ADR-025/ADR-026 deployed via `helm/krp/` (`krp-0.7.0`) and verified manually on kind cluster `krp` (PostgreSQL dependency failure E2E). Milestones 0–11 are implemented and verified. **180 tests** (142 unit, 36 integration, 2 E2E).
+> **Status:** Milestone 13 complete — operational runbooks (`docs/runbooks/`, ADR-027) manually validated on kind cluster `krp` (see `docs/TESTING.md`). Incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring, and ADR-025/ADR-026 via `helm/krp/` (`krp-0.7.0`). Milestones 0–12 are implemented and verified. **180 tests** (142 unit, 36 integration, 2 E2E).
 
 ## Functional Requirements
 
@@ -87,8 +87,8 @@
 |----|-------------|--------|
 | FR-028 | The platform shall define SLIs and SLOs for key services | Implemented (ADR-024; Prometheus recording rules for availability and P95 latency SLIs, 99%/500ms SLO targets, 6h window; manually verified on kind) |
 | FR-029 | Error budgets shall be tracked and visualized | Implemented (error-budget recording rules and **KRP SRE** Grafana dashboard; manually verified on kind including fault injection and recovery) |
-| FR-030 | Incident simulation scenarios shall be executable | Implemented (M12 — `scripts/incidents/`; three kubectl-based scenarios per ADR-025; PostgreSQL dependency failure manually verified on kind) |
-| FR-031 | Runbooks shall document response procedures for common incidents | Planned |
+| FR-030 | Incident simulation scenarios shall be executable | Implemented (M12 — `scripts/incidents/`; three kubectl-based scenarios per ADR-025; PostgreSQL manually verified at M12 closeout; payment and pod-crash validated during M13 runbook manual E2E; pod-crash M13 validation: `user-service` only — see `docs/TESTING.md`) |
+| FR-031 | Runbooks shall document response procedures for common incidents | Implemented (M13 — `docs/runbooks/`; three operational runbooks per M12 simulated scenarios; manually validated on kind `krp`; alert linkage via documentation; ADR-027; evidence in `docs/TESTING.md`) |
 
 ### Incident Response
 
@@ -147,7 +147,7 @@
 |----|-------------|--------|
 | NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (142 unit + 36 integration + 2 E2E — 180 total; see `docs/TESTING.md` for current breakdown) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
-| NFR-014 | Failure scenarios shall be testable and reproducible | Implemented (M12 — reproducible kubectl-based incident simulation scripts per ADR-025; PostgreSQL dependency failure manually verified on kind) |
+| NFR-014 | Failure scenarios shall be testable and reproducible | Implemented (M12 — reproducible kubectl-based incident simulation scripts per ADR-025; PostgreSQL manually verified at M12 closeout; all three scenarios validated during M13 runbook manual E2E on kind `krp` — see `docs/TESTING.md`) |
 | NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally and via GitHub Actions CD (commit `34f919b`); CD monitoring smoke checks verified; M8 — manual alert firing and resolution verified on kind via Prometheus `/api/v1/alerts` and Alertmanager `/api/v2/alerts`; M9 — structured logging unit tests; Loki, Alloy, Grafana Loki datasource/dashboard, and log/metric correlation verified manually on kind) |
 
 ### Portability

@@ -1,6 +1,6 @@
 # Kubernetes Reliability Platform
 
-> **Current progress:** Milestones 0–12 complete. Incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, **KRP PostgreSQL** dashboard, `KRPPostgresExporterDown`/`KRPPostgresDown` alerts), and PostgreSQL dependency failure E2E verification on kind cluster `krp`. SRE SLIs, SLOs, error budgets, and **KRP SRE** dashboard verified. Distributed tracing, centralized logging, Alertmanager, and application metrics verified. Milestone 13 — Runbooks is next.
+> **Current progress:** Milestones 0–13 complete. Operational runbooks (`docs/runbooks/`, ADR-027) for payment dependency failure, PostgreSQL dependency failure, and application pod crash — manually validated on kind cluster `krp` (see `docs/TESTING.md`). Incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, **KRP PostgreSQL** dashboard, `KRPPostgresExporterDown`/`KRPPostgresDown` alerts). SRE SLIs, SLOs, error budgets, and **KRP SRE** dashboard verified. Distributed tracing, centralized logging, Alertmanager, and application metrics verified. Milestone 14 — AI Incident Analyzer is next.
 
 ## What This Project Is
 
@@ -35,8 +35,8 @@ Modern platform and SRE engineering requires practical experience across applica
 - Centralized logging with structured JSON logs, Loki, Grafana Alloy, and Grafana log dashboard (implemented and verified — Milestone 9)
 - Distributed tracing with OpenTelemetry, OpenTelemetry Collector, and Grafana Tempo (implemented and verified — Milestone 10)
 - SRE practices: SLIs, SLOs, error budgets, and SRE alerting (implemented and verified — Milestone 11)
-- Incident simulation (implemented — Milestone 12; three kubectl-based scenarios; PostgreSQL dependency failure manually verified end-to-end on kind; payment dependency and pod-crash scripts not manually E2E verified in M12 closeout; simulation procedures, not operational runbooks)
-- Operational runbooks (Milestone 13)
+- Incident simulation (implemented — Milestone 12; three kubectl-based scenarios; PostgreSQL dependency failure manually verified end-to-end on kind at M12 closeout; payment dependency and pod-crash not manually E2E verified at M12 closeout; subsequently validated during M13 runbook testing; simulation procedures, not operational runbooks)
+- Operational runbooks (implemented and manually validated — Milestone 13; `docs/runbooks/`; three runbooks per M12 scenarios; evidence in `docs/TESTING.md`; simulation procedures remain in `scripts/incidents/`)
 - AI-assisted operations (final phase)
 
 **Out of scope:**
@@ -58,5 +58,5 @@ When complete, the platform will demonstrate:
 5. Distributed tracing with OpenTelemetry (Milestone 10 — implemented)
 6. SRE practices including SLIs, SLOs, and error budgets (Milestone 11 — implemented)
 7. Incident simulation for failure practice (Milestone 12 — implemented)
-8. Runbook-driven incident response (Milestone 13 — planned)
+8. Runbook-driven incident response (Milestone 13 — implemented)
 9. AI-assisted root cause analysis with human-in-the-loop remediation

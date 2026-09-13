@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 12 — Incident Simulation (complete)
+> **Last updated:** Milestone 13 — Runbooks (complete)
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -448,7 +448,23 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 - Runbooks reference specific metrics, logs, and traces
 - Runbooks are tested against simulations
 
-**Status:** NOT STARTED
+**Delivered (M13 close):**
+- [x] ADR-027 — Operational Runbook Structure and Scope
+- [x] Operational runbooks under `docs/runbooks/` — payment dependency failure, PostgreSQL dependency failure, application pod crash (one per M12 simulated scenario)
+- [x] Runbook index and alert-to-runbook mapping in `docs/runbooks/README.md`
+- [x] Investigation steps using Prometheus, Grafana, Loki, and Tempo in each runbook
+- [x] Local kind escalation model (L1–L4) documented; no external paging
+- [x] Documentation cross-links to alerts (no Helm `runbook_url` annotations)
+- [x] Cross-references from `scripts/incidents/README.md` to operational runbooks (simulation boundary preserved)
+- [x] FR-031 marked **Implemented** in `docs/REQUIREMENTS.md`
+- [x] Manual kind runbook validation procedure documented in `docs/TESTING.md`
+- [x] Manual kind E2E runbook validation against all three simulations — **executed** on kind cluster `krp` (payment dependency failure, PostgreSQL dependency failure, application pod crash with `user-service` only; evidence in `docs/TESTING.md`)
+- [x] **180 tests** unchanged (M13 added no automated tests)
+- [x] No application, Helm, CI/CD, or M12 simulation script changes
+
+**Status:** COMPLETE
+
+> **Note:** Milestone 13 verified — operational runbooks delivered under `docs/runbooks/` for all three M12 simulated failure scenarios and manually validated on kind cluster `krp` (see `docs/TESTING.md`). Pod-crash runbook validation used `user-service` only. Payment dependency failure and pod-crash were not manually E2E verified during M12 closeout; they were validated during M13 runbook testing. Simulation procedures remain in `scripts/incidents/` (not operational runbooks).
 
 ---
 
@@ -549,7 +565,7 @@ Milestone 9  → Logging                     [COMPLETE]
 Milestone 10 → Distributed Tracing         [COMPLETE]
 Milestone 11 → SRE Practices               [COMPLETE]
 Milestone 12 → Incident Simulation         [COMPLETE]
-Milestone 13 → Runbooks                    [NOT STARTED]
+Milestone 13 → Runbooks                    [COMPLETE]
 Milestone 14 → AI Incident Analyzer        [NOT STARTED]
 Milestone 15 → AI Tool Calling             [NOT STARTED]
 Milestone 16 → RAG                         [NOT STARTED]

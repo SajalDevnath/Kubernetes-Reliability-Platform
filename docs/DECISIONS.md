@@ -1474,6 +1474,8 @@ The existing repository already provides sufficient **Kubernetes-native mechanis
 
 **Verification:** Manual kind E2E on cluster `krp` completed — see verification summary above.
 
+**M13 verification addendum (operational runbooks):** Payment dependency failure and application pod crash were subsequently validated during Milestone 13 operational runbook manual E2E on kind cluster `krp` (pod-crash: `user-service` only). Detailed evidence in `docs/TESTING.md`. M12 closeout facts above remain historically accurate.
+
 ---
 
 ## ADR-026 — PostgreSQL Monitoring with postgres-exporter
@@ -1544,3 +1546,74 @@ PostgreSQL is a shared dependency for all application services. Dedicated databa
 **Status:** Accepted — implemented (Milestone 12)
 
 **Verification:** Manual kind E2E on cluster `krp` during PostgreSQL dependency failure simulation — `pg_up` transitioned to 0 while `up{job="postgres-exporter"}` remained 1; `KRPPostgresDown` fired and resolved via Alertmanager; **KRP PostgreSQL** dashboard reflected outage and recovery.
+
+---
+
+## ADR-027 — Operational Runbook Structure and Scope
+
+**Date:** 2026-09-13
+
+**Decision:**
+
+Milestone 13 will deliver **operational runbooks** for common incident response procedures as markdown documentation under `docs/runbooks/`. One runbook per M12 simulated failure scenario (three total). Alert linkage uses **documentation cross-references** only — no Helm `runbook_url` annotations or Prometheus rule changes. Escalation follows a **local kind learning model** (L1–L4) without external paging. Runbooks are validated manually against M12 incident simulation scripts on kind cluster `krp`.
+
+### Context
+
+ADR-025 deferred operational runbooks to Milestone 13 (FR-031) and explicitly did not define runbook content, structure, or ownership. M12 delivered three kubectl-based incident simulation scenarios with observability verification. M13 translates incident practice into operational response playbooks using the existing M7–M12 observability stack.
+
+### Scope (M13 includes)
+
+| Item | Detail |
+|------|--------|
+| **Location** | `docs/runbooks/` |
+| **Runbooks** | `payment-dependency-failure.md`, `postgres-dependency-failure.md`, `application-pod-crash.md` |
+| **Index** | `docs/runbooks/README.md` — catalog, alert-to-runbook mapping, terminology boundary |
+| **Content** | Investigation, diagnosis, remediation, verification, escalation, metrics/logs/traces references |
+| **Alert linkage** | Documentation cross-links in README and per-runbook `Related Alerts` sections |
+| **Escalation** | Local L1–L4 model (operator → deepen investigation → consult docs → stop and document) |
+| **Verification** | Manual testing against M12 simulation scripts; results in `docs/TESTING.md` |
+| **FR-031** | Runbooks document response procedures for common incidents |
+
+### Scope (M13 excludes)
+
+| Category | Excluded |
+|----------|----------|
+| **AI features** | Milestones 14–17 |
+| **Automated remediation** | Milestone 17 |
+| **New alerts or Prometheus changes** | No new rules; no `runbook_url` annotations |
+| **New simulations** | M12 scenarios only; network/latency deferred (ADR-025) |
+| **Chaos engineering** | Chaos Mesh, Litmus, etc. (ADR-025) |
+| **External paging** | PagerDuty, Slack, email (ADR-021 null receivers) |
+| **Application/Helm/CI changes** | Documentation-only milestone |
+| **Executable runbooks** | Markdown only; M12 scripts remain separate injection tools |
+
+### Terminology boundary
+
+| Artifact | Role |
+|----------|------|
+| `scripts/incidents/` | **Cause** failures for practice (M12) |
+| `docs/runbooks/` | **Respond** to incidents operationally (M13) |
+
+### Consequences
+
+#### Positive
+
+- Clear separation from M12 simulation procedures
+- Reuses existing alerts, dashboards, metrics, logs, and traces without infrastructure changes
+- Provides foundation for M16 RAG indexing of runbooks
+- Satisfies FR-031 with minimal scope expansion
+
+#### Tradeoffs / limitations
+
+- Markdown runbooks require manual maintenance alongside observability changes
+- Local escalation model does not demonstrate production on-call workflows
+- Brief incidents may not trigger alerts — runbooks must be symptom-first
+- Manual kind validation required; no automated runbook tests in CI
+
+**Reason:**
+
+M12 established reproducible failure scenarios and observability signals. M13 operationalizes human response procedures without introducing new infrastructure. Documentation-based alert linkage is sufficient for a local kind learning environment. ADR-025 explicitly left structure undefined; this ADR records the M13 structural decisions.
+
+**Status:** Accepted — implemented (Milestone 13)
+
+**Verification:** Three operational runbooks and index delivered under `docs/runbooks/`; documentation updates at M13 closeout; manual kind E2E runbook validation **executed** on kind cluster `krp` (payment dependency failure, PostgreSQL dependency failure, application pod crash with `user-service` only). Detailed evidence in `docs/TESTING.md`. Payment dependency failure and pod-crash were not manually E2E verified during M12 closeout (ADR-025); they were validated during M13 runbook testing.

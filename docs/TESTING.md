@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 12 complete — manual E2E incident simulation verification on kind cluster `krp` (PostgreSQL dependency failure; postgres-exporter metrics, `KRPPostgresDown`, Alertmanager, **KRP PostgreSQL** dashboard, order-service recovery). SRE, tracing, logging, and metrics test suites unchanged. **180 tests** (142 unit, 36 integration, 2 E2E).
+> **Status:** Milestone 13 complete — operational runbooks (`docs/runbooks/`, ADR-027) for all three M12 simulated failure scenarios. Manual kind E2E runbook validation **executed** on kind cluster `krp` (see Operational Runbook Verification below). SRE, tracing, logging, metrics, and incident simulation test suites unchanged. **180 tests** (142 unit, 36 integration, 2 E2E).
 
 ## Philosophy
 
@@ -206,9 +206,83 @@ A task is not complete merely because the application starts. Every change must 
   - `KRPPostgresDown` fired → Alertmanager receipt → resolved after postgres restore
   - **KRP PostgreSQL** dashboard (`uid: krp-postgres`) reflected outage and recovery
   - order-service experienced database connection failures during outage; recovered after PostgreSQL restore
-- **Not verified in M12 closeout:** Payment dependency failure and pod-crash scenarios (scripts exist; manual E2E not documented)
+- **Not verified in M12 closeout:** Payment dependency failure and pod-crash scenarios (scripts exist; manual E2E not documented at M12 closeout). These scenarios were subsequently validated during **Milestone 13 operational runbook manual E2E** on kind cluster `krp` (see Operational Runbook Verification below).
 - **Deferred:** Network-partition and artificial-latency scenarios (ADR-025)
 - **180 tests** unchanged (M12 added no automated tests)
+
+### Operational Runbook Verification (Milestone 13 — complete)
+
+- **Scope:** Operational runbooks under `docs/runbooks/`; manual validation against M12 incident simulation scripts on kind cluster `krp` (no automated runbook tests in `tests/`; CD workflow unchanged)
+- **Location:** `docs/runbooks/`; validation procedure per runbook **Simulation Validation** section
+- **Status:** Complete — three operational runbooks delivered; manual kind E2E runbook validation **executed** on kind cluster `krp`
+- **M12 vs M13 distinction:** M12 closeout manually verified the PostgreSQL dependency failure **scenario** only (see Incident Simulation Verification above). M13 validation tested operational **runbooks** against all three M12 simulation scripts. Payment dependency failure and pod-crash were **not** manually E2E verified during M12 closeout; they were validated during M13 runbook testing.
+- **Runbooks delivered:**
+  - `docs/runbooks/payment-dependency-failure.md`
+  - `docs/runbooks/postgres-dependency-failure.md`
+  - `docs/runbooks/application-pod-crash.md`
+  - `docs/runbooks/README.md` (index and alert-to-runbook mapping)
+- **Validation procedure (per runbook):**
+  1. Confirm healthy baseline on kind cluster `krp`
+  2. Inject failure using the corresponding M12 simulation script
+  3. Respond using the operational runbook only (not the simulation script as the response procedure)
+  4. Verify metrics, logs, traces, alerts where timing permits, and Kubernetes state
+  5. Perform operational recovery per runbook **Remediation and Recovery**
+  6. Confirm runbook **Verification** criteria
+
+#### Manual kind E2E runbook validation — executed on kind cluster `krp`
+
+**A. PostgreSQL dependency failure** (`docs/runbooks/postgres-dependency-failure.md`; `scripts/incidents/postgres-dependency-failure.sh`)
+
+- PostgreSQL outage simulated; `pg_up` used as primary database health signal
+- PostgreSQL recovered; final verification: `pg_up == 1`
+- **M12 historical note:** PostgreSQL dependency failure scenario was previously manually verified during M12 closeout (see Incident Simulation Verification above, including `KRPPostgresDown` and **KRP PostgreSQL** dashboard). M13 validation exercised the operational runbook against the same scenario.
+- **Not reported in M13 validation:** Loki logs, Tempo traces, Grafana dashboard panels, `KRPPostgresExporterDown` scenario
+
+**B. Payment dependency failure** (`docs/runbooks/payment-dependency-failure.md`; `scripts/incidents/payment-dependency-failure.sh`)
+
+- `payment-service` made unavailable; Prometheus target down during incident; `up{job="payment-service"}` recovered to `1` after remediation
+- `POST /orders` traffic: 10 requests; all returned HTTP 503
+- Prometheus `http_requests_total` for `order-service`: `method="POST"`, `status="503"`, count `10`
+- Non-zero 5xx rate observed: `rate(http_requests_total{service="order-service",status=~"5.."}[5m])`; total order-service request rate also queried
+- Order-service logs recorded HTTP 503 behavior
+- `KRPServiceTargetDown` fired for `payment-service`; resolved after recovery; Alertmanager eventually returned `{"status":"success","data":{"alerts":[]}}`
+- Recovery: `payment-service` scaled to 1 replica; rollout completed; pod Ready; `/health` returned `{"status":"ok","service":"payment-service","environment":"development"}`
+- **Not observed:** `KRPHigh5xxErrorRate`, SLO alerts (`KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`), Grafana dashboards, Tempo traces
+
+**C. Application pod crash** (`docs/runbooks/application-pod-crash.md`; `scripts/incidents/pod-crash.sh user-service`)
+
+- **Scope:** Manual M13 validation used **`user-service` only**. The script supports `user-service`, `order-service`, and `payment-service`; `order-service` and `payment-service` were **not** manually E2E validated in M13.
+- Running `user-service` pod deleted (normal delete; no `--force`, no `--grace-period=0`)
+- Deployment self-healing: replacement pod became Ready; Deployment returned to 1/1 Ready, 1/1 Available
+- Prometheus `query_range` on `up{job="user-service"}`: transition `1 → 0 → 1`; `up=0` window approximately 30 seconds
+- `KRPServiceTargetDown` **did not** fire (consistent with ~1m `for` duration and brief outage); Alertmanager showed no active alerts
+- Recovery: `up{job="user-service"} == 1`; `/health` returned `{"status":"ok","service":"user-service","environment":"development"}`
+- **Not reported:** Loki logs, Tempo traces, Grafana dashboards
+
+**D. Final post-E2E cluster recovery**
+
+After all incident testing and recovery:
+
+- All relevant workloads Running and Ready (`user-service`, `order-service`, `payment-service`, `postgres`, `postgres-exporter`, Prometheus, Grafana, Loki, Tempo, Alertmanager, Alloy, OpenTelemetry Collector)
+- `up{job=~"user-service|order-service|payment-service"}`: all `1`
+- `pg_up == 1`
+- Alertmanager: `{"status":"success","data":{"alerts":[]}}`
+
+- **Commands used for validation:**
+
+```bash
+# Prerequisites: kind cluster krp running, helm/krp deployed, observability stack ready
+bash scripts/incidents/payment-dependency-failure.sh
+# Follow docs/runbooks/payment-dependency-failure.md
+
+bash scripts/incidents/postgres-dependency-failure.sh
+# Follow docs/runbooks/postgres-dependency-failure.md
+
+bash scripts/incidents/pod-crash.sh user-service
+# Follow docs/runbooks/application-pod-crash.md
+```
+
+- **180 tests** unchanged (M13 added no automated tests)
 
 ### AI Testing (Planned — Milestones 14–17)
 
