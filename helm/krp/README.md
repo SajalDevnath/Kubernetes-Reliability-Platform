@@ -6,6 +6,24 @@ Helm chart for deploying the **Kubernetes Reliability Platform** to a local [kin
 
 > **Warning:** Default credentials in `values.yaml` are local-development placeholders only (`postgres.database.password: change_me`, `grafana.adminPassword: change_me`). **Do not use these credentials in production.**
 
+## What This Chart Deploys
+
+This chart deploys the **Kubernetes platform and observability infrastructure**:
+
+- Application services: PostgreSQL, user-service, order-service, payment-service, postgres-exporter
+- Observability stack: Prometheus, Grafana, Alertmanager, Loki, Grafana Alloy, Tempo, OpenTelemetry Collector
+
+## What This Chart Does NOT Deploy (Milestone 14)
+
+The following M14 components run as **local development processes** and are **not** Helm chart components:
+
+| Component | Location | Local startup |
+|-----------|----------|---------------|
+| React frontend (Live Observability Console) | `frontend/` | `cd frontend && npm run dev` (port 5173) |
+| Observability BFF | `services/observability_api/` | `uv run uvicorn ... --port 8004 --app-dir services/observability_api` |
+
+To use the M14 console against this chart's observability backends, run `kubectl port-forward` for Prometheus, Loki, Tempo, and Alertmanager, then start the BFF and frontend locally. See [docs/DEVELOPMENT.md](../../docs/DEVELOPMENT.md).
+
 ## Relationship to `k8s/`
 
 | Path | Purpose |

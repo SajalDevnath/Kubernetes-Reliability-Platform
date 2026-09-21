@@ -1,6 +1,6 @@
 # Testing Strategy
 
-> **Status:** Milestone 13 complete — operational runbooks (`docs/runbooks/`, ADR-027) for all three M12 simulated failure scenarios. Manual kind E2E runbook validation **executed** on kind cluster `krp` (see Operational Runbook Verification below). SRE, tracing, logging, metrics, and incident simulation test suites unchanged. **180 tests** (142 unit, 36 integration, 2 E2E).
+> **Status:** Milestones 0–14 complete. Live Observability Console: **134** Observability BFF unit tests, **127** frontend Vitest tests. Full backend pytest suite: **314** tests (includes BFF; 276 unit when excluding integration/e2e markers, 36 integration, 2 E2E). CI runs the full backend suite only — frontend and BFF-specific checks are not yet in CI. Milestone 15 — Runbook Knowledge Assistant (RAG) is next.
 
 ## Philosophy
 
@@ -282,13 +282,59 @@ bash scripts/incidents/pod-crash.sh user-service
 # Follow docs/runbooks/application-pod-crash.md
 ```
 
-- **180 tests** unchanged (M13 added no automated tests)
+- **314 tests** total after M14 (M13 baseline was 180; M14 added 134 BFF unit tests)
 
-### AI Testing (Planned — Milestones 14–17)
+### Observability BFF Tests (Milestone 14 — complete)
 
-- **Scope:** Prompt quality, tool calling accuracy, RAG retrieval, safety guardrails
-- **Purpose:** Ensure AI recommendations are safe and useful
-- **Status:** Planned
+- **Scope:** BFF clients, query allowlisting, normalization, services, routes, validation, error handling
+- **Location:** `tests/unit/observability_api/`
+- **Tools:** pytest, FastAPI TestClient, httpx MockTransport
+- **Status:** Complete — **134** unit tests passing
+
+```bash
+uv run pytest tests/unit/observability_api/ -q
+```
+
+BFF tests are included in the full backend run:
+
+```bash
+uv run pytest tests/ -v
+```
+
+### Frontend Tests (Milestone 14 — complete)
+
+- **Scope:** Page components, observability views, polling behavior, application CRUD, layout
+- **Location:** `frontend/src/**/*.test.tsx`
+- **Tools:** Vitest, Testing Library, jsdom
+- **Status:** Complete — **127** tests passing
+
+```bash
+cd frontend
+npm test -- --run
+npm run build
+npm run lint
+```
+
+### RAG / Assistant Testing (Planned — Milestone 15)
+
+- **Scope:** Retrieval quality, grounding, safety boundaries for the Runbook Knowledge Assistant
+- **Status:** Planned — `/assistant` is currently a placeholder
+
+### M14 Manual Verification Checklist
+
+Prerequisites: kind cluster `krp` with `helm/krp/` deployed, observability port-forwards active, BFF on :8004, frontend on :5173, application services on :8001–:8003.
+
+- [ ] **Metrics** — `/observability/metrics` shows **Live**; service health, request metrics, live SLO, and PostgreSQL panels populate
+- [ ] **Logs** — `/observability/logs` shows recent logs; service filter changes results
+- [ ] **Traces** — `/observability/traces` lists traces; selecting a trace shows span-tree detail
+- [ ] **Alerts** — `/observability/alerts` lists active alerts; severity/service/search filters work; detail panel expands
+- [ ] **Live/disconnected** — stop a port-forward or the BFF; observability pages show **Disconnected**; restore and confirm **Live**
+- [ ] **Service filtering** — metrics, logs, and traces respect service selection
+- [ ] **Application CRUD** — create/read/update/delete on `/users`, `/orders`, `/payments`
+- [ ] **Runbooks** — `/reliability/runbooks` index; `?runbook=<id>` detail renders markdown
+- [ ] **Static catalogs** — `/reliability/services`, `/reliability/slo`, `/reliability/incidents` display catalog content (not live telemetry)
+- [ ] **Assistant placeholder** — `/assistant` shows M15 planned state
+- [ ] **Navigation** — sidebar routes work; responsive layout; back-to-top on main scroll container
 
 ## Test Execution
 
@@ -334,27 +380,50 @@ bash scripts/incidents/pod-crash.sh user-service
 Run with:
 
 ```bash
-python -m uv run pytest tests/unit -v
-python -m uv run pytest tests/integration -v -m integration
-python -m uv run pytest tests/e2e -v -m e2e
+uv run pytest tests/ -v
+uv run pytest tests/unit/observability_api/ -q
+uv run ruff check services tests
+uv run pytest tests/unit -v
+uv run pytest tests/integration -v -m integration
+uv run pytest tests/e2e -v -m e2e
 ```
+
+Frontend:
+
+```bash
+cd frontend && npm test -- --run && npm run build && npm run lint
+```
+
+### CI Coverage
+
+`.github/workflows/ci.yml` runs on `pull_request`:
+
+- Ruff lint on `services` and `tests`
+- Full backend pytest suite (**314** tests) with PostgreSQL 16 service container
+- Docker builds for three application services
+- Helm lint and template validation
+
+CI does **not** currently run frontend tests, frontend builds, or separate BFF checks beyond the included pytest suite.
 
 ## Test Directory Structure
 
 ```
 tests/
-├── unit/                          # Unit tests (142 passing)
-│   ├── order_service/             # Order Service unit tests
-│   └── payment_service/           # Payment Service unit tests
-├── integration/                   # PostgreSQL + API tests (36 passing)
-│   ├── order_service/             # Order Service integration tests (14 passing)
-│   └── payment_service/           # Payment Service integration tests (12 passing)
-└── e2e/                           # End-to-end cross-service tests (2 passing)
+├── unit/                          # Unit tests (276 when excluding integration/e2e markers)
+│   ├── observability_api/         # M14 Observability BFF (134 tests)
+│   ├── order_service/
+│   └── payment_service/
+├── integration/                   # PostgreSQL + API tests (36)
+│   ├── order_service/
+│   └── payment_service/
+└── e2e/                           # Cross-service tests (2)
+
+frontend/src/                      # M14 frontend Vitest tests (127)
 ```
 
-**Current totals:** 142 unit + 36 integration + 2 E2E = **180 tests** (142 pass when integration/E2E skip without PostgreSQL).
+**Current totals:** **314** backend pytest tests (276 unit + 36 integration + 2 E2E) + **127** frontend Vitest tests.
 
-**Historical baselines (unchanged):** M2/M3/M4/M6 — 124 tests; M7/M8 — 139 tests; M9 — 166 tests.
+**Historical baselines:** M2/M3/M4/M6 — 124; M7/M8 — 139; M9 — 166; M10–M13 — 180; M14 — 314 backend + 127 frontend.
 
 ## Quality Gates
 

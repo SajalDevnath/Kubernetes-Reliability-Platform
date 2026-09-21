@@ -1617,3 +1617,48 @@ M12 established reproducible failure scenarios and observability signals. M13 op
 **Status:** Accepted — implemented (Milestone 13)
 
 **Verification:** Three operational runbooks and index delivered under `docs/runbooks/`; documentation updates at M13 closeout; manual kind E2E runbook validation **executed** on kind cluster `krp` (payment dependency failure, PostgreSQL dependency failure, application pod crash with `user-service` only). Detailed evidence in `docs/TESTING.md`. Payment dependency failure and pod-crash were not manually E2E verified during M12 closeout (ADR-025); they were validated during M13 runbook testing.
+
+---
+
+## ADR-028 — Live Observability Console and Observability BFF
+
+**Date:** 2026-09-21
+
+**Status:** Accepted — implemented (Milestone 14)
+
+**Context:**
+
+Milestone 14 requires a browser-based operator console for live observability data (metrics, logs, traces, alerts) alongside application CRUD and reliability documentation views. The observability backends (Prometheus, Loki, Tempo, Alertmanager) run in the kind cluster via `helm/krp/`. Exposing arbitrary PromQL, LogQL, or Tempo queries directly to the browser would be unsafe and difficult to validate.
+
+**Decision:**
+
+1. **React/Vite frontend** (`frontend/`, port 5173) — operator UI with polling, live/disconnected indicators, and static reliability catalog pages clearly distinguished from live telemetry.
+2. **FastAPI Observability BFF** (`services/observability_api/`, port 8004) — read-only backend-for-frontend that:
+   - Exposes curated application endpoints only (no arbitrary query passthrough)
+   - Allowlists service names and validates request parameters
+   - Defines queries in `app/queries/` (Prometheus, Loki, Tempo)
+   - Normalizes upstream responses to stable schemas
+   - Applies httpx timeouts and structured error envelopes
+3. **Vite dev proxy** — browser calls `/api/observability/*` and application APIs through the proxy; no CORS configuration required in the current local setup.
+4. **Local development only** — frontend and BFF are not containerized, not in Helm, and not in CI (beyond BFF unit tests in the backend pytest suite).
+5. **Port-forward access** — BFF connects to observability backends at `localhost` URLs; developers port-forward from the kind cluster.
+
+**Consequences:**
+
+#### Positive
+
+- Browser never contacts observability backends directly
+- Read-only, auditable query surface with validation and normalization
+- Clear separation between live observability pages and static reliability catalogs
+- Foundation for M15 RAG assistant (`/assistant` placeholder)
+
+#### Tradeoffs / limitations
+
+- Requires multiple port-forwards and local processes for full console experience
+- Frontend and BFF not yet deployable through Helm
+- Runbook content duplicated in `frontend/src/content/runbooks/` (see `docs/runbooks/README.md`)
+- No Kubernetes API access from the BFF — cluster operations remain manual
+
+**Superseded context:**
+
+A previous roadmap planned M14 as an AI Incident Analyzer. That approach was not implemented. M14 was redefined as the Live Observability Console. AI/RAG scope moves to M15 Runbook Knowledge Assistant.

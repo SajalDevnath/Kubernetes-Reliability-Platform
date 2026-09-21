@@ -1,26 +1,124 @@
 # Architecture
 
-> **Status:** Milestone 13 complete — operational runbooks (`docs/runbooks/`, ADR-027) for payment dependency failure, PostgreSQL dependency failure, and application pod crash; manually validated on kind cluster `krp` (see `docs/TESTING.md`). Incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, **KRP PostgreSQL** dashboard, PostgreSQL alert rules). SRE SLIs, SLOs, error budgets, and **KRP SRE** dashboard verified. Distributed tracing, centralized logging, Alertmanager, and application metrics verified. Milestone 14 — AI Incident Analyzer is next.
+> **Status:** Milestones 0–14 complete — Live Observability Console (`frontend/`, `services/observability_api/`). Operational runbooks (`docs/runbooks/`, ADR-027), incident simulation (`scripts/incidents/`), PostgreSQL monitoring, SRE SLIs/SLOs/error budgets, distributed tracing, centralized logging, Alertmanager, and application metrics verified on kind cluster `krp`. Milestone 15 — Runbook Knowledge Assistant (RAG) is next. See ADR-028 for M14 BFF architecture.
 
 This document describes the architecture of the Kubernetes Reliability Platform. Components marked **Planned** are not yet implemented.
 
 ## High-Level Overview
 
 ```
-Client
-  |
-  v
-User Service (FastAPI)          Client
-                                    |
-                                    v
-                              Order Service (FastAPI)
-                                    |
-                                    v
-                              Payment Service (FastAPI)
-                                    |
-                                    v
-                              PostgreSQL
+Browser (React/Vite :5173)
+        |
+        | Vite dev proxy
+        |
+        +--> User Service (FastAPI)      :8001
+        +--> Order Service (FastAPI)     :8002  --> Payment Service (FastAPI) :8003
+        |
+        +--> Observability BFF (FastAPI)   :8004
+                 |
+                 +--> Prometheus    :9090
+                 +--> Loki            :3100
+                 +--> Tempo           :3200
+                 +--> Alertmanager    :9093
+
+All application services --> PostgreSQL
+
+Observability backends (Prometheus, Grafana, Loki, Alloy, Tempo,
+OTel Collector, Alertmanager) deployed in kind via helm/krp/
 ```
+
+The browser does **not** query Prometheus, Loki, Tempo, or Alertmanager directly. Observability backends are reached by the BFF via `kubectl port-forward` during local development.
+
+## Presentation Layer (Milestone 14 — implemented)
+
+### React/Vite Frontend
+
+- **Location:** `frontend/`
+- **Port:** 5173 (Vite dev server, `strictPort: true`)
+- **Technology:** React 18, TypeScript, Vite, Tailwind CSS, Radix/shadcn-style UI components, Lucide icons, React Router
+- **Deployment:** Local development only — not containerized, not in Helm, not in CI
+- **API access:** Vite dev proxy in `frontend/vite.config.ts` forwards `/api/users`, `/api/orders`, `/api/payments`, and `/api/observability` to local backends
+- **Polling:** `usePolling` hook with per-surface intervals; `LiveStatusIndicator` shows **Live** or **Disconnected**
+- **Status:** Complete
+
+### Observability BFF (Backend-for-Frontend)
+
+- **Location:** `services/observability_api/`
+- **Port:** 8004 (default in `app/core/config.py`)
+- **Technology:** Python, FastAPI, httpx, pydantic-settings
+- **Deployment:** Local development only — not containerized, not in Helm, not in CI
+- **Purpose:** Curated, read-only observability API for the browser; shields upstream backends from arbitrary queries
+- **Upstream clients:** Prometheus, Loki, Tempo, Alertmanager (HTTP)
+- **Status:** Complete
+
+### Browser Data Flows
+
+**Application CRUD flow:**
+
+```
+Browser --> Vite proxy (/api/users|orders|payments) --> User/Order/Payment Service --> PostgreSQL
+```
+
+**Observability flow:**
+
+```
+Browser --> Vite proxy (/api/observability/*) --> Observability BFF --> Prometheus | Loki | Tempo | Alertmanager
+```
+
+### BFF API Surface
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | BFF process health |
+| `GET /api/observability/health` | Upstream connectivity health |
+| `GET /api/observability/metrics/services` | Live scrape health for application services |
+| `GET /api/observability/metrics/requests` | HTTP request metrics over a time window |
+| `GET /api/observability/metrics/slo` | Live SLO metrics for a service |
+| `GET /api/observability/metrics/postgres` | Live PostgreSQL operational metrics |
+| `GET /api/observability/logs` | Normalized recent logs for a validated service |
+| `GET /api/observability/traces` | Normalized trace search |
+| `GET /api/observability/traces/{trace_id}` | Normalized trace detail |
+| `GET /api/observability/alerts` | Normalized active alerts |
+
+The BFF does **not** expose arbitrary PromQL, LogQL, or Tempo queries to the browser.
+
+### BFF Security and Read-Only Boundary
+
+- **Read-only design** — no mutation of observability backends or Kubernetes resources
+- **No Kubernetes API access** — the BFF queries observability HTTP APIs only
+- **Query allowlisting** — service names restricted to `user-service`, `order-service`, `payment-service`; PromQL/LogQL/Tempo queries defined in `app/queries/`; parameters validated in `app/core/validation.py`
+- **Normalization** — upstream responses transformed to stable schemas in `app/normalization/`
+- **Error handling** — `ObservabilityApiError` mapped to structured `ErrorEnvelope` JSON responses
+- **Timeouts** — configurable upstream connect (default 2s) and read/write/pool (default 5s) via httpx
+- **No CORS middleware** — not required in the current local setup because the Vite dev proxy serves the browser and BFF on the same origin
+
+### Live vs Static UI Pages
+
+| Route | Type | Notes |
+|-------|------|-------|
+| `/observability/metrics` | Live | Includes live SLO measurements |
+| `/observability/logs` | Live | |
+| `/observability/traces` | Live | Search and span-tree detail |
+| `/observability/alerts` | Live | |
+| `/users`, `/orders`, `/payments` | Live | Application CRUD |
+| `/reliability/services` | Static catalog | Documented architecture — not live probe results |
+| `/reliability/slo` | Static catalog | Configured SLO model — live SLO on `/observability/metrics` |
+| `/reliability/incidents` | Static catalog | Documented scenarios — not active incident status |
+| `/reliability/runbooks` | Embedded docs | Detail via `?runbook=<id>` |
+| `/assistant` | Placeholder | M15 Runbook Knowledge Assistant (RAG) |
+
+The frontend does not execute incident simulations or remediation commands.
+
+### Local-Only vs Kubernetes/Helm Deployed
+
+| Component | Local dev | Kubernetes/Helm (`helm/krp/`) |
+|-----------|-----------|-------------------------------|
+| React frontend | Yes (`npm run dev`) | **Not deployed** |
+| Observability BFF | Yes (uvicorn :8004) | **Not deployed** |
+| User/Order/Payment services | Yes (uv or port-forward) | Yes |
+| PostgreSQL | Yes (local or in-cluster) | Yes |
+| Prometheus, Grafana, Loki, Alloy, Tempo, OTel Collector, Alertmanager | Via port-forward | Yes |
+| postgres-exporter | Via port-forward | Yes |
 
 ## Application Layer
 
@@ -99,7 +197,7 @@ User Service (FastAPI)          Client
 
 - **CI workflow:** `.github/workflows/ci.yml` — triggers on `pull_request`; `permissions: contents: read`
 - **CD workflow:** `.github/workflows/cd.yml` — triggers on `push` to `main`; `permissions: contents: read`
-- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (180 tests) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template`
+- **CI pipeline:** Python 3.10, `uv sync --dev --frozen`, Ruff lint, full pytest suite (314 tests, includes Observability BFF) with PostgreSQL 16 service container, Docker builds (`krp-*-service:ci`), `helm lint`, `helm template` — does not run frontend tests
 - **CD pipeline:** Docker Buildx builds, kind v0.33.0 ephemeral cluster on the GitHub-hosted runner, `kind load docker-image`, Helm deploy of `helm/krp/` into namespace `krp` using `values.yaml` with `--set images.*.tag=ci`, deployment readiness waits (postgres, user-service, payment-service, order-service, prometheus, grafana), in-cluster HTTP and monitoring smoke tests, automatic cluster cleanup (`if: always()`)
 - **Not production deployment:** CD uses a disposable ephemeral kind cluster on the runner; no container registry, no cloud Kubernetes, no deployment to a developer's local kind cluster
 - **Credential handling:** CI/CD credential handling reviewed and documented; no GitHub Secrets or dedicated secrets-management mechanism; PostgreSQL password remains local-development placeholder (`change_me`)
@@ -276,15 +374,14 @@ Reproducible kubectl-based failure scenarios for incident practice (ADR-025). Ex
 
 Alert-to-runbook mapping and escalation model: see [`docs/runbooks/README.md`](runbooks/README.md). Simulation procedures remain in [`scripts/incidents/README.md`](../scripts/incidents/README.md) — not operational runbooks.
 
-## AI Layer (Planned — Milestones 14–17)
+## Runbook Knowledge Assistant (Planned — Milestone 15)
 
-- AI Incident Analyzer for root cause analysis
-- Tool calling for Kubernetes API interaction
-- RAG for runbook and documentation retrieval
-- Human-in-the-loop controlled remediation
-- **Status:** Planned
+- **Objective:** Retrieval-augmented generation (RAG) for runbook and documentation access via `/assistant`
+- **Scope:** Ingest repository runbooks and docs; chunking/indexing; retrieval pipeline; grounded answers
+- **Status:** Planned — `/assistant` is currently a placeholder
+- **Prerequisite:** M14 Live Observability Console is complete; the platform operates fully without AI
 
-> AI is the final layer. The platform must work fully without AI before AI capabilities are introduced.
+> A previous roadmap planned separate AI milestones (incident analyzer, tool calling, RAG, controlled remediation as M14–M17). That sequence is superseded. M15 consolidates the next AI layer into the Runbook Knowledge Assistant (RAG). Concepts such as tool calling and controlled remediation remain future ideas, not current milestones.
 
 ## User Service Package Structure
 

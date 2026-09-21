@@ -2,6 +2,18 @@
 
 > **Status:** Milestone 13 — Operational Runbooks (complete). **FR-031** — Runbooks shall document response procedures for common incidents. Manual kind E2E runbook validation **executed** on kind cluster `krp` (see [`docs/TESTING.md`](../TESTING.md); pod-crash validation: `user-service` only).
 
+## Frontend Embedded Copies (Milestone 14)
+
+The M14 Live Observability Console displays runbooks in the browser at `/reliability/runbooks` (detail via `?runbook=<id>`). The frontend embeds **copies** of these markdown files from `frontend/src/content/runbooks/`, referenced by `frontend/src/lib/runbooks-catalog.ts`.
+
+| Source of truth (edit here) | Embedded copy (UI reads this) |
+|----------------------------|----------------------------|
+| `docs/runbooks/payment-dependency-failure.md` | `frontend/src/content/runbooks/payment-dependency-failure.md` |
+| `docs/runbooks/postgres-dependency-failure.md` | `frontend/src/content/runbooks/postgres-dependency-failure.md` |
+| `docs/runbooks/application-pod-crash.md` | `frontend/src/content/runbooks/application-pod-crash.md` |
+
+**Important:** Editing files under `docs/runbooks/` does **not** automatically update the frontend UI. Update both locations until runbook sources are consolidated in a future milestone.
+
 **Authority:** [ADR-025](../DECISIONS.md) — Incident Simulation Scope and Approach | [ADR-027](../DECISIONS.md) — Operational Runbook Structure and Scope
 
 ---

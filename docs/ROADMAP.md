@@ -1,6 +1,6 @@
 # Project Roadmap
 
-> **Last updated:** Milestone 13 — Runbooks (complete)
+> **Last updated:** Milestone 14 — Live Observability Console (complete). Milestone 15 — Runbook Knowledge Assistant (RAG) is next.
 
 This roadmap defines the complete progression of the Kubernetes Reliability Platform. Work proceeds strictly in milestone order unless explicitly instructed otherwise.
 
@@ -468,106 +468,97 @@ This roadmap defines the complete progression of the Kubernetes Reliability Plat
 
 ---
 
-## Milestone 14 — AI Incident Analyzer
+## Milestone 14 — Live Observability Console
 
-**Objective:** Build an AI-assisted root cause analysis tool.
+**Objective:** Provide a browser-based operator console for live observability data, application CRUD, and reliability documentation views.
 
 **Major Tasks:**
-- Integrate LLM API
-- Design structured prompting for incident analysis
-- Feed observability data (metrics, logs, traces) to the analyzer
-- Generate RCA reports
-- Document AI analyzer usage
+- React/TypeScript/Vite frontend with Tailwind and shadcn/Radix-style UI components
+- FastAPI Observability BFF with curated, allowlisted queries to Prometheus, Loki, Tempo, and Alertmanager
+- Live Metrics, Logs, Traces, and Alerts views with polling and live/disconnected state
+- Application CRUD pages (Users, Orders, Payments)
+- Reliability catalog pages (Services, SLOs, Incidents) and embedded runbook UI
+- Response normalization, validation, timeouts, and structured error handling in the BFF
+- Frontend and BFF unit tests
 
 **Completion Criteria:**
-- AI analyzer produces useful RCA for simulated incidents
-- Analysis references real observability data
-- Output is structured and actionable
+- Browser does not query observability backends directly
+- Live observability pages display normalized data from the BFF
+- Static reliability catalog pages are clearly distinguished from live telemetry
+- `/assistant` reserves the route for M15
+- Frontend and BFF run as local development processes (not yet in Helm or CI)
 
-**Status:** NOT STARTED
+**Delivered (M14 close):**
+- [x] React frontend under `frontend/` (Vite dev server on port 5173)
+- [x] Observability BFF under `services/observability_api/` (port 8004)
+- [x] Vite dev proxy for `/api/users`, `/api/orders`, `/api/payments`, `/api/observability`
+- [x] Live routes: `/observability/metrics`, `/observability/logs`, `/observability/traces`, `/observability/alerts`
+- [x] Live application CRUD: `/users`, `/orders`, `/payments`
+- [x] Static reliability catalogs: `/reliability/services`, `/reliability/slo`, `/reliability/incidents`
+- [x] Runbook UI: `/reliability/runbooks` with detail via `?runbook=<id>`
+- [x] `/assistant` placeholder for M15
+- [x] **134** Observability BFF unit tests; **127** frontend Vitest tests
+- [x] Full backend suite: **314** pytest tests (includes BFF)
+
+**Status:** COMPLETE
+
+> **Note:** The frontend and BFF are local development components. They are not containerized or deployed through `helm/krp/`. Observability backends remain in the Kubernetes cluster; local access uses `kubectl port-forward`. Live SLO measurements appear on `/observability/metrics`; `/reliability/slo` is the configured SLO model catalog.
 
 ---
 
-## Milestone 15 — AI Tool Calling
+## Milestone 15 — Runbook Knowledge Assistant (RAG)
 
-**Objective:** Enable AI to query Kubernetes and observability APIs via tool calling.
+**Objective:** Provide a runbook knowledge assistant that answers operational questions grounded in repository runbooks and documentation.
 
 **Major Tasks:**
-- Define tool schemas for Kubernetes API queries
-- Define tool schemas for observability queries
-- Implement tool calling framework
-- Restrict AI to read-only operations initially
-- Document tool calling capabilities and limits
+- Ingest runbooks and relevant project documentation
+- Chunking and indexing for retrieval
+- Retrieval pipeline integrated with the `/assistant` UI
+- Context-aware, grounded answers citing source runbook sections
+- Safety and scope boundaries for assistant responses
 
 **Completion Criteria:**
-- AI can query pod status, logs, and metrics via tools
-- Tool access is read-only and auditable
-- Safety guardrails are enforced
+- Assistant retrieves relevant runbook sections for operational questions
+- Responses are grounded in repository documentation (not unconstrained generation)
+- Retrieval quality is tested against known scenarios
+- `/assistant` placeholder is replaced with a working experience
 
-**Status:** NOT STARTED
+**Status:** NOT STARTED — **next milestone**
 
 ---
 
-## Milestone 16 — RAG
+## Superseded Milestone Model (Historical)
 
-**Objective:** Implement retrieval-augmented generation for runbook and documentation access.
+The following AI-focused milestone sequence was planned before M14 and is **superseded** by the current model (M14 = Live Observability Console, M15 = RAG):
 
-**Major Tasks:**
-- Index runbooks and documentation
-- Implement retrieval pipeline
-- Integrate RAG with AI analyzer
-- Verify relevant context retrieval
-- Document RAG setup
+| Old milestone | Former scope | Current status |
+|---------------|--------------|----------------|
+| M14 (old) | AI Incident Analyzer | Superseded — not implemented; removed |
+| M15 (old) | AI Tool Calling | Superseded — not a current milestone |
+| M16 (old) | RAG | Consolidated into **M15 Runbook Knowledge Assistant (RAG)** |
+| M17 (old) | Controlled Remediation | Future idea only — not a current milestone |
 
-**Completion Criteria:**
-- AI retrieves relevant runbook sections for incidents
-- RAG improves RCA quality over raw prompting
-- Retrieval is tested against known scenarios
-
-**Status:** NOT STARTED
-
----
-
-## Milestone 17 — Controlled Remediation
-
-**Objective:** Enable AI-recommended remediation with mandatory human approval.
-
-**Major Tasks:**
-- Define safe remediation actions (restart pod, scale deployment)
-- Implement human approval workflow
-- Enforce guardrails against destructive operations
-- Audit all remediation actions
-- Document remediation procedures and safety limits
-
-**Completion Criteria:**
-- AI recommends remediation actions
-- Human approval is required before execution
-- Destructive operations are blocked
-- All actions are logged and auditable
-
-**Status:** NOT STARTED
+Concepts such as tool calling, Kubernetes API access, and controlled remediation may inform future work but are not part of the current milestone plan.
 
 ---
 
 ## Progression Summary
 
 ```
-Milestone 0  → Engineering Foundation        [COMPLETE]
-Milestone 1  → Application Foundation      [COMPLETE]
-Milestone 2  → Microservices               [COMPLETE]
-Milestone 3  → Docker                      [COMPLETE]
-Milestone 4  → Kubernetes                  [COMPLETE]
-Milestone 5  → Helm                        [COMPLETE]
-Milestone 6  → CI/CD                       [COMPLETE]
-Milestone 7  → Metrics and Monitoring      [COMPLETE]
-Milestone 8  → Alerting                    [COMPLETE]
-Milestone 9  → Logging                     [COMPLETE]
-Milestone 10 → Distributed Tracing         [COMPLETE]
-Milestone 11 → SRE Practices               [COMPLETE]
-Milestone 12 → Incident Simulation         [COMPLETE]
-Milestone 13 → Runbooks                    [COMPLETE]
-Milestone 14 → AI Incident Analyzer        [NOT STARTED]
-Milestone 15 → AI Tool Calling             [NOT STARTED]
-Milestone 16 → RAG                         [NOT STARTED]
-Milestone 17 → Controlled Remediation      [NOT STARTED]
+Milestone 0  → Engineering Foundation              [COMPLETE]
+Milestone 1  → User Service                        [COMPLETE]
+Milestone 2  → Microservices / CRUD / Workflow     [COMPLETE]
+Milestone 3  → Docker / Docker Compose             [COMPLETE]
+Milestone 4  → Kubernetes / kind                   [COMPLETE]
+Milestone 5  → Helm                                [COMPLETE]
+Milestone 6  → CI/CD                               [COMPLETE]
+Milestone 7  → Metrics / Monitoring                [COMPLETE]
+Milestone 8  → Alerting                            [COMPLETE]
+Milestone 9  → Logging                             [COMPLETE]
+Milestone 10 → Distributed Tracing                 [COMPLETE]
+Milestone 11 → SLI / SLO / Error Budgets           [COMPLETE]
+Milestone 12 → Incident Simulation                 [COMPLETE]
+Milestone 13 → Runbooks                            [COMPLETE]
+Milestone 14 → Live Observability Console          [COMPLETE]
+Milestone 15 → Runbook Knowledge Assistant (RAG)   [NOT STARTED — NEXT]
 ```

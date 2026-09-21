@@ -8,7 +8,7 @@
 
 ## 1. Project Overview
 
-The Kubernetes Reliability Platform is a hands-on learning and demonstration project that builds three small Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, incident simulation, and AI-assisted operations.
+The Kubernetes Reliability Platform is a hands-on learning and demonstration project that builds three small Python/FastAPI microservices and progressively layers operational engineering capabilities — from local development through Docker, Kubernetes, observability, SRE practices, incident simulation, runbooks, a browser-based Live Observability Console, and (planned) a Runbook Knowledge Assistant (RAG).
 
 The business logic is intentionally simple. The primary purpose is learning and demonstrating reliability engineering, not building a complex business application.
 
@@ -20,7 +20,8 @@ The business logic is intentionally simple. The primary purpose is learning and 
 - Implement full observability: metrics, logging, tracing, and alerting
 - Practice SRE concepts: SLIs, SLOs, error budgets, incident response
 - Simulate failures and practice root cause analysis
-- Introduce AI-assisted operations as the final layer
+- Provide a Live Observability Console for operator workflows (Milestone 14)
+- Introduce a Runbook Knowledge Assistant (RAG) as the next layer (Milestone 15)
 
 ## 3. Scope
 
@@ -34,7 +35,8 @@ The business logic is intentionally simple. The primary purpose is learning and 
 - GitHub Actions CI/CD
 - Prometheus, Grafana, Alertmanager, Loki, OpenTelemetry
 - SRE practices, incident simulation, runbooks
-- AI-assisted RCA, tool calling, RAG, controlled remediation
+- Live Observability Console — React frontend and Observability BFF (Milestone 14)
+- Runbook Knowledge Assistant (RAG) — planned (Milestone 15)
 
 ### Out of Scope
 
@@ -47,14 +49,21 @@ The business logic is intentionally simple. The primary purpose is learning and 
 ## 4. Application Architecture
 
 ```
-Client → User Service
+Browser (React/Vite :5173)
+        |
+        | Vite dev proxy
+        |
+        +--> User Service      :8001
+        +--> Order Service     :8002 --> Payment Service :8003
+        |
+        +--> Observability BFF :8004
+                 |
+                 +--> Prometheus, Loki, Tempo, Alertmanager (port-forwarded from kind)
 
-Client → Order Service → Payment Service
-
-All services → PostgreSQL
+All application services --> PostgreSQL
 ```
 
-Three independent microservices communicating via REST APIs. Order Service depends on Payment Service. All services use PostgreSQL.
+Three independent microservices communicating via REST APIs. Order Service depends on Payment Service. All services use PostgreSQL. The M14 console adds a React frontend and Observability BFF for curated, read-only observability access. The browser does not query observability backends directly.
 
 ## 5. Microservices
 
@@ -111,50 +120,46 @@ Business logic remains intentionally small. Services exist to create realistic o
 | Loki | Log aggregation |
 | OpenTelemetry | Distributed tracing |
 
-### AI (Final Layer)
+### Presentation (Milestone 14)
 
-- LLM API
-- Structured prompting
-- Tool calling
-- RAG
-- Kubernetes API integration
-- Human-in-the-loop remediation
+| Technology | Purpose |
+|-----------|---------|
+| React, TypeScript, Vite | Live Observability Console UI |
+| Tailwind CSS, Radix/shadcn-style UI | Styling and components |
+| FastAPI (Observability BFF) | Curated read-only observability API |
 
-## 7. Final Architecture
+### Runbook Knowledge Assistant (Milestone 15 — planned)
 
-The complete platform architecture, when all milestones are finished:
+- RAG over repository runbooks and documentation
+- Retrieval pipeline and grounded answers via `/assistant`
+
+## 7. Platform Architecture
+
+Current architecture (Milestones 0–14 complete):
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Client / Operator                     │
+│              Browser (React/Vite :5173)                  │
+│              Live Observability Console                  │
 └──────────┬──────────────────────────────┬───────────────┘
-           │                              │
+           │ Vite proxy                   │
            v                              v
-┌──────────────────┐          ┌──────────────────────┐
-│  Microservices   │          │   AI SRE Assistant   │
-│  ┌────────────┐  │          │  (RCA, Tools, RAG)   │
-│  │User Service│  │          └──────────┬───────────┘
-│  ├────────────┤  │                     │
-│  │Order Svc   │──┼──► Payment Service  │
-│  ├────────────┤  │                     │
-│  │Payment Svc │  │                     │
-│  └─────┬──────┘  │                     │
-│        │         │                     │
-│        v         │                     │
-│   PostgreSQL     │                     │
+┌──────────────────┐          ┌──────────────────────────┐
+│  Microservices   │          │  Observability BFF :8004 │
+│  User/Order/Pay  │          │  (local dev only)        │
+│  :8001–:8003     │          └──────────┬───────────────┘
 └────────┬─────────┘                     │
-         │                               │
-         v                               v
-┌─────────────────────────────────────────────────────────┐
-│              Observability Stack                         │
-│  Prometheus │ Grafana │ Alertmanager │ Loki │ OTel      │
-└─────────────────────────────────────────────────────────┘
+         v                                 v
+   PostgreSQL              Prometheus │ Loki │ Tempo │ Alertmanager
+                           (in kind via helm/krp/, port-forwarded locally)
          │
          v
 ┌─────────────────────────────────────────────────────────┐
-│              Kubernetes (kind) + Helm                    │
-│              CI/CD (GitHub Actions)                      │
+│  Kubernetes (kind) + Helm + CI/CD (GitHub Actions)    │
+│  Grafana, Alloy, OTel Collector also deployed in cluster │
 └─────────────────────────────────────────────────────────┘
+
+Planned: /assistant (M15 RAG) — not yet implemented
 ```
 
 ## 8. Repository Structure
@@ -166,11 +171,12 @@ kubernetes-reliability-platform/
 │   ├── rules/          # Cursor AI rules
 │   └── plans/          # Implementation plans per milestone
 │
+├── frontend/           # M14 React/Vite Live Observability Console
 ├── docs/               # Project documentation
 ├── .github/workflows/  # GitHub Actions CI/CD (Milestone 6)
 ├── k8s/                # Kubernetes manifests (Milestone 4 — reference)
 ├── helm/krp/           # Helm chart (Milestone 5)
-├── services/           # Application microservices
+├── services/           # Application microservices + observability_api BFF
 ├── tests/
 │   ├── unit/           # Unit tests
 │   ├── integration/    # Integration tests
@@ -250,20 +256,18 @@ Rules are defined in `.cursor/rules/`:
 
 ## 14. Milestone Strategy
 
-The project progresses through 18 milestones (0–17):
+The project progresses through milestones 0–15:
 
 ```
-Git → Python → FastAPI → REST APIs → PostgreSQL → Docker → Docker Compose
-→ Kubernetes → Deployments → Services → ConfigMaps/Secrets → Probes
-→ Resource Limits → Helm → GitHub Actions → Prometheus → PromQL → Grafana
-→ Alertmanager → Loki → OpenTelemetry → Incident Management → Runbooks
-→ AI Incident Analyzer → AI Tool Calling → RAG → Human Approval
-→ Controlled Auto-Remediation
+M0  Foundation → M1 User Service → M2 Microservices → M3 Docker
+→ M4 Kubernetes → M5 Helm → M6 CI/CD → M7 Metrics → M8 Alerting
+→ M9 Logging → M10 Tracing → M11 SRE → M12 Incident Simulation
+→ M13 Runbooks → M14 Live Observability Console → M15 RAG Assistant
 ```
 
 Each milestone produces a working, verifiable state. No milestone is skipped.
 
-AI milestones (14–17) are the final layer. The platform must work fully without AI first.
+M14 delivers the operator console without AI. M15 introduces the Runbook Knowledge Assistant (RAG). A previous roadmap planned separate AI milestones (incident analyzer, tool calling, RAG, remediation as M14–M17); that sequence is superseded.
 
 ## 15. Testing Philosophy
 
@@ -271,7 +275,8 @@ AI milestones (14–17) are the final layer. The platform must work fully withou
 - Container and Kubernetes behavior tests
 - Failure simulation tests
 - Observability verification
-- AI testing (later milestones)
+- Observability BFF and frontend tests (Milestone 14)
+- RAG/assistant testing (Milestone 15)
 - A task is not complete without test verification
 
 ## 16. Security Principles
@@ -312,7 +317,8 @@ This is a learning project. Each milestone builds practical skills:
 - Automation (Milestone 6)
 - Observability (Milestones 7–10)
 - Reliability engineering (Milestones 11–13)
-- AI-assisted operations (Milestones 14–17)
+- Operator console and observability UI (Milestone 14)
+- Runbook knowledge assistant (Milestone 15)
 
 Complexity is introduced gradually. Each layer must work before the next is added.
 
@@ -326,7 +332,8 @@ A fully operational Kubernetes-based reliability platform demonstrating:
 4. Full observability stack (metrics, logs, traces, alerts)
 5. SRE practices with SLIs, SLOs, and error budgets
 6. Incident simulation and runbook-driven response
-7. AI-assisted root cause analysis with human-in-the-loop remediation
+7. Browser-based Live Observability Console with curated BFF
+8. Runbook Knowledge Assistant (RAG) — planned (Milestone 15)
 
 ## 21. Target Roles
 
@@ -354,7 +361,7 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 
 ## 23. Initial Project State
 
-**Current Milestone:** Milestone 13 — Runbooks (COMPLETE)
+**Current Milestone:** Milestone 14 — Live Observability Console (COMPLETE)
 
 **Status:**
 - Milestone 0 complete (engineering foundation, documentation, rules, roadmap)
@@ -370,7 +377,8 @@ A milestone is done when all its tasks meet the above criteria and completion cr
 - Milestone 10 complete — OpenTelemetry distributed tracing in all three services (ADR-023); OpenTelemetry Collector (`otel/opentelemetry-collector-contrib:0.120.0`) and Grafana Tempo (`grafana/tempo:2.7.2`) deployed via `helm/krp/` (`krp-0.5.0`); Grafana Tempo datasource (`uid: tempo`); cross-service Order → Payment trace correlation verified manually on kind cluster `krp`; **180 tests** (142 unit, including 14 M10 tracing tests; 36 integration; 2 E2E); CD workflow unchanged (no Tempo/Collector smoke checks)
 - Milestone 11 complete — SRE SLIs, SLOs, and error budgets (ADR-024); Prometheus recording rules and SRE alert rules (`KRPSLOAvailabilityViolation`, `KRPSLOErrorBudgetExhausted`, `KRPHighP95Latency`); Grafana **KRP SRE** dashboard (`uid: krp-sre`); deployed via `helm/krp/` (`krp-0.6.0`); manual kind E2E verification for recording rules, availability SLO alert firing and resolution, and dashboard; `KRPHighP95Latency` loaded but deliberate firing not demonstrated (ADR-024 step 13); M7–M10 regression verified; **180 tests** unchanged; CD workflow unchanged
 - Milestone 12 complete — incident simulation scripts (`scripts/incidents/`, ADR-025); PostgreSQL monitoring via `postgres-exporter` (ADR-026); Prometheus scrape job `postgres-exporter`; alerts `KRPPostgresExporterDown` and `KRPPostgresDown`; Grafana **KRP PostgreSQL** dashboard (`uid: krp-postgres`); deployed via `helm/krp/` (`krp-0.7.0`); manual kind E2E verification for PostgreSQL dependency failure (postgres scaled to 0, `pg_up=0`, `KRPPostgresDown` firing and resolution, dashboard outage/recovery, order-service DB failure and recovery); payment dependency and pod-crash scripts implemented without documented manual E2E in M12 closeout; network/latency scenarios deferred; **180 tests** unchanged; CD workflow unchanged
-- Milestone 13 complete — operational runbooks (`docs/runbooks/`, ADR-027); three runbooks for payment dependency failure, PostgreSQL dependency failure, and application pod crash; alert-to-runbook mapping via documentation; local kind escalation model; manual kind E2E runbook validation executed on kind cluster `krp` (payment dependency failure, PostgreSQL dependency failure, application pod crash with `user-service` only; evidence in `docs/TESTING.md`); payment dependency failure and pod-crash were not manually E2E verified during M12 closeout; **180 tests** unchanged; no application, Helm, or CI/CD changes
+- Milestone 13 complete — operational runbooks (`docs/runbooks/`, ADR-027); manual kind E2E validation on kind cluster `krp` (see `docs/TESTING.md`)
+- Milestone 14 complete — Live Observability Console: React frontend (`frontend/`), Observability BFF (`services/observability_api/`); live metrics, logs, traces, alerts; application CRUD; reliability catalogs and runbook UI; **314** backend pytest tests (includes 134 BFF tests) and **127** frontend Vitest tests; frontend and BFF are local development only (not in Helm or CI)
 - Kubernetes manifests exist under `k8s/`; Helm chart exists under `helm/krp/`; CI/CD workflows exist under `.github/workflows/`
 
-**Next Milestone:** Milestone 14 — AI Incident Analyzer
+**Next Milestone:** Milestone 15 — Runbook Knowledge Assistant (RAG)

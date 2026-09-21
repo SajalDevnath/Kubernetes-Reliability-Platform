@@ -1,10 +1,10 @@
 # Kubernetes Reliability Platform
 
-> **Current progress:** Milestones 0–13 complete. Operational runbooks (`docs/runbooks/`, ADR-027) for payment dependency failure, PostgreSQL dependency failure, and application pod crash — manually validated on kind cluster `krp` (see `docs/TESTING.md`). Incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring (`postgres-exporter`, **KRP PostgreSQL** dashboard, `KRPPostgresExporterDown`/`KRPPostgresDown` alerts). SRE SLIs, SLOs, error budgets, and **KRP SRE** dashboard verified. Distributed tracing, centralized logging, Alertmanager, and application metrics verified. Milestone 14 — AI Incident Analyzer is next.
+> **Current progress:** Milestones 0–14 complete. Live Observability Console (`frontend/`, `services/observability_api/`) with live metrics, logs, traces, and alerts; application CRUD; reliability catalogs and runbook UI. Operational runbooks (`docs/runbooks/`, ADR-027) manually validated on kind cluster `krp`. Full observability stack, SRE practices, incident simulation, and PostgreSQL monitoring verified. **Milestone 15 — Runbook Knowledge Assistant (RAG)** is next.
 
 ## What This Project Is
 
-The Kubernetes Reliability Platform is a hands-on learning and demonstration project that builds a small set of Python/FastAPI microservices and progressively layers operational engineering capabilities on top — from local development through Docker, Kubernetes, observability, SRE practices, and AI-assisted incident response.
+The Kubernetes Reliability Platform is a hands-on learning and demonstration project that builds a small set of Python/FastAPI microservices and progressively layers operational engineering capabilities on top — from local development through Docker, Kubernetes, observability, SRE practices, incident simulation, runbooks, and a browser-based operator console.
 
 ## Why It Exists
 
@@ -17,8 +17,9 @@ Modern platform and SRE engineering requires practical experience across applica
 - Progress through Docker, Kubernetes, Helm, and CI/CD
 - Implement full observability: metrics, logging, tracing, and alerting
 - Practice SRE concepts: SLIs, SLOs, error budgets, incident response, and runbooks
-- Simulate failures and practice root cause analysis
-- Introduce AI-assisted operations as the final layer: RCA, tool calling, RAG, and controlled remediation
+- Simulate failures and practice operational response using runbooks
+- Operate a Live Observability Console for day-to-day investigation workflows (Milestone 14)
+- Introduce a Runbook Knowledge Assistant (RAG) for grounded operational guidance (Milestone 15 — planned)
 
 ## Scope
 
@@ -27,17 +28,13 @@ Modern platform and SRE engineering requires practical experience across applica
 - Three microservices: User, Order, Payment (implemented)
 - PostgreSQL database (implemented)
 - Docker and Docker Compose local orchestration (implemented)
-- Local Kubernetes (kind) (implemented — Milestone 4)
-- Helm chart packaging (implemented — Milestone 5)
-- GitHub Actions CI/CD (implemented — Milestone 6)
-- Application metrics and Prometheus/Grafana monitoring (implemented and verified — Milestone 7)
-- Alertmanager alerting with Prometheus rules and severity-based routing (implemented and verified — Milestone 8)
-- Centralized logging with structured JSON logs, Loki, Grafana Alloy, and Grafana log dashboard (implemented and verified — Milestone 9)
-- Distributed tracing with OpenTelemetry, OpenTelemetry Collector, and Grafana Tempo (implemented and verified — Milestone 10)
-- SRE practices: SLIs, SLOs, error budgets, and SRE alerting (implemented and verified — Milestone 11)
-- Incident simulation (implemented — Milestone 12; three kubectl-based scenarios; PostgreSQL dependency failure manually verified end-to-end on kind at M12 closeout; payment dependency and pod-crash not manually E2E verified at M12 closeout; subsequently validated during M13 runbook testing; simulation procedures, not operational runbooks)
-- Operational runbooks (implemented and manually validated — Milestone 13; `docs/runbooks/`; three runbooks per M12 scenarios; evidence in `docs/TESTING.md`; simulation procedures remain in `scripts/incidents/`)
-- AI-assisted operations (final phase)
+- Local Kubernetes (kind) and Helm chart packaging (implemented)
+- GitHub Actions CI/CD (implemented)
+- Application metrics, alerting, logging, and tracing (implemented and verified)
+- SRE practices: SLIs, SLOs, error budgets, and SRE alerting (implemented)
+- Incident simulation scripts and operational runbooks (implemented)
+- Live Observability Console — React frontend and Observability BFF (implemented — Milestone 14)
+- Runbook Knowledge Assistant (RAG) — planned (Milestone 15)
 
 **Out of scope:**
 
@@ -47,16 +44,36 @@ Modern platform and SRE engineering requires practical experience across applica
 - Java, Spring Boot, or Maven-based services
 - Premature introduction of technologies before their milestone
 
-## Final Expected Capabilities
+## Current Capabilities
 
-When complete, the platform will demonstrate:
+1. Running microservices locally, in Docker Compose, and in Kubernetes
+2. Automated CI/CD pipelines (GitHub Actions)
+3. Prometheus metrics, Grafana dashboards, and Alertmanager alerting
+4. Centralized logging with Loki and Grafana Alloy
+5. Distributed tracing with OpenTelemetry, Collector, and Tempo
+6. SRE practices including SLIs, SLOs, and error budgets
+7. Incident simulation for failure practice
+8. Runbook-driven incident response documentation
+9. Browser-based Live Observability Console with curated BFF (local development)
 
-1. Running microservices locally and in Kubernetes
-2. Automated CI/CD pipelines (GitHub Actions — CI on pull requests; CD to ephemeral kind on `main`)
-3. Prometheus metrics collection, Grafana dashboards, and Alertmanager alerting (Milestones 7–8 — implemented)
-4. Centralized logging with Loki and Grafana Alloy (Milestone 9 — implemented)
-5. Distributed tracing with OpenTelemetry (Milestone 10 — implemented)
-6. SRE practices including SLIs, SLOs, and error budgets (Milestone 11 — implemented)
-7. Incident simulation for failure practice (Milestone 12 — implemented)
-8. Runbook-driven incident response (Milestone 13 — implemented)
-9. AI-assisted root cause analysis with human-in-the-loop remediation
+## Current Limitations
+
+- **Frontend and BFF are local-only** — not containerized, not deployed via Helm, not covered by CI frontend checks
+- **Observability console requires port-forwards** — BFF connects to in-cluster Prometheus, Loki, Tempo, and Alertmanager via `kubectl port-forward`
+- **Reliability catalog pages are static** — Services, SLO, and Incidents pages document the model; live telemetry is on observability routes
+- **Runbook duplication** — frontend embeds copies of `docs/runbooks/`; edits to docs do not automatically update the UI
+- **Assistant not implemented** — `/assistant` is a placeholder for M15 RAG
+
+## Future Engineering Scope
+
+**Next — Milestone 15 (planned):**
+
+- Runbook and documentation ingestion, indexing, and retrieval
+- Context-aware, grounded answers via `/assistant`
+
+**Possible later work** (not committed requirements):
+
+- Containerize and deploy frontend and BFF through Helm
+- Add frontend/BFF to CI
+- Consolidate runbook sources
+- Concepts from the superseded AI roadmap (tool calling, remediation) may inform future milestones but are not current scope

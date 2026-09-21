@@ -12,6 +12,13 @@ Before making any changes, read the relevant documentation:
 4. `docs/DEVELOPMENT.md` — development workflow
 5. `.cursor/rules/` — project-specific Cursor rules
 
+## Current Milestone Status
+
+- **Milestones 0–14:** COMPLETE
+- **Milestone 15 — Runbook Knowledge Assistant (RAG):** NOT STARTED — **next**
+
+M14 delivered the Live Observability Console (`frontend/`, `services/observability_api/`). The frontend and BFF are **local development only** — not containerized, not in Helm, not fully covered by CI.
+
 ## Operating Rules
 
 ### Scope and Milestones
@@ -82,7 +89,8 @@ Before making any changes, read the relevant documentation:
 - Create Helm charts before Milestone 5
 - Create CI/CD workflows before Milestone 6
 - Install observability tools before their milestones
-- Implement AI features before Milestone 14
+- Implement M15 RAG without explicit instruction
+- Resurrect the removed AI incident analyzer / tool-calling / remediation implementation
 - Introduce Java, Spring Boot, Maven, Django, or Flask
 - Add unnecessary dependencies
 - Create fake implementation files or placeholder tests
@@ -93,13 +101,17 @@ Before making any changes, read the relevant documentation:
 
 **Application:** Python, FastAPI, Pydantic, SQLAlchemy, PostgreSQL, uv
 
+**Presentation (M14):** React, TypeScript, Vite, Tailwind CSS, Radix/shadcn-style UI components, Lucide
+
+**Observability BFF (M14):** Python, FastAPI, httpx, pydantic-settings
+
 **Infrastructure:** Docker, Docker Compose, Kubernetes, kind, kubectl, Helm
 
 **CI/CD:** GitHub Actions
 
-**Observability:** Prometheus, Grafana, Alertmanager, Loki, OpenTelemetry
+**Observability:** Prometheus, Grafana, Alertmanager, Loki, OpenTelemetry, Tempo, Grafana Alloy
 
-**AI (final layer):** LLM API, tool calling, RAG, Kubernetes API integration
+**Next (M15):** Runbook Knowledge Assistant (RAG) — LLM API integration planned
 
 Do not introduce additional technologies without explicit approval.
 

@@ -1,6 +1,6 @@
 # Development Guide
 
-> **Current Milestone:** Milestone 13 — Runbooks (complete). Milestone 14 — AI Incident Analyzer is next.
+> **Current Milestone:** Milestone 14 — Live Observability Console (complete). Milestone 15 — Runbook Knowledge Assistant (RAG) is next.
 
 This document describes the development workflow for the Kubernetes Reliability Platform.
 
@@ -16,9 +16,11 @@ This document describes the development workflow for the Kubernetes Reliability 
 
 - Python 3.10+
 - [uv](https://docs.astral.sh/uv/) (`python -m uv` if installed via pip)
+- Node.js and npm (required for the M14 frontend — `frontend/`)
 - Git
-- PostgreSQL (required for integration connectivity tests; optional for unit tests when not using Docker Compose)
+- PostgreSQL (required for integration connectivity tests and local application services; optional for unit tests when not using Docker Compose)
 - Docker and Docker Compose (required for the containerized local stack — Milestone 3)
+- kind, kubectl, and Helm (required for Kubernetes deployment and M14 observability port-forwards)
 
 ## Python Development Workflow
 
@@ -688,7 +690,7 @@ Runs on `ubuntu-latest` with:
 1. **Checkout** and Python 3.10 setup
 2. **uv** — `uv sync --dev --frozen`
 3. **Ruff** — `uv run ruff check services tests`
-4. **pytest** — `uv run pytest tests/ -v` (full 180-test suite)
+4. **pytest** — `uv run pytest tests/ -v` (full 314-test backend suite, includes Observability BFF)
 5. **PostgreSQL 16** — GitHub Actions service container (`app_user` / `change_me` / `k8s_reliability` on port 5432)
 6. **Docker builds** — `krp-user-service:ci`, `krp-order-service:ci`, `krp-payment-service:ci` (validation only; no push)
 7. **Helm** — `helm lint helm/krp`; `helm template krp helm/krp` (output discarded to avoid logging Secret values)
@@ -819,6 +821,125 @@ See `AGENTS.md` for the complete AI assistant operating model.
 
 See `docs/TESTING.md` for the full testing strategy.
 
+## M14 Live Observability Console — Local Development
+
+The M14 console consists of a React frontend, an Observability BFF, and (optionally) local application services. Observability backends run in the kind cluster via `helm/krp/` and are accessed through `kubectl port-forward`.
+
+### Why Port-Forwards Are Required
+
+The Observability BFF (`services/observability_api/`) connects to Prometheus, Loki, Tempo, and Alertmanager at `localhost` URLs (defaults in `app/core/config.py`). These services run inside the kind cluster, not on the developer host. Port-forwards expose them on localhost so the BFF can query them without the browser contacting observability backends directly.
+
+### Observability Port-Forwards
+
+With the kind cluster `krp` and Helm release running:
+
+```bash
+kubectl port-forward -n krp svc/prometheus 9090:9090
+kubectl port-forward -n krp svc/loki 3100:3100
+kubectl port-forward -n krp svc/tempo 3200:3200
+kubectl port-forward -n krp svc/alertmanager 9093:9093
+```
+
+Run each command in a separate terminal (or use a process manager). Verify upstream readiness:
+
+```bash
+curl http://127.0.0.1:9090/-/ready
+curl http://127.0.0.1:3100/ready
+curl http://127.0.0.1:3200/ready
+curl http://127.0.0.1:9093/-/ready
+```
+
+Optional Grafana access (not required for the M14 console, but useful for comparison):
+
+```bash
+kubectl port-forward -n krp svc/grafana 3000:3000
+```
+
+### Application Services — Local uv (Recommended for CRUD)
+
+```bash
+python -m uv sync --dev
+cp .env.example .env
+
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8001 --app-dir services/user_service
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8002 --app-dir services/order_service
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8003 --app-dir services/payment_service
+```
+
+### Application Services — Optional Cluster Port-Forwards
+
+Instead of local uv processes, forward in-cluster services:
+
+```bash
+kubectl port-forward -n krp svc/user-service 8001:8001
+kubectl port-forward -n krp svc/order-service 8002:8002
+kubectl port-forward -n krp svc/payment-service 8003:8003
+```
+
+The Vite dev proxy forwards `/api/users`, `/api/orders`, and `/api/payments` to these ports.
+
+### Observability BFF
+
+```bash
+python -m uv run uvicorn app.main:app --host 127.0.0.1 --port 8004 --app-dir services/observability_api
+```
+
+Verify:
+
+```bash
+curl http://127.0.0.1:8004/health
+curl http://127.0.0.1:8004/api/observability/health
+```
+
+Upstream URLs are configurable via environment variables (see `.env.example`):
+
+| Variable | Default |
+|----------|---------|
+| `PROMETHEUS_URL` | `http://localhost:9090` |
+| `LOKI_URL` | `http://localhost:3100` |
+| `TEMPO_URL` | `http://localhost:3200` |
+| `ALERTMANAGER_URL` | `http://localhost:9093` |
+| `PORT` | `8004` |
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. The Vite dev server proxies API requests — no separate CORS configuration is needed.
+
+### M14 Console Startup Checklist
+
+1. **kind cluster and Helm release** — `helm/krp/` deployed in namespace `krp` (see [helm/krp/README.md](../helm/krp/README.md))
+2. **Observability port-forwards** — Prometheus, Loki, Tempo, Alertmanager (four terminals)
+3. **Application services** — local uv on 8001–8003 **or** cluster port-forwards
+4. **Observability BFF** — uvicorn on port 8004
+5. **Frontend** — `npm run dev` in `frontend/`
+
+### M14 Verification Routes
+
+| Route | Expected behavior |
+|-------|-------------------|
+| `http://127.0.0.1:5173/` | Overview page |
+| `/observability/metrics` | Live indicator; service health, request metrics, SLO, PostgreSQL |
+| `/observability/logs` | Live log stream with service filter |
+| `/observability/traces` | Trace search; click for span-tree detail |
+| `/observability/alerts` | Active alerts with filters and detail |
+| `/users`, `/orders`, `/payments` | Application CRUD |
+| `/reliability/services` | Static service catalog |
+| `/reliability/slo` | Static SLO model (live SLO on Metrics page) |
+| `/reliability/incidents` | Static incident scenario catalog |
+| `/reliability/runbooks` | Runbook index |
+| `/reliability/runbooks?runbook=postgres-dependency-failure` | Runbook detail |
+| `/assistant` | M15 placeholder |
+
+If observability backends or the BFF are unreachable, observability pages show **Disconnected**.
+
+See [docs/TESTING.md](TESTING.md) for the M14 manual verification checklist and [frontend/README.md](../frontend/README.md) / [services/observability_api/README.md](../services/observability_api/README.md) for package-level details.
+
 ## Documentation Workflow
 
 1. Update relevant docs when implementation changes architecture or behavior
@@ -848,6 +969,7 @@ For each milestone:
 | 5 | Helm |
 | 6 | GitHub Actions (cloud) |
 | 7–10 | Prometheus, Grafana, Alertmanager, Loki, OpenTelemetry |
-| 14–17 | LLM API access |
+| 14 | Node.js, npm (frontend); kind cluster with observability stack for port-forwards |
+| 15 | LLM API access (for Runbook Knowledge Assistant / RAG) |
 
 Do not install future prerequisites until their milestone begins.

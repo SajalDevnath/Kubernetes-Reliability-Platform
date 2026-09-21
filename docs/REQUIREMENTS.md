@@ -1,6 +1,6 @@
 # Requirements
 
-> **Status:** Milestone 13 complete — operational runbooks (`docs/runbooks/`, ADR-027) manually validated on kind cluster `krp` (see `docs/TESTING.md`). Incident simulation scripts (`scripts/incidents/`), PostgreSQL monitoring, and ADR-025/ADR-026 via `helm/krp/` (`krp-0.7.0`). Milestones 0–12 are implemented and verified. **180 tests** (142 unit, 36 integration, 2 E2E).
+> **Status:** Milestones 0–14 complete. Live Observability Console implemented (`frontend/`, `services/observability_api/`). Operational runbooks manually validated on kind cluster `krp`. **314** backend pytest tests (includes 134 BFF tests) + **127** frontend Vitest tests. Milestone 15 — Runbook Knowledge Assistant (RAG) is next.
 
 ## Functional Requirements
 
@@ -90,22 +90,27 @@
 | FR-030 | Incident simulation scenarios shall be executable | Implemented (M12 — `scripts/incidents/`; three kubectl-based scenarios per ADR-025; PostgreSQL manually verified at M12 closeout; payment and pod-crash validated during M13 runbook manual E2E; pod-crash M13 validation: `user-service` only — see `docs/TESTING.md`) |
 | FR-031 | Runbooks shall document response procedures for common incidents | Implemented (M13 — `docs/runbooks/`; three operational runbooks per M12 simulated scenarios; manually validated on kind `krp`; alert linkage via documentation; ADR-027; evidence in `docs/TESTING.md`) |
 
-### Incident Response
+### Live Observability Console (Milestone 14)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-032 | The platform shall support structured incident investigation workflows | Planned |
-| FR-033 | Root cause analysis shall be documented for simulated incidents | Planned |
+| FR-032 | The platform shall provide a browser-based observability console | Implemented (M14 — React/Vite frontend at `frontend/`) |
+| FR-033 | The console shall display live metrics from Prometheus via a curated API | Implemented (M14 — `/observability/metrics`; BFF `GET /api/observability/metrics/*`) |
+| FR-034 | The console shall display live logs from Loki via a curated API | Implemented (M14 — `/observability/logs`; BFF `GET /api/observability/logs`) |
+| FR-035 | The console shall display live traces from Tempo via a curated API | Implemented (M14 — `/observability/traces`; BFF `GET /api/observability/traces`) |
+| FR-036 | The console shall display live alerts from Alertmanager via a curated API | Implemented (M14 — `/observability/alerts`; BFF `GET /api/observability/alerts`) |
+| FR-037 | An Observability BFF shall expose read-only, allowlisted queries — not arbitrary PromQL/LogQL to the browser | Implemented (M14 — `services/observability_api/`; ADR-028) |
+| FR-038 | The console shall provide application CRUD pages for Users, Orders, and Payments | Implemented (M14 — `/users`, `/orders`, `/payments`) |
+| FR-039 | The console shall provide reliability catalog and runbook views distinct from live telemetry | Implemented (M14 — static catalogs under `/reliability/*`; runbooks at `/reliability/runbooks?runbook=<id>`) |
 
-### AI
+### Runbook Knowledge Assistant (Milestone 15)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-034 | An AI Incident Analyzer shall assist with root cause analysis | Planned |
-| FR-035 | AI shall use tool calling to query Kubernetes and observability data | Planned |
-| FR-036 | AI shall use RAG to retrieve relevant runbooks and documentation | Planned |
-| FR-037 | AI remediation actions shall require human approval | Planned |
-| FR-038 | AI shall not have unrestricted destructive Kubernetes access | Planned |
+| FR-040 | A Runbook Knowledge Assistant shall retrieve relevant runbook and documentation context | Planned (M15 — `/assistant` is currently a placeholder) |
+| FR-041 | Assistant responses shall be grounded in repository runbooks and documentation | Planned (M15) |
+
+> **Superseded requirements:** A previous roadmap assigned AI incident analysis (FR-034 old), tool calling (FR-035 old), and remediation (FR-037/038 old) to milestones M14–M17. Those milestones were not implemented. The current model assigns RAG to M15 (FR-040, FR-041).
 
 ## Non-Functional Requirements
 
@@ -145,7 +150,7 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (142 unit + 36 integration + 2 E2E — 180 total; see `docs/TESTING.md` for current breakdown) |
+| NFR-013 | Each service shall have unit, integration, and end-to-end tests | Implemented (314 backend pytest tests including 134 BFF tests; 127 frontend Vitest tests; see `docs/TESTING.md`) |
 | NFR-016 | The platform shall run locally without cloud dependencies | Implemented |
 | NFR-014 | Failure scenarios shall be testable and reproducible | Implemented (M12 — reproducible kubectl-based incident simulation scripts per ADR-025; PostgreSQL manually verified at M12 closeout; all three scenarios validated during M13 runbook manual E2E on kind `krp` — see `docs/TESTING.md`) |
 | NFR-015 | Observability outputs shall be verifiable | Implemented (M7 — `/metrics` unit tests; Prometheus scrape targets and Grafana dashboard verified locally and via GitHub Actions CD (commit `34f919b`); CD monitoring smoke checks verified; M8 — manual alert firing and resolution verified on kind via Prometheus `/api/v1/alerts` and Alertmanager `/api/v2/alerts`; M9 — structured logging unit tests; Loki, Alloy, Grafana Loki datasource/dashboard, and log/metric correlation verified manually on kind) |

@@ -13,7 +13,16 @@ Three Python/FastAPI microservices:
 - **Order Service** — order management; calls Payment Service
 - **Payment Service** — payment processing
 
-**Database:** PostgreSQL (shared or per-service, to be decided in Milestone 1)
+**Database:** PostgreSQL (shared instance for local development)
+
+## Presentation Layer (Milestone 14)
+
+- **React/Vite frontend** (`frontend/`) — Live Observability Console; local development only
+- **Observability BFF** (`services/observability_api/`) — FastAPI read-only curated observability API; local development only
+- Browser does **not** query Prometheus, Loki, Tempo, or Alertmanager directly
+- Vite dev proxy forwards `/api/users`, `/api/orders`, `/api/payments`, `/api/observability` to local backends
+- Reliability catalog pages (`/reliability/services`, `/reliability/slo`, `/reliability/incidents`) are static — not live telemetry
+- Live SLO measurements are on `/observability/metrics`, not `/reliability/slo`
 
 ## Application Technologies
 
@@ -22,6 +31,11 @@ Three Python/FastAPI microservices:
 - Pydantic
 - SQLAlchemy
 - uv (dependency management)
+
+## Frontend Technologies (Milestone 14)
+
+- React, TypeScript, Vite
+- Tailwind CSS, Radix/shadcn-style UI components, Lucide icons
 
 ## Infrastructure (introduced progressively)
 
@@ -33,7 +47,7 @@ Three Python/FastAPI microservices:
 
 ## CI/CD
 
-- GitHub Actions
+- GitHub Actions (backend pytest, Ruff, Docker builds, Helm validation — frontend/BFF not yet in CI)
 
 ## Observability (introduced after application deployment)
 
@@ -41,18 +55,18 @@ Three Python/FastAPI microservices:
 - Grafana
 - Alertmanager
 - Loki
+- Grafana Alloy
 - OpenTelemetry
+- Grafana Tempo
 
-## AI Layer (final phase only)
+Observability backends are deployed in kind via `helm/krp/`. The M14 BFF accesses them via port-forward during local development.
 
-- LLM API integration
-- Structured prompting
-- Tool calling
-- RAG
-- Kubernetes API integration (read-only initially)
-- Human-in-the-loop remediation
+## Runbook Knowledge Assistant (Milestone 15 — planned)
 
-AI must not be introduced until the reliability platform works without AI.
+- RAG over repository runbooks and documentation
+- `/assistant` UI — currently a placeholder
+
+> A previous roadmap planned separate AI milestones (incident analyzer, tool calling, RAG, remediation as M14–M17). That sequence is superseded. M15 consolidates the next AI layer into the Runbook Knowledge Assistant (RAG).
 
 ## Constraints
 
@@ -60,3 +74,4 @@ AI must not be introduced until the reliability platform works without AI.
 - Do not silently change architecture — explain important decisions.
 - Business logic should remain intentionally simple.
 - The platform exists to demonstrate operational and reliability engineering concepts.
+- Do not claim frontend or BFF are deployed in Kubernetes unless they are added to Helm.

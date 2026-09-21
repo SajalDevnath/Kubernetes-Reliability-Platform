@@ -20,7 +20,9 @@ A task is not complete merely because the application starts. It must be tested 
 | Kubernetes | Deployment, probes, scaling | Milestone 4 |
 | Failure simulation | Network, latency, dependency failures | Milestone 12 |
 | Observability | Metrics, logs, traces verification | Milestones 7–10 |
-| AI | Prompt quality, tool calling, safety | Milestones 14–17 |
+| Observability BFF | BFF clients, allowlisting, normalization, routes | Milestone 14 (`tests/unit/observability_api/`) |
+| Frontend | Page components, polling, observability views, CRUD | Milestone 14 (`frontend/`, Vitest) |
+| RAG / Assistant | Retrieval quality, grounding, safety boundaries | Milestone 15 — planned (not started) |
 
 ## Expectations
 
