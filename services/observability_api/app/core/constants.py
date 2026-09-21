@@ -1,0 +1,25 @@
+"""Allowlists and fixed values for observability API."""
+
+SERVICES = frozenset({"user-service", "order-service", "payment-service"})
+
+POSTGRES_DATABASE_NAME = "k8s_reliability"
+POSTGRES_EXPORTER_JOB = "postgres-exporter"
+
+LATENCY_SLO_TARGET_SECONDS = 0.5
+
+METRICS_RANGE_MINUTES_DEFAULT = 30
+METRICS_RANGE_MINUTES_MIN = 5
+METRICS_RANGE_MINUTES_MAX = 120
+METRICS_RANGE_STEP_SECONDS = 60
+
+SERVICE_JOB_PATTERN = "user-service|order-service|payment-service"
+
+LOGS_LIMIT_DEFAULT = 50
+LOGS_LIMIT_MIN = 1
+LOGS_LIMIT_MAX = 100
+LOGS_DEFAULT_MINUTES = 15
+LOGS_DIRECTION_DEFAULT = "backward"
+
+TRACES_LIMIT_DEFAULT = 20
+TRACES_LIMIT_MIN = 1
+TRACES_LIMIT_MAX = 100

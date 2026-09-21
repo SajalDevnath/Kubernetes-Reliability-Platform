@@ -11,6 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 USER_SERVICE_ROOT = PROJECT_ROOT / "services" / "user_service"
 ORDER_SERVICE_ROOT = PROJECT_ROOT / "services" / "order_service"
 PAYMENT_SERVICE_ROOT = PROJECT_ROOT / "services" / "payment_service"
+OBSERVABILITY_API_ROOT = PROJECT_ROOT / "services" / "observability_api"
 
 
 def _clear_app_modules() -> None:
@@ -21,7 +22,12 @@ def _clear_app_modules() -> None:
 
 def _set_service_path(service_root: Path) -> None:
     root = str(service_root)
-    for service_path in (USER_SERVICE_ROOT, ORDER_SERVICE_ROOT, PAYMENT_SERVICE_ROOT):
+    for service_path in (
+        USER_SERVICE_ROOT,
+        ORDER_SERVICE_ROOT,
+        PAYMENT_SERVICE_ROOT,
+        OBSERVABILITY_API_ROOT,
+    ):
         service_path_str = str(service_path)
         while service_path_str in sys.path:
             sys.path.remove(service_path_str)
@@ -35,7 +41,9 @@ def pytest_configure(config) -> None:
 
 def pytest_runtest_setup(item) -> None:
     fspath = str(item.fspath)
-    if "payment_service" in fspath:
+    if "observability_api" in fspath:
+        _set_service_path(OBSERVABILITY_API_ROOT)
+    elif "payment_service" in fspath:
         _set_service_path(PAYMENT_SERVICE_ROOT)
     elif "order_service" in fspath:
         _set_service_path(ORDER_SERVICE_ROOT)
@@ -102,4 +110,41 @@ def payment_service_modules():
         "PaymentService": PaymentService,
         "PaymentNotFoundError": PaymentNotFoundError,
         "InvalidPaymentStateError": InvalidPaymentStateError,
+    }
+
+
+@pytest.fixture
+def observability_api_modules():
+    """Import Observability API modules with the correct service path."""
+    _set_service_path(OBSERVABILITY_API_ROOT)
+    from app.clients.alertmanager import AlertmanagerClient
+    from app.clients.base import BaseHttpClient
+    from app.clients.factory import UpstreamClients
+    from app.clients.loki import LokiClient
+    from app.clients.tempo import TempoClient
+    from app.core.config import Settings
+    from app.core.exceptions import (
+        ObservabilityApiError,
+        UpstreamHttpError,
+        UpstreamMalformedResponse,
+        UpstreamTimeout,
+        UpstreamUnavailable,
+    )
+    from app.main import create_app
+    from app.services.health_service import HealthService
+
+    return {
+        "AlertmanagerClient": AlertmanagerClient,
+        "BaseHttpClient": BaseHttpClient,
+        "LokiClient": LokiClient,
+        "TempoClient": TempoClient,
+        "UpstreamClients": UpstreamClients,
+        "Settings": Settings,
+        "ObservabilityApiError": ObservabilityApiError,
+        "UpstreamHttpError": UpstreamHttpError,
+        "UpstreamMalformedResponse": UpstreamMalformedResponse,
+        "UpstreamTimeout": UpstreamTimeout,
+        "UpstreamUnavailable": UpstreamUnavailable,
+        "create_app": create_app,
+        "HealthService": HealthService,
     }
